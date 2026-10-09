@@ -20,3 +20,5 @@ Thumbs.db
 *.pem
 *.key
 build/
+# Owner-provided vision references: local only until source/rights are confirmed
+art/reference/

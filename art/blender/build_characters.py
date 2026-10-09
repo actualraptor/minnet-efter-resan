@@ -12,36 +12,39 @@ from mathutils import Matrix, Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib_common as C  # noqa: E402
 import lib_character as L  # noqa: E402
+import lib_linnaea  # noqa: E402
+import lib_villagers  # noqa: E402
 from lib_character import smooth_pulse as sp_  # noqa: E402
 
 SPECS = {
     "linnaea": {
-        "name": "linnaea", "height": 1.68, "ears": "elf", "hair_style": "long", "bangs": 7,
-        "outfit": "mage", "staff": "staff", "eye_size": 1.0, "smile": 0.25, "boot_top": 0.42,
+        "name": "linnaea", "height": 1.68, "ears": "elf", "hair_style": "long2", "bangs": 7,
+        "outfit": "mage2", "staff": None, "eye_size": 1.05, "smile": 0.25, "boot_top": 0.47, "anim_set": "mage",
         "colors": {
-            "skin": "#f6dfd2", "hair": "#e6ebf2", "brow": "#c4c8d6", "eyes": "#2fae94", "lash": "#4a3b52",
+            "skin": "#f7e1d6", "hair": "#ebe8f2", "brow": "#c9c4d8", "eyes": "#2fae94", "lash": "#4a3b52",
             "tunic": "#9cbc8a", "cream": "#efe5cc", "mantle": "#5f8b83", "plum": "#7b4f7a",
-            "legs": "#3d3140", "boots": "#7a5236", "sleeve": "#efe5cc", "torso": "#9cbc8a", "mouth": "#c07a7a",
+            "legs": "#3a2e33", "boots": "#7a5236", "sleeve": "#efe5cc", "torso": "#efe5cc", "mouth": "#c07a7a",
         },
     },
     "edda": {
         "name": "edda", "height": 1.55, "ears": "human", "hair_style": "bun", "bangs": 0,
-        "outfit": "elder", "staff": "cane", "eye_size": 0.72, "glasses": True, "wrinkles": True, "smile": 0.7,
-        "body_width": 1.15, "head_radii": (0.1, 0.104, 0.112), "boot_top": 0.2,
+        "outfit": "elder2", "anim_set": "elder", "staff": "cane", "eye_size": 0.8, "eyes_closed_smile": True, "blush": True,
+        "wrinkles": True, "smile": 0.9,
+        "body_width": 1.15, "head_radii": (0.1, 0.104, 0.112), "boot_top": 0.2, "head_scale": 1.1,
         "radii": {"chest": (0.13, 0.095), "spine": (0.118, 0.09), "pelvis": (0.135, 0.1)},
         "colors": {
             "skin": "#efcfbf", "hair": "#dcd9d4", "brow": "#bdb8b2", "eyes": "#6b7f9a", "lash": "#5a4a4e",
-            "dress": "#6f805c", "apron": "#efe6d2", "shawl": "#8e5d86", "legs": "#6f805c", "boots": "#4e3626",
-            "sleeve": "#6f805c", "torso": "#6f805c", "mouth": "#a8686a",
+            "dress": "#8a5a3c", "apron": "#efe4cc", "shawl": "#8e5d86", "legs": "#8a5a3c", "boots": "#4e3626",
+            "sleeve": "#f1e7d3", "torso": "#f1e7d3", "mouth": "#a8686a",
         },
     },
     "pippa": {
         "name": "pippa", "height": 1.30, "head_scale": 1.2, "ears": "human", "hair_style": "pigtails", "bangs": 5,
-        "outfit": "child", "staff": None, "eye_size": 1.18, "freckles": True, "blush": True, "smile": 0.9,
+        "outfit": "child2", "anim_set": "child", "staff": None, "eye_size": 1.18, "freckles": True, "blush": True, "smile": 0.9,
         "boot_top": 0.27, "radii": {"chest": (0.105, 0.08), "pelvis": (0.115, 0.09), "hip": (0.075, 0.07)},
         "colors": {
             "skin": "#f8dcc8", "hair": "#b5643a", "brow": "#97502e", "eyes": "#5b8a3c", "lash": "#5a3528",
-            "pinafore": "#e0b24a", "accent": "#d9604f", "legs": "#8f6684", "boots": "#7a4a2e",
+            "pinafore": "#c0643f", "accent": "#7b9f6a", "legs": "#8f6684", "boots": "#7a4a2e",
             "sleeve": "#f6f0e2", "torso": "#f6f0e2", "mouth": "#c26a62",
         },
     },
@@ -66,7 +69,9 @@ def relaxed(a, staff=True, spread=0.0):
 def hair(a, h1, h2=None, h3=None):
     a.rot("hair.1", rx=h1)
     a.rot("hair.2", rx=h2 if h2 is not None else h1 * 0.6)
-    a.rot("hair.3", rx=h3 if h3 is not None else h1 * 0.5)
+    h3 = h3 if h3 is not None else h1 * 0.5
+    a.rot("hair.3", rx=h3)
+    a.rot("hair.4", rx=h3 * 1.1)
 
 
 def mage_idle(a, t, f):
@@ -78,7 +83,7 @@ def mage_idle(a, t, f):
     a.rot("chest", rx=-1.2 * b)
     a.rot("neck", rx=2)
     a.rot("head", rx=-3 + 1.5 * math.sin(p + 1.0), ry=2.0 * math.sin(p))
-    hair(a, 4 + 2 * math.sin(p + 0.5), 3 * math.sin(p + 1.2), 3 * math.sin(p + 2.0))
+    hair(a, 6 + 2 * math.sin(p + 0.5), 4 + 2 * math.sin(p + 1.2), 3 + 2 * math.sin(p + 2.0))
     a.staff_upright(tilt_x=4 + 1.0 * b, tilt_y=-4)
 
 
@@ -174,7 +179,7 @@ def mage_cast(a, t, f):
         a.rot(f"thigh.{side}", rx=-12 * strike)
         a.rot(f"shin.{side}", rx=22 * strike)
         a.rot(f"foot.{side}", rx=-10 * strike)
-    hair(a, 4 - 10 * raise_ + 14 * strike, -6 * raise_ + 9 * strike, -5 * raise_ + 8 * strike)
+    hair(a, 6 + 10 * raise_ + 16 * strike, 4 + 6 * raise_ + 10 * strike, 3 + 5 * raise_ + 8 * strike)
     a.staff_upright(tilt_x=4 - 10 * raise_ + 30 * strike, tilt_y=-4)
 
 
@@ -186,7 +191,7 @@ def mage_talk(a, t, f):
     a.rot("hand.L", rz=10 * math.sin(2 * p))
     a.rot("head", rx=-2 + 3 * math.sin(2 * p), ry=3 * math.sin(p))
     a.rot("spine", rx=1.0 * math.sin(p))
-    hair(a, 4 + 2 * math.sin(p), 3 * math.sin(p + 1), 3 * math.sin(p + 2))
+    hair(a, 6 + 2 * math.sin(p), 4 + 2 * math.sin(p + 1), 3 + 2 * math.sin(p + 2))
     a.staff_upright(tilt_x=5, tilt_y=-4)
 
 
@@ -306,8 +311,17 @@ def build(name, root):
     rig = L.Rig(spec)
     L.build_body(rig)
     L.build_head(rig)
-    L.build_hair(rig)
-    {"mage": L.outfit_mage, "elder": L.outfit_elder, "child": L.outfit_child}[spec["outfit"]](rig)
+    if spec["outfit"] == "mage2":
+        lib_linnaea.build(rig)
+    elif spec["outfit"] == "elder2":
+        lib_villagers.edda_hair(rig)
+        lib_villagers.edda(rig)
+    elif spec["outfit"] == "child2":
+        L.build_hair(rig)
+        lib_villagers.pippa(rig)
+    else:
+        L.build_hair(rig)
+        {"mage": L.outfit_mage, "elder": L.outfit_elder, "child": L.outfit_child}[spec["outfit"]](rig)
     if spec.get("staff"):
         L.staff(rig, kind=spec["staff"])
     arm = L.build_armature(rig)
@@ -324,7 +338,7 @@ def build(name, root):
         bpy.context.view_layer.update()
         tip_empty.matrix_world = Matrix.Translation(rig.staff_tip)
     anim = L.Animator(rig)
-    for (aname, frames, fn, loop) in ANIMS[spec["outfit"]]:
+    for (aname, frames, fn, loop) in ANIMS[spec.get("anim_set", spec["outfit"])]:
         anim.action(aname, frames, fn, loop)
     anim.reset()
     out_dir = os.path.join(root, "game", "assets", "models", "characters")
@@ -341,7 +355,7 @@ def build(name, root):
     for tr in ad.nla_tracks:
         tr.mute = True
     poses = []
-    for (aname, frames, fn, loop) in ANIMS[spec["outfit"]]:
+    for (aname, frames, fn, loop) in ANIMS[spec.get("anim_set", spec["outfit"])]:
         act = bpy.data.actions.get(aname)
         ad.action = act
         try:

@@ -26,13 +26,13 @@ func _build_clump_mesh() -> ArrayMesh:
 	rng.seed = WorldLayout.SEED + 101
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var blades := 9
+	var blades := 12
 	for b in blades:
 		var ang := rng.randf() * TAU
 		var r := sqrt(rng.randf()) * 0.22
 		var root := Vector3(cos(ang) * r, 0.0, sin(ang) * r)
 		var h := rng.randf_range(0.2, 0.42)
-		var w := rng.randf_range(0.035, 0.06)
+		var w := rng.randf_range(0.022, 0.04)
 		var face := rng.randf() * TAU
 		var side := Vector3(cos(face), 0.0, sin(face)) * w
 		var lean := Vector3(cos(ang), 0.0, sin(ang)) * rng.randf_range(0.05, 0.2)

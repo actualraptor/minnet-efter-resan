@@ -65,7 +65,12 @@ static func convert_material(src: Material) -> Material:
 		m.set_shader_parameter("emission_strength", 0.9)
 	if lname.contains("skin"):
 		m.set_shader_parameter("shadow_tint", Color(0.85, 0.55, 0.55))
+	m.set_shader_parameter("ramp_softness", 0.22)
 	if lname.contains("hair"):
-		m.set_shader_parameter("shadow_tint", Color(0.62, 0.66, 0.82))
-		m.set_shader_parameter("rim_strength", 0.6)
+		# Silver hair needs visible form: darker base, lavender shadows, soft ramp.
+		m.set_shader_parameter("albedo", b.albedo_color.darkened(0.1))
+		m.set_shader_parameter("shadow_tint", Color(0.55, 0.52, 0.78))
+		m.set_shader_parameter("ramp_softness", 0.4)
+		m.set_shader_parameter("light_scale", 0.5)
+		m.set_shader_parameter("rim_strength", 0.5)
 	return m

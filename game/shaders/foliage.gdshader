@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx, cull_back;
+render_mode diffuse_burley, specular_schlick_ggx, cull_disabled;
 // Painterly foliage for scripted tree/bush meshes. Vertex COLOR.r = sway
 // weight, COLOR.g = per-clump tint. Soft wrap lighting + subsurface-like
 // backlight keep canopies glowing rather than flat green blobs.
@@ -12,6 +12,8 @@ uniform vec3 tint_light : source_color = vec3(0.72, 0.84, 0.4);
 uniform vec3 tint_dark : source_color = vec3(0.2, 0.38, 0.22);
 uniform float sway = 0.06;
 uniform float is_leaf = 1.0;
+uniform sampler2D leaf_tex : source_color, filter_linear_mipmap, repeat_disable;
+uniform bool use_leaf_tex = false;
 
 varying float vsway;
 varying float vtint;
@@ -36,6 +38,12 @@ void fragment() {
 		float hl = smoothstep(0.35, 1.0, vsway);
 		base = mix(tint_dark, base, 0.55 + 0.45 * hl);
 		base = mix(base, tint_light, hl * 0.35 + (vtint - 0.5) * 0.18);
+	}
+	if (use_leaf_tex) {
+		vec4 lt = texture(leaf_tex, UV);
+		ALPHA = lt.a;
+		ALPHA_SCISSOR_THRESHOLD = 0.45;
+		base *= mix(0.72, 1.18, lt.r);
 	}
 	ALBEDO = base;
 	ROUGHNESS = 0.85;

@@ -51,22 +51,64 @@ def trunk_colors(ob, height):
     C.vertex_color_fill(ob, lambda co, n: (max(0.0, co.z / height) * 0.3, 0.5, 0.0, 1.0))
 
 
-def canopy(name, center, radius, mat, seed, blobs=9, squash=0.8, spread=1.0):
+def canopy(name, center, radius, mat, seed, blobs=9, squash=0.8, spread=1.0, cards_per_blob=70, card_size=0.6):
+    """Painterly canopy: a dark inner volume of blobs wrapped in many alpha
+    leaf cards. All normals point away from the canopy centre so it shades
+    like one soft illustrated mass rather than many facets."""
+    import bmesh
     rnd = random.Random(seed)
+    center = Vector(center)
     parts = []
+    blob_list = []
     for i in range(blobs):
         a = rnd.random() * math.tau
         r = (0.25 + rnd.random() * 0.55) * radius * spread
         z = (rnd.random() - 0.35) * radius * 0.7
-        c = Vector(center) + Vector((math.cos(a) * r, math.sin(a) * r, z))
+        c = center + Vector((math.cos(a) * r, math.sin(a) * r, z))
         if i == 0:
-            c = Vector(center) + Vector((0, 0, radius * 0.25))
+            c = center + Vector((0, 0, radius * 0.25))
         br = radius * (0.45 + rnd.random() * 0.3)
-        b = C.ellipsoid("Blob", c, (br, br, br * squash), mat, segs=14, rings=9)
-        C.displace_noise(b, br * 0.09, 2.2, seed + i)
+        blob_list.append((c, br))
+        b = C.ellipsoid("Blob", c, (br * 0.86, br * 0.86, br * squash * 0.86), mat, segs=12, rings=8)
         parts.append(b)
-    ob = C.join(parts, name)
+    inner = C.join(parts, name + "_Inner")
+    # Leaf cards
+    card_mat = C.mat(mat.name.replace("M_Leaves", "M_LeafCards"), "#" + "".join("%02x" % int(round(max(0, min(1, (v / 12.92 if v <= 0.0031308 else 1.055 * v ** (1 / 2.4) - 0.055))) * 255)) for v in mat.diffuse_color[:3]), 0.8)
+    bm = bmesh.new()
+    uv_layer = bm.loops.layers.uv.new("UVMap")
+    for (c, br) in blob_list:
+        for k in range(cards_per_blob):
+            u = rnd.random() * 2 - 1
+            th = rnd.random() * math.tau
+            sq = math.sqrt(1 - u * u)
+            dirv = Vector((sq * math.cos(th), sq * math.sin(th), u * squash))
+            if dirv.z < -0.55 * squash and rnd.random() < 0.6:
+                continue  # fewer cards underneath
+            p = c + dirv * br * (0.82 + rnd.random() * 0.25)
+            out = (p - center).normalized()
+            nrm = (out + Vector(((rnd.random() - 0.5) * 0.8, (rnd.random() - 0.5) * 0.8, (rnd.random() - 0.5) * 0.8))).normalized()
+            ref = Vector((0, 0, 1)) if abs(nrm.z) < 0.9 else Vector((1, 0, 0))
+            t1 = nrm.cross(ref).normalized()
+            t2 = nrm.cross(t1).normalized()
+            roll = rnd.random() * math.tau
+            t1, t2 = t1 * math.cos(roll) + t2 * math.sin(roll), t2 * math.cos(roll) - t1 * math.sin(roll)
+            sz = card_size * radius / 2.6 * (0.75 + rnd.random() * 0.5)
+            corners = [p + (-t1 - t2) * sz, p + (t1 - t2) * sz, p + (t1 + t2) * sz, p + (-t1 + t2) * sz]
+            vs = [bm.verts.new(v) for v in corners]
+            f = bm.faces.new(vs)
+            for loop, uv in zip(f.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
+                loop[uv_layer].uv = uv
+    cards = C.mesh_obj(name + "_Cards", bm, card_mat, smooth=True)
+    n_inner = len(inner.data.vertices)
+    ob = C.join([inner, cards], name)
+    me = ob.data
+    normals = [tuple((v.co - center).normalized()) for v in me.vertices]
+    me.normals_split_custom_set_from_vertices(normals)
     foliage_colors(ob, center, radius * 1.4, seed)
+    attr = me.color_attributes["Col"]
+    for i in range(n_inner, len(me.vertices)):
+        c = attr.data[i].color
+        attr.data[i].color = (c[0], c[1], 1.0, 1.0)  # B=1 marks leaf-card vertices
     return ob
 
 
@@ -274,6 +316,53 @@ def signpost(name):
     return export(name, parts, cols=[("SignCol", "box", (0, 0, 0.9), (0.08, 0.08, 0.9))])
 
 
+def stone_wall(name, length=3.0, seed=5):
+    """Dry-stone wall: stacked irregular stones with mossy tops."""
+    rnd = random.Random(seed)
+    stones = [C.mat("M_Rock", "#9a958c", 0.95), C.mat("M_RockWarm", "#a89f8e", 0.95), C.mat("M_RockCool", "#8a8b88", 0.95)]
+    moss = C.mat("M_Moss", "#6f9a4c", 0.95)
+    parts = []
+    z = 0.0
+    for row in range(4):
+        x = -0.05 + (0.12 if row % 2 else 0.0)
+        h = 0.2 - row * 0.015
+        while x < length:
+            w = 0.22 + rnd.random() * 0.2
+            st = C.ellipsoid("WallStone", (x + w * 0.5, (rnd.random() - 0.5) * 0.06, z + h * 0.5),
+                             (w * 0.55, 0.24 - row * 0.02, h * 0.62), stones[rnd.randrange(3)], segs=8, rings=5)
+            C.displace_noise(st, 0.025, 3.0, seed * 31 + int(x * 10) + row)
+            parts.append(st)
+            if row == 3 and rnd.random() < 0.6:
+                mo = C.ellipsoid("WallMoss", (x + w * 0.5, 0, z + h * 1.05), (w * 0.5, 0.2, 0.05), moss, segs=8, rings=4)
+                C.displace_noise(mo, 0.015, 4.0, seed + int(x * 7))
+                parts.append(mo)
+            x += w
+        z += h * 0.92
+    for p in parts:
+        p.data.polygons.foreach_set("use_smooth", [False] * len(p.data.polygons))
+    return export(name, parts, cols=[("WallCol", "box", (length / 2, 0, 0.4), (length / 2, 0.25, 0.4))])
+
+
+def lamp_post(name):
+    wood = C.mat("M_FenceWood", "#8a6a4c", 0.85)
+    iron = C.mat("M_Iron", "#3a3633", 0.5, 0.6)
+    glow = C.mat("M_LanternGlow", "#ffd58a", 0.4, emit=3.5)
+    parts = [C.box("Post", (0, 0, 1.1), (0.07, 0.07, 1.15), wood, bevel=0.015),
+             C.box("Arm", (0.32, 0, 2.12), (0.36, 0.045, 0.045), wood, bevel=0.01),
+             C.box("Brace", (0.12, 0, 1.9), (0.15, 0.035, 0.035), wood)]
+    parts[-1].data.transform(Matrix.Translation((-0.12, 0, -1.9)))
+    parts[-1].data.transform(Matrix.Rotation(-0.7, 4, "Y"))
+    parts[-1].data.transform(Matrix.Translation((0.14, 0, 1.92)))
+    parts.append(C.cylinder("Chain", (0.6, 0, 2.08), (0.6, 0, 1.92), 0.008, material=iron, segs=4))
+    parts.append(C.box("LanternCap", (0.6, 0, 1.9), (0.1, 0.1, 0.025), iron))
+    parts.append(C.box("LanternGlass", (0.6, 0, 1.76), (0.075, 0.075, 0.12), glow))
+    for dx in (-1, 1):
+        for dy in (-1, 1):
+            parts.append(C.box("LanternBar", (0.6 + dx * 0.078, dy * 0.078, 1.76), (0.008, 0.008, 0.13), iron))
+    parts.append(C.box("LanternBase", (0.6, 0, 1.63), (0.09, 0.09, 0.02), iron))
+    return export(name, parts, cols=[("PostCol", "box", (0, 0, 1.1), (0.09, 0.09, 1.1))])
+
+
 def build(root):
     global OUT
     OUT = os.path.join(root, "game", "assets", "models", "nature")
@@ -301,6 +390,9 @@ def build(root):
     built.append(woodpile("woodpile"))
     built.append(garden_bed("garden_bed"))
     built.append(signpost("signpost"))
+    built.append(stone_wall("stone_wall", seed=5))
+    built.append(stone_wall("stone_wall_b", seed=9))
+    built.append(lamp_post("lamp_post"))
     # Preview line-up
     x = 0.0
     for ob in built:

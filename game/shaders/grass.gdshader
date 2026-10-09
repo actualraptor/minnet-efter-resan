@@ -12,6 +12,8 @@ global uniform float spell_wave_strength;
 uniform vec3 base_color : source_color = vec3(0.2, 0.4, 0.15);
 uniform vec3 tip_color : source_color = vec3(0.62, 0.8, 0.3);
 uniform vec3 warm_tip : source_color = vec3(0.88, 0.82, 0.38);
+uniform vec3 cool_tip : source_color = vec3(0.45, 0.72, 0.5);
+uniform vec3 dry_tip : source_color = vec3(0.86, 0.74, 0.45);
 uniform vec3 wave_color : source_color = vec3(0.85, 1.0, 0.55);
 uniform sampler2D patch_noise : filter_linear_mipmap, repeat_enable;
 
@@ -44,6 +46,9 @@ void vertex() {
 void fragment() {
 	float patch = texture(patch_noise, world_pos.xz * 0.011).r;
 	vec3 tipc = mix(tip_color, warm_tip, smoothstep(0.45, 0.9, patch) * 0.6 + tint * 0.2);
+	float patch_b = texture(patch_noise, world_pos.xz * 0.045 + vec2(0.5, 0.1)).r;
+	tipc = mix(tipc, cool_tip, smoothstep(0.55, 0.85, patch_b) * 0.5);
+	tipc = mix(tipc, dry_tip, step(0.93, tint) * 0.7);
 	vec3 col = mix(base_color, tipc, smoothstep(0.0, 1.0, tip));
 	col *= 0.9 + tint * 0.2;
 	float d = distance(world_pos.xz, spell_wave.xz);

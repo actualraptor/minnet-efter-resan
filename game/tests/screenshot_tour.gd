@@ -111,3 +111,14 @@ func _tour() -> void:
 	p.camera_rig.outdoor_length = 3.4
 	await _wait(1.6)
 	await _shot("00_hero")
+	# 8. Character close-ups, framed like the vision frames (behind, three-quarter).
+	var cpos := Vector3(0.8, 0, 9.5)
+	cpos.y = t.height_at(cpos.x, cpos.z) + 0.1
+	p.camera_rig.outdoor_length = 2.0
+	p.camera_rig.height = 1.2
+	_pose(cpos, PI - 0.25, -0.5, -2.0)
+	await _wait(1.5)
+	await _shot("09_linnaea_back")
+	_pose(cpos, 0.4, 0.4 + 0.45, -4.0)
+	await _wait(1.5)
+	await _shot("10_linnaea_front")

@@ -40,9 +40,10 @@ BONES = [
     ("foot.L", "ankle", "toe", "shin.L"),
 ]
 HAIR_BONES = [
-    ("hair.1", (0, 0.10, 1.66), (0, 0.13, 1.45), "head"),
-    ("hair.2", (0, 0.13, 1.45), (0, 0.14, 1.23), "hair.1"),
-    ("hair.3", (0, 0.14, 1.23), (0, 0.15, 0.86), "hair.2"),
+    ("hair.1", (0, 0.10, 1.66), (0, 0.14, 1.42), "head"),
+    ("hair.2", (0, 0.14, 1.42), (0, 0.16, 1.18), "hair.1"),
+    ("hair.3", (0, 0.16, 1.18), (0, 0.17, 0.94), "hair.2"),
+    ("hair.4", (0, 0.17, 0.94), (0, 0.17, 0.64), "hair.3"),
 ]
 
 
@@ -650,7 +651,7 @@ def build_armature(rig):
     for name, h, t, parent in BONES:
         if ".L" in name:
             defs.append((name.replace(".L", ".R"), h, t, parent.replace(".L", ".R") if parent and ".L" in parent else parent))
-    if rig.spec.get("hair_style", "long") == "long":
+    if rig.spec.get("hair_style", "long") in ("long", "long2"):
         defs += HAIR_BONES
     created = {}
     for name, h, t, parent in defs:

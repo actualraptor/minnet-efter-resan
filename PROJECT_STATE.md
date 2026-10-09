@@ -22,7 +22,7 @@ _Last updated: 2026-10-09_
 | Audio: ambience, SFX, music (original) | Done | files generated; levels checked with ffmpeg. **Not yet judged by ear in play.** |
 
 ## Partially complete / known issues
-- **Characters** are an original scripted base. The official concept sheet was not provided. Faces are static decals, hands are mittens, and cloth is rigid.
+- **Characters (v2, 2026-10-09):** rebuilt toward the owner's vision frames (`art/reference/`, local only). Linnaea has layered skirt panels, a corset, puffed sleeves, long braided hair with a flower and ribbon, and a gem-loop staff. Edda and Pippa got matching redesigns. Still scripted geometry: static decal faces, mitten hands, rigid cloth.
 - **Indoor camera:** in tight spots Linnaea now fades out as the camera closes in. It still needs a feel check by hand (#10).
 - **Edda's shawl** reads as a large plum shape from the front.
 - **The interior** has improved but is still warmer and plainer than the reference art.
@@ -57,6 +57,7 @@ See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from sc
 - No suitable Blender skill was found: the available ones require blender-mcp with a GUI session. Headless `bpy` is used instead.
 
 ## Next priorities
+0. World vision pass: path dressing (walls, lantern posts, cobbles; props already built), castle vista, spell ribbons and petals, ornate HUD, optional pixel-art render mode.
 1. Human playtest: movement feel, camera indoors, dialogue pacing, audio mix.
 2. Character pass against the official Linnaea sheet once provided (proportions, face, hair volume).
 3. Interior dressing and lighting toward the reference (light shafts, clutter density, Edda's outfit).
@@ -64,4 +65,5 @@ See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from sc
 5. Milestone 002 planning: the village to the south and the next small quests.
 
 ## Change log (short)
+- 2026-10-09: Vision pass, characters: Linnaea v2, Edda v2, Pippa v2. Golden-hour light, volumetric haze, cumulus sky, leaf-card trees, denser wildflowers.
 - 2026-10-09: Milestone 001 slice built: world, cottage, characters, spell, dialogue, quest, memory, audio, tests, docs, site.

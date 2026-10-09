@@ -52,16 +52,16 @@ func _environment() -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 0.85
-	env.ambient_light_energy = 0.75
+	env.ambient_light_energy = 0.62
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = 1.05
 	env.tonemap_white = 6.0
 	env.glow_enabled = true
-	env.glow_intensity = 0.55
+	env.glow_intensity = 0.8
 	env.glow_strength = 0.9
-	env.glow_bloom = 0.06
-	env.glow_hdr_threshold = 0.95
+	env.glow_bloom = 0.12
+	env.glow_hdr_threshold = 0.85
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.sdfgi_enabled = true
 	env.sdfgi_use_occlusion = true
@@ -74,7 +74,7 @@ func _environment() -> void:
 	env.ssao_light_affect = 0.15
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
-	env.fog_light_color = Color(0.78, 0.86, 0.93)
+	env.fog_light_color = Color(0.72, 0.82, 0.95)
 	env.fog_light_energy = 1.0
 	env.fog_sun_scatter = 0.25
 	env.fog_depth_begin = 35.0
@@ -84,8 +84,15 @@ func _environment() -> void:
 	env.fog_aerial_perspective = 0.35
 	env.fog_sky_affect = 0.12
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.12
-	env.adjustment_contrast = 1.03
+	env.adjustment_saturation = 1.22
+	env.adjustment_contrast = 1.07
+	# Volumetric haze: soft sun shafts through trees and a luminous distance.
+	env.volumetric_fog_enabled = true
+	env.volumetric_fog_density = 0.0045
+	env.volumetric_fog_albedo = Color(1.0, 0.93, 0.82)
+	env.volumetric_fog_anisotropy = 0.7
+	env.volumetric_fog_length = 90.0
+	env.volumetric_fog_sky_affect = 0.0
 	var we := WorldEnvironment.new()
 	we.name = "WorldEnvironment"
 	we.environment = env
@@ -99,14 +106,15 @@ func _environment() -> void:
 
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.light_color = Color(1.0, 0.84, 0.62)
-	sun.light_energy = 2.4
+	sun.light_color = Color(1.0, 0.82, 0.58)
+	sun.light_energy = 2.9
+	sun.light_volumetric_fog_energy = 1.4
 	sun.shadow_enabled = true
 	sun.shadow_blur = 1.6
 	sun.directional_shadow_max_distance = 95.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	# Low golden-hour sun from the west, slightly south: side light models the cottage front.
-	sun.rotation = Vector3(deg_to_rad(-24.0), deg_to_rad(-70.0), 0.0)
+	sun.rotation = Vector3(deg_to_rad(-21.0), deg_to_rad(-62.0), 0.0)
 	add_child(sun)
 
 

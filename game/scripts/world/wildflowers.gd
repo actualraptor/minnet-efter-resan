@@ -8,7 +8,7 @@ extends Node3D
 const SHADER := preload("res://shaders/flower.gdshader")
 
 @export var radius := 62.0
-@export var drift_count := 260
+@export var drift_count := 520
 
 
 func _ready() -> void:
@@ -36,7 +36,7 @@ func _ready() -> void:
 	while drifts < drift_count and tries < drift_count * 6:
 		tries += 1
 		var c: Vector2
-		if rng.randf() < 0.45:
+		if rng.randf() < 0.55:
 			c = anchors[rng.randi() % anchors.size()] + Vector2(rng.randfn(0, 2.5), rng.randfn(0, 2.5))
 		else:
 			var a := rng.randf() * TAU
@@ -48,7 +48,7 @@ func _ready() -> void:
 			continue
 		drifts += 1
 		var vi := rng.randi() % ids.size()
-		var n := rng.randi_range(6, 26)
+		var n := rng.randi_range(10, 34)
 		var spread := rng.randf_range(0.6, 2.0)
 		for k in n:
 			var p := c + Vector2(rng.randfn(0, spread * 0.5), rng.randfn(0, spread * 0.5))
