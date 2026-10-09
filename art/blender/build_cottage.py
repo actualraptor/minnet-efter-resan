@@ -7,6 +7,7 @@ Front door faces -Y in Blender (= +Z in Godot), i.e. south toward the road.
 Interior floor top sits at FLOOR (matches WorldLayout.COTTAGE_FLOOR)."""
 import math
 import os
+import random
 import sys
 
 import bpy
@@ -29,8 +30,15 @@ def M():
         "stone_dark": C.mat("M_StoneDark", "#7d776f", 0.95),
         "plaster": C.mat("M_Plaster", "#f1e6cf", 0.95),
         "timber": C.mat("M_Timber", "#6e4b33", 0.8),
-        "roof": C.mat("M_Roof", "#a5574a", 0.85),
-        "roof_dark": C.mat("M_RoofDark", "#86463d", 0.85),
+        "roof": C.mat("M_RoofSlate", "#6f7d6a", 0.85),
+        "roof_dark": C.mat("M_RoofSlateDark", "#5a6657", 0.85),
+        "roof_warm": C.mat("M_RoofSlateWarm", "#7f8a72", 0.85),
+        "roof_moss": C.mat("M_RoofMoss", "#7a9a52", 0.95),
+        "roof_deck": C.mat("M_RoofDeck", "#3f463d", 0.9),
+        "ivy": C.mat("M_Leaves_Ivy", "#4f8a3e", 0.8),
+        "ivy_light": C.mat("M_Leaves_IvyLight", "#77a94e", 0.8),
+        "vine": C.mat("M_Vine", "#5b4632", 0.9),
+        "white_flower": C.mat("M_IvyFlower", "#fbf3e2", 0.6),
         "floor": C.mat("M_FloorWood", "#a8794f", 0.75),
         "wood": C.mat("M_Wood", "#8c6040", 0.75),
         "wood_light": C.mat("M_WoodLight", "#bf9466", 0.75),
@@ -210,6 +218,38 @@ def build(root):
     lan = (DOOR_X + 0.95, -hy - 0.12, FLOOR + 2.0)
     vis.append(C.box("LanternBody", lan, (0.08, 0.08, 0.12), m["iron"]))
     vis.append(C.box("LanternGlow", lan, (0.065, 0.085, 0.09), m["candle"]))
+    lan2 = (DOOR_X - 0.95, -hy - 0.12, FLOOR + 2.0)
+    vis.append(C.box("LanternBody", lan2, (0.08, 0.08, 0.12), m["iron"]))
+    vis.append(C.box("LanternGlow", lan2, (0.065, 0.085, 0.09), m["candle"]))
+    # Stone arch voussoirs over the door so it reads as a rounded doorway.
+    for i in range(9):
+        a_ = math.pi * i / 8
+        cx_ = DOOR_X + math.cos(a_) * (DOOR_W / 2 + 0.16)
+        cz_ = FLOOR + DOOR_H - 0.05 + math.sin(a_) * 0.42
+        st = C.box("ArchStone", (0, 0, 0), (0.1, T / 2 + 0.07, 0.07), m["stone"] if i % 2 else m["stone_dark"], bevel=0.02)
+        st.data.transform(Matrix.Rotation(a_ - math.pi / 2, 4, "Y"))
+        st.data.transform(Matrix.Translation((cx_, -hy + T / 2, cz_)))
+        vis.append(st)
+    vis.append(C.box("ArchFill", (DOOR_X, -hy + T / 2 - 0.01, FLOOR + DOOR_H + 0.18), (DOOR_W / 2 + 0.05, T / 2 + 0.02, 0.2), m["timber"]))
+    # Hanging sign with a leaf emblem.
+    vis.append(C.box("SignBracket", (DOOR_X + 1.6, -hy - 0.35, FLOOR + 2.6), (0.03, 0.4, 0.03), m["iron"]))
+    vis.append(C.box("SignBoard", (DOOR_X + 1.6, -hy - 0.55, FLOOR + 2.25), (0.02, 0.28, 0.22), m["wood"], bevel=0.02))
+    gold_sign = C.mat("M_SignGold", "#d8b25a", 0.4, 0.6)
+    for k in range(5):
+        vis.append(C.ellipsoid("SignLeaf", (DOOR_X + 1.585, -hy - 0.55 + (k - 2) * 0.05, FLOOR + 2.2 + abs(k - 2) * 0.04), (0.005, 0.025, 0.06), gold_sign, segs=6, rings=4))
+    # Pots and a barrel by the steps.
+    terracotta = C.mat("M_Terracotta", "#c07a52", 0.8)
+    for (px, py, rr, h_) in ((DOOR_X - 1.15, -hy - 0.55, 0.2, 0.32), (DOOR_X + 1.2, -hy - 0.6, 0.17, 0.26), (DOOR_X + 1.6, -hy - 0.25, 0.14, 0.22)):
+        vis.append(C.cylinder("Pot", (px, py, 0.0), (px, py, h_), rr * 0.8, rr, material=terracotta, segs=12))
+        for k in range(7):
+            aa = k * 0.9
+            vis.append(C.ellipsoid("PotLeaf", (px + math.cos(aa) * rr * 0.6, py + math.sin(aa) * rr * 0.6, h_ + 0.08), (rr * 0.45, rr * 0.45, rr * 0.4), m["ivy_light"], segs=8, rings=5))
+            if k % 2 == 0:
+                vis.append(C.ellipsoid("PotFlower", (px + math.cos(aa) * rr * 0.7, py + math.sin(aa) * rr * 0.7, h_ + 0.2), (0.05, 0.05, 0.04), [m["flower_a"], m["white_flower"], m["flower_c"]][k % 3], segs=8, rings=4))
+    vis.append(C.cylinder("Barrel", (-hx - 0.2, -hy + 0.9, 0.0), (-hx - 0.2, -hy + 0.9, 0.8), 0.32, 0.34, material=m["wood"], segs=14))
+    for z_ in (0.15, 0.65):
+        vis.append(C.cylinder("BarrelHoop", (-hx - 0.2, -hy + 0.9, z_), (-hx - 0.2, -hy + 0.9, z_ + 0.04), 0.345, material=m["iron"], segs=14))
+    col.append(("BarrelCol", (-hx - 0.2, -hy + 0.9, 0.4), (0.34, 0.34, 0.4)))
 
     # --- Roof (gabled, ridge along X) -----------------------------------------------------
     overhang = 0.6
@@ -218,19 +258,31 @@ def build(root):
     half_span = hy + overhang
     slope_len = math.hypot(half_span, rise + 0.35)
     ang = math.atan2(rise + 0.35, half_span)
-    rows = 9
+    rnd = random.Random(7)
     for sy in (-1, 1):
+        rot = Matrix.Rotation(-sy * ang, 4, "X")
+        deck = C.box("RoofDeck", (0, 0, 0), (hx + overhang, slope_len / 2, 0.05), m["roof_deck"])
+        deck.data.transform(rot)
+        deck.data.transform(Matrix.Translation((0, sy * half_span * 0.5, top - 0.35 + (rise + 0.35) * 0.5)))
+        vis.append(deck)
+        rows = 15
+        n = Vector((0, sy * math.sin(ang), math.cos(ang)))
         for r in range(rows):
-            t0 = r / rows
-            # shingle rows, staggered tones for a hand-laid look
-            yy = sy * (half_span * (1 - t0) - half_span / rows * 0.5)
-            zz = top - 0.35 + (rise + 0.35) * t0 + (rise + 0.35) / rows * 0.5
-            mm = m["roof"] if r % 2 == 0 else m["roof_dark"]
-            panel = C.box("RoofRow", (0, 0, 0), (hx + overhang, slope_len / rows / 2 + 0.03, 0.06), mm, bevel=0.02)
-            rot = Matrix.Rotation(-sy * ang, 4, "X")
-            panel.data.transform(rot)
-            panel.data.transform(Matrix.Translation((0, yy, zz + 0.06 * r * 0.0)))
-            vis.append(panel)
+            t = (r + 0.5) / rows
+            yy = sy * half_span * (1 - t)
+            zz = top - 0.35 + (rise + 0.35) * t
+            x = -hx - overhang + (0.18 if r % 2 else 0.0)
+            while x < hx + overhang - 0.05:
+                w = 0.16 + rnd.random() * 0.05
+                moss = (math.sin(x * 0.9 + r * 0.7) + math.sin(x * 2.3 - r * 1.3) * 0.6) > 1.05 and r < 9
+                mm = m["roof_moss"] if moss else [m["roof"], m["roof_dark"], m["roof_warm"]][rnd.randrange(3)]
+                sh = C.box("Shingle", (0, 0, 0), (w, slope_len / rows * 0.62, 0.028), mm, bevel=0.012)
+                tilt = Matrix.Rotation(sy * 0.08 + (rnd.random() - 0.5) * 0.05, 4, "X") @ Matrix.Rotation((rnd.random() - 0.5) * 0.06, 4, "Y")
+                sh.data.transform(tilt)
+                sh.data.transform(rot)
+                sh.data.transform(Matrix.Translation(Vector((x + w, yy, zz)) + n * 0.07))
+                vis.append(sh)
+                x += w * 2 + 0.01
     vis.append(C.cylinder("Ridge", (-hx - overhang, 0, ridge_z + 0.02), (hx + overhang, 0, ridge_z + 0.02), 0.13, material=m["timber"], segs=8))
     # Gable triangles (plaster with timber).
     for sx in (-1, 1):
@@ -374,6 +426,94 @@ def build(root):
         hyp = -1.8 + i * 0.32
         vis.append(C.cylinder("HerbString", (hxp, hyp, top - 0.15), (hxp, hyp, top - 0.45), 0.004, material=m["timber"], segs=4))
         vis.append(C.ellipsoid("Herb", (hxp, hyp, top - 0.55), (0.06, 0.06, 0.13), m["leaf"] if i % 2 else m["fabric_sage"], segs=8, rings=5))
+
+    # --- Ivy climbing the walls ------------------------------------------------------------
+    rnd = random.Random(42)
+
+    def ivy_patch(start, wall_normal, along, steps, up_bias=0.75):
+        p = Vector(start)
+        nn = Vector(wall_normal)
+        pts = [p.copy()]
+        for i in range(steps):
+            d = Vector(along) * (rnd.random() - 0.5) * 0.5 + Vector((0, 0, up_bias + rnd.random() * 0.3))
+            p = p + d.normalized() * 0.22
+            pts.append(p.copy())
+            for k in range(3):
+                off = Vector(along) * (rnd.random() - 0.5) * 0.36 + Vector((0, 0, (rnd.random() - 0.5) * 0.3))
+                lc = p + off + nn * (0.04 + rnd.random() * 0.04)
+                lm = m["ivy"] if rnd.random() < 0.6 else m["ivy_light"]
+                lf = C.ellipsoid("IvyLeaf", lc, (0.09, 0.09, 0.07), lm, segs=7, rings=4)
+                for v in lf.data.vertices:
+                    v.co = v.co - nn * nn.dot(v.co - lc) * 0.65
+                vis.append(lf)
+            if rnd.random() < 0.18:
+                vis.append(C.ellipsoid("IvyFlower", p + nn * 0.1, (0.035, 0.035, 0.03), m["white_flower"], segs=6, rings=4))
+        vis.append(C.tube("Vine", [q + nn * 0.03 for q in pts], [0.018] * len(pts), m["vine"], segs=4))
+
+    front_n = (0, -1, 0)
+    for x0 in (-hx + 0.25, -1.1, 1.1, hx - 0.3, -3.4):
+        ivy_patch((x0, -hy - 0.02, 0.35), front_n, (1, 0, 0), rnd.randint(9, 15))
+    for y0 in (-hy + 0.4, hy - 0.5, 0.6):
+        ivy_patch((-hx - 0.02, y0, 0.35), (-1, 0, 0), (0, 1, 0), rnd.randint(8, 14))
+    for x0 in (-2.0, 3.0):
+        ivy_patch((x0, hy + 0.02, 0.35), (0, 1, 0), (1, 0, 0), rnd.randint(8, 13))
+    for i in range(24):
+        gx = -hx + 0.2 + i * (W - 0.4) / 23
+        sag = math.sin(i / 23 * math.pi * 3) ** 2 * 0.25
+        vis.append(C.ellipsoid("EaveLeaf", (gx, -hy - 0.22, top - 0.25 - sag), (0.1, 0.07, 0.08), m["ivy"] if i % 3 else m["ivy_light"], segs=7, rings=4))
+
+    # --- Interior clutter ------------------------------------------------------------------
+    rnd2 = random.Random(9)
+    dried = [C.mat("M_DriedRose", "#c98a8e", 0.9), C.mat("M_DriedLavender", "#9a83c4", 0.9), C.mat("M_DriedGold", "#e0c070", 0.9), m["fabric_cream"]]
+    for i in range(18):
+        t_ = i / 17
+        gy = cy - 0.95 + t_ * 1.9
+        gz = FLOOR + 1.42 - math.sin(t_ * math.pi * 2) ** 2 * 0.18
+        vis.append(C.ellipsoid("Garland", (cx - 0.5, gy, gz), (0.05, 0.06, 0.07), dried[i % 4] if i % 2 else m["leaf"], segs=7, rings=4))
+    for (px, py, axis) in ((-1.0, hy - T - 0.02, "y"), (-2.2, hy - T - 0.02, "y"), (-hx + T + 0.02, -1.5, "x"), (-hx + T + 0.02, 1.8, "x")):
+        dm = dried[int(abs(px + py) * 10) % 3]
+        if axis == "y":
+            vis.append(C.box("Frame", (px, py, FLOOR + 1.75), (0.2, 0.02, 0.26), m["timber"]))
+            vis.append(C.box("Print", (px, py - 0.022, FLOOR + 1.75), (0.16, 0.004, 0.22), m["fabric_cream"]))
+            vis.append(C.ellipsoid("PrintLeaf", (px, py - 0.028, FLOOR + 1.72), (0.05, 0.003, 0.12), m["leaf"], segs=6, rings=4))
+            vis.append(C.ellipsoid("PrintBloom", (px, py - 0.03, FLOOR + 1.86), (0.045, 0.003, 0.045), dm, segs=8, rings=4))
+        else:
+            vis.append(C.box("Frame", (px, py, FLOOR + 1.75), (0.02, 0.2, 0.26), m["timber"]))
+            vis.append(C.box("Print", (px + 0.022, py, FLOOR + 1.75), (0.004, 0.16, 0.22), m["fabric_cream"]))
+            vis.append(C.ellipsoid("PrintLeaf", (px + 0.028, py, FLOOR + 1.72), (0.003, 0.05, 0.12), m["leaf"], segs=6, rings=4))
+            vis.append(C.ellipsoid("PrintBloom", (px + 0.03, py, FLOOR + 1.86), (0.003, 0.045, 0.045), dm, segs=8, rings=4))
+    glass_cols = ["#7fbf9a", "#8fb0d8", "#c9a86a", "#b07aa8"]
+    for i in range(10):
+        bx_ = shx - 0.6 + i * 0.13
+        glow_b = i % 5 == 0
+        mm = C.mat(("M_BottleGlow" if glow_b else "M_Bottle") + str(i % 4), glass_cols[i % 4], 0.2, emit=0.6 if glow_b else 0.0)
+        vis.append(C.cylinder("Bottle", (bx_, hy - T - 0.16, FLOOR + 2.475), (bx_, hy - T - 0.16, FLOOR + 2.6 + 0.04 * (i % 3)), 0.035, 0.022, material=mm, segs=8))
+    for (a_, b_, za, zb) in win_back:
+        for xx in (a_ - 0.12, b_ + 0.12):
+            cur = C.box("Curtain", (xx, hy - T - 0.06, (za + zb) / 2 + 0.1), (0.14, 0.02, (zb - za) / 2 + 0.2), m["fabric_sage"], bevel=0.02)
+            C.displace_noise(cur, 0.012, 9.0, int(abs(xx) * 10))
+            vis.append(cur)
+    terracotta = C.mat("M_Terracotta", "#c07a52", 0.8)
+    for (px, py) in ((-hx + 0.6, hy - 2.4), (shx + 1.2, hy - 0.55), (-0.2, -hy + 0.7)):
+        vis.append(C.cylinder("PlantPot", (px, py, FLOOR), (px, py, FLOOR + 0.3), 0.15, 0.18, material=terracotta, segs=12))
+        for k in range(9):
+            aa = k * 0.75
+            vis.append(C.ellipsoid("PlantLeaf", (px + math.cos(aa) * 0.12, py + math.sin(aa) * 0.12, FLOOR + 0.42 + 0.06 * (k % 3)), (0.12, 0.05, 0.03), m["ivy_light"], segs=6, rings=4))
+    for k in range(6):
+        b_ = C.box("BookStack", (0, 0, 0), (0.13 - 0.01 * (k % 2), 0.09, 0.025), [m["book1"], m["book2"], m["book3"], m["book4"]][k % 4], bevel=0.004)
+        b_.data.transform(Matrix.Rotation(rnd2.random() * 0.4, 4, "Z"))
+        b_.data.transform(Matrix.Translation((cx - 0.6, cy - 1.15, FLOOR + 0.03 + k * 0.05)))
+        vis.append(b_)
+    # A cat asleep on the rug, because of course there is.
+    cat_w = C.mat("M_CatWhite", "#f2ece4", 0.9)
+    cat_g = C.mat("M_CatGrey", "#6b6662", 0.9)
+    cc = Vector((-0.6, 0.6, FLOOR + 0.02))
+    vis.append(C.ellipsoid("CatBody", cc + Vector((0, 0, 0.09)), (0.22, 0.14, 0.1), cat_w, segs=14, rings=8))
+    vis.append(C.ellipsoid("CatPatch", cc + Vector((0.06, 0.02, 0.15)), (0.14, 0.11, 0.06), cat_g, segs=12, rings=6))
+    vis.append(C.ellipsoid("CatHead", cc + Vector((-0.2, -0.06, 0.08)), (0.09, 0.08, 0.075), cat_w, segs=12, rings=8))
+    for e in (-1, 1):
+        vis.append(C.cylinder("CatEar", cc + Vector((-0.24, -0.06 + e * 0.045, 0.13)), cc + Vector((-0.25, -0.06 + e * 0.055, 0.19)), 0.025, 0.002, material=cat_g, segs=4))
+    vis.append(C.tube("CatTail", [cc + Vector((0.2, 0.04, 0.05)), cc + Vector((0.18, -0.15, 0.04)), cc + Vector((-0.05, -0.2, 0.04))], [0.03, 0.028, 0.02], cat_g, segs=6))
 
     # --- Export ---------------------------------------------------------------------------
     for o in vis:

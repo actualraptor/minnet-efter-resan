@@ -7,7 +7,7 @@ extends Node3D
 @export var mouse_sensitivity := 0.0025
 @export var pad_sensitivity := 2.6
 @export var outdoor_length := 4.3
-@export var indoor_length := 2.5
+@export var indoor_length := 2.2
 @export var height := 1.55
 @export var follow_speed := 12.0
 @export var min_pitch := deg_to_rad(-62.0)
@@ -65,7 +65,8 @@ func _apply() -> void:
 	rotation = Vector3(0.0, yaw, 0.0)
 	_pitch_node.rotation = Vector3(pitch, 0.0, 0.0)
 	# Offset slightly over the shoulder for a more cinematic frame.
-	_arm.position = Vector3(0.35, 0.0, 0.0)
+	var indoors := target != null and target.is_indoors()
+	_arm.position = _arm.position.lerp(Vector3(0.12 if indoors else 0.35, 0.0, 0.0), 0.1)
 
 
 func snap_behind(model_yaw: float) -> void:

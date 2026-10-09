@@ -13,7 +13,7 @@ var cottage: Node3D
 var door: Door
 var sun: DirectionalLight3D
 var fire_light: OmniLight3D
-var _fire_base := 2.4
+var _fire_base := 1.7
 var _placed: Array[Vector2] = []
 var _pollen: GPUParticles3D
 
@@ -169,8 +169,8 @@ func _cottage() -> void:
 	add_child(fire_light)
 	fire_light.global_position = base + Vector3(3.3, WorldLayout.COTTAGE_FLOOR + 0.7, -1.2)
 	var fill := OmniLight3D.new()
-	fill.light_color = Color(1.0, 0.82, 0.6)
-	fill.light_energy = 0.9
+	fill.light_color = Color(1.0, 0.9, 0.8)
+	fill.light_energy = 0.6
 	fill.omni_range = 7.0
 	add_child(fill)
 	fill.global_position = base + Vector3(-1.0, WorldLayout.COTTAGE_FLOOR + 2.7, 0.0)

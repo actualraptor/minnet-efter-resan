@@ -42,7 +42,7 @@ BONES = [
 HAIR_BONES = [
     ("hair.1", (0, 0.10, 1.66), (0, 0.13, 1.45), "head"),
     ("hair.2", (0, 0.13, 1.45), (0, 0.14, 1.23), "hair.1"),
-    ("hair.3", (0, 0.14, 1.23), (0, 0.13, 1.00), "hair.2"),
+    ("hair.3", (0, 0.14, 1.23), (0, 0.15, 0.86), "hair.2"),
 ]
 
 
@@ -343,15 +343,42 @@ def build_hair(rig):
             locks.append(_strand(rig, "Lock", root, tip, (0.025 * side, -0.01, 0), 0.03 * hs, hair,
                                  flat_axis=(side, 0.4, 0), flatten=0.4))
         rig.add(C.join(locks, "HairLocks"), allowed=["head", "neck", "chest"])
-        # Back curtain: several thick flattened strands down to the waist.
+        # Back curtain: a full, layered fall of hair to below the waist.
         back = []
-        for i in range(11):
-            t = (i / 10) * 2 - 1
-            root = Vector((t * r.x * 0.88, c.y + r.y * 0.8, c.z + r.z * 0.25 - abs(t) * 0.04 * hs))
-            tip = Vector((t * 0.13 * rig.s, 0.14 * rig.s - abs(t) * 0.03, (0.98 + abs(t) * 0.08) * rig.s))
-            back.append(_strand(rig, "Back", root, tip, (0, 0.05, 0), (0.062 - abs(t) * 0.014) * hs, hair,
-                                flat_axis=(0, 1, 0), flatten=0.38, segs=8))
+        for layer, (count, depth, length, thick) in enumerate(((15, 0.8, 0.86, 0.064), (11, 0.6, 0.98, 0.058))):
+            for i in range(count):
+                t = (i / (count - 1)) * 2 - 1
+                wav = math.sin(i * 2.3 + layer) * 0.02
+                root = Vector((t * r.x * 0.9, c.y + r.y * depth, c.z + r.z * (0.35 - 0.1 * layer) - abs(t) * 0.04 * hs))
+                tip = Vector((t * (0.17 + 0.03 * layer) * rig.s + wav, (0.16 - 0.02 * layer) * rig.s - abs(t) * 0.02,
+                              (length + abs(t) * 0.07 + wav) * rig.s))
+                back.append(_strand(rig, "Back", root, tip, (0.012 * t, 0.06, 0), (thick - abs(t) * 0.012) * hs, hair,
+                                    flat_axis=(0, 1, 0), flatten=0.4, segs=8))
         rig.add(C.join(back, "HairBack"), allowed=["head", "hair.1", "hair.2", "hair.3"])
+        # Crown braid wrapping from the left temple round the back of the head.
+        braid = []
+        n = 16
+        for k in range(n):
+            a = math.radians(160 - k * 13.5)
+            p = c + Vector((math.cos(a) * r.x * 1.07, math.sin(a) * r.y * 1.07 + 0.01 * hs, r.z * (0.42 - 0.12 * math.sin(k / n * math.pi))))
+            off = Vector((0, 0, 0.008 * hs * (1 if k % 2 else -1)))
+            braid.append(C.ellipsoid("Braid", p + off, (0.019 * hs, 0.019 * hs, 0.014 * hs), hair, segs=8, rings=6))
+        # Flower ornament and ribbon at the left temple, like a pressed keepsake.
+        fpos = c + Vector((r.x * 0.98, r.y * 0.1, r.z * 0.5))
+        petal = C.mat("M_HairFlower", "#fbf6ea", 0.6)
+        for k in range(5):
+            a = k * math.tau / 5
+            braid.append(C.ellipsoid("HairPetal", fpos + Vector((0.006, math.cos(a) * 0.02, math.sin(a) * 0.02)) * hs / max(hs, 1e-6),
+                                     (0.006, 0.016, 0.016), petal, segs=8, rings=4))
+        braid.append(C.ellipsoid("HairFlowerC", fpos + Vector((0.012, 0, 0)), (0.006, 0.009, 0.009), C.mat("M_HairFlowerCentre", "#e8b84a", 0.5), segs=8, rings=4))
+        leafm = C.mat("M_HairLeaf", "#6d9a52", 0.7)
+        for k, a in enumerate((2.4, 3.6)):
+            braid.append(C.ellipsoid("HairLeaf", fpos + Vector((0.002, math.cos(a) * 0.03, math.sin(a) * 0.03)), (0.004, 0.012, 0.022), leafm, segs=6, rings=4))
+        rib = C.mat("M_Plum_Ribbon", "#7b4f7a", 0.7)
+        rp = fpos + Vector((0.0, 0.03, -0.02))
+        braid.append(C.tube("HairRibbon", [rp, rp + Vector((0.01, 0.02, -0.07)), rp + Vector((0.015, 0.03, -0.14))], [0.011, 0.01, 0.006], rib, segs=5, flatten=0.3, flat_axis=(1, 0, 0)))
+        braid.append(C.tube("HairRibbon2", [rp, rp + Vector((0.005, 0.045, -0.05)), rp + Vector((0.01, 0.06, -0.11))], [0.011, 0.01, 0.006], rib, segs=5, flatten=0.3, flat_axis=(1, 0, 0)))
+        rig.add(C.join(braid, "HairBraid"), rigid="head")
     elif style == "bun":
         bun_c = c + Vector((0, r.y * 0.75, r.z * 0.55))
         bun = C.ellipsoid("Bun", bun_c, (0.055 * hs, 0.05 * hs, 0.05 * hs), hair, segs=14, rings=10)
@@ -396,6 +423,22 @@ def trim_ring(rig, name, r, z, sy, material, skip=None, segs=40, thick=0.007):
     return C.tube(name, pts, [thick * rig.s] * len(pts), material, segs=5, caps=skip is not None)
 
 
+def ruffle(ob, z_below, amp_r, amp_z, freq, center=(0.0, 0.0)):
+    """Wavy, frilled hem: displaces vertices below z_below radially and vertically."""
+    for v in ob.data.vertices:
+        if v.co.z < z_below:
+            dx, dy = v.co.x - center[0], v.co.y - center[1]
+            a = math.atan2(dy, dx)
+            k = min(1.0, (z_below - v.co.z) / 0.06)
+            w = math.sin(a * freq)
+            rr = math.hypot(dx, dy)
+            if rr > 1e-5:
+                f = 1.0 + (amp_r * w * k) / rr
+                v.co.x = center[0] + dx * f
+                v.co.y = center[1] + dy * f
+            v.co.z += amp_z * w * k
+
+
 def outfit_mage(rig):
     sp = rig.spec
     cl = sp["colors"]
@@ -407,9 +450,14 @@ def outfit_mage(rig):
     gold = C.mat("M_Gold", "#d8b25a", 0.35, 0.8)
     leather = C.mat("M_Leather", "#7a5236", 0.65)
     torso_bones = ["hips", "spine", "chest", "thigh.L", "thigh.R"]
-    under = C.lathe("Underdress", _scaled_profile(rig, [(0.108, 1.12), (0.14, 0.95), (0.182, 0.76), (0.226, 0.55), (0.23, 0.53)]),
-                    32, cream, scale_xy=(1.0, 0.76))
+    under = C.lathe("Underdress", _scaled_profile(rig, [(0.108, 1.12), (0.14, 0.95), (0.19, 0.76), (0.25, 0.56), (0.275, 0.5), (0.28, 0.485)]),
+                    64, cream, scale_xy=(1.0, 0.8))
+    ruffle(under, 0.56 * s, 0.018 * s, 0.014 * s, 14)
     rig.add(under, allowed=torso_bones)
+    lining = C.lathe("SkirtLining", _scaled_profile(rig, [(0.112, 1.1), (0.15, 0.95), (0.2, 0.76), (0.252, 0.6), (0.262, 0.555)]),
+                     56, plum, scale_xy=(1.0, 0.8), skip_angle=(270.0, 30.0, 0.98 * s))
+    ruffle(lining, 0.6 * s, 0.012 * s, 0.01 * s, 10)
+    rig.add(lining, allowed=torso_bones)
     open_front = (270.0, 24.0, 1.02 * s)
     tunic = C.lathe("Tunic", _scaled_profile(rig, [(0.066, 1.47), (0.11, 1.44), (0.136, 1.38), (0.138, 1.29), (0.124, 1.16),
                                                    (0.119, 1.08), (0.156, 0.95), (0.20, 0.78), (0.238, 0.62)]),
@@ -453,6 +501,17 @@ def outfit_mage(rig):
         cuffs.append(C.tube("Cuff", [a, b], [0.036 * s, 0.05 * s], sage, segs=12, caps=False))
         cuffs.append(C.tube("CuffTrim", [b - (b - a).normalized() * 0.006, b], [0.051 * s, 0.051 * s], gold, segs=12))
     rig.add(C.join(cuffs, "Cuffs"), allowed=["forearm.L", "forearm.R", "hand.L", "hand.R"])
+    # Puffed cream upper sleeves.
+    puffs = []
+    for side in (1, -1):
+        sh = rig.p("shoulder", side)
+        el = rig.p("elbow", side)
+        mid = sh.lerp(el, 0.45)
+        pf = C.tube("Puff", [sh.lerp(el, 0.05), mid, sh.lerp(el, 0.85)], [0.052 * s, 0.062 * s, 0.04 * s], cream, segs=12)
+        C.displace_noise(pf, 0.004 * s, 6.0, 5)
+        puffs.append(pf)
+        puffs.append(C.tube("PuffBand", [sh.lerp(el, 0.82), sh.lerp(el, 0.9)], [0.043 * s, 0.043 * s], plum, segs=12))
+    rig.add(C.join(puffs, "Sleeves"), allowed=["upper_arm.L", "upper_arm.R", "shoulder.L", "shoulder.R", "forearm.L", "forearm.R"])
     # Satchel on the right hip with a strap across the chest.
     sat_c = Vector((-0.175 * s, 0.0, 0.9 * s))
     satchel = C.box("Satchel", sat_c, (0.035 * s, 0.065 * s, 0.055 * s), leather, bevel=0.012 * s)
@@ -468,8 +527,8 @@ def outfit_mage(rig):
     for side in (1, -1):
         k = rig.p("knee", side)
         a = rig.p("ankle", side)
-        p = k.lerp(a, 0.5)
-        bc.append(C.tube("BootCuff", [p + Vector((0, 0, -0.015)), p + Vector((0, 0, 0.02))], [0.052 * s, 0.056 * s],
+        p = k.lerp(a, 0.25)
+        bc.append(C.tube("BootCuff", [p + Vector((0, 0, -0.02)), p + Vector((0, 0, 0.035))], [0.054 * s, 0.062 * s],
                          C.mat("M_Boots_" + sp["name"], sp["colors"]["boots"], 0.7), segs=12))
     rig.add(C.join(bc, "BootCuffs"), allowed=["shin.L", "shin.R"])
 
@@ -545,6 +604,20 @@ def staff(rig, length=1.72, kind="staff"):
             parts.append(C.tube("Prong", pts, [0.012 * s * (1 - 0.8 * t) for t in [k / 6 for k in range(7)]], wood, segs=6))
         parts.append(C.tube("Ring", [top + Vector((0, 0, -0.02 * s)), top + Vector((0, 0, 0.015 * s))], [0.022 * s, 0.022 * s], gold, segs=10))
         parts.append(C.tube("Ring2", [grip + Vector((0, 0, 0.22 * s)), grip + Vector((0, 0, 0.245 * s))], [0.02 * s, 0.02 * s], gold, segs=10))
+        glow = C.mat("M_Crystal_Glow", "#5fe0a8", 0.1, emit=1.5)
+        chain = C.mat("M_Gold", "#d8b25a", 0.35, 0.8)
+        for i in range(3):
+            a = i * math.tau / 3 + 1.0
+            hang = top + Vector((math.cos(a) * 0.05 * s, math.sin(a) * 0.05 * s, 0.03 * s))
+            low = hang + Vector((0, 0, -(0.07 + 0.03 * i) * s))
+            parts.append(C.tube("DangleChain", [hang, low], [0.0025, 0.0025], chain, segs=4))
+            d = C.ellipsoid("Dangle", low + Vector((0, 0, -0.03 * s)), (0.012 * s, 0.012 * s, 0.032 * s), glow, segs=6, rings=4)
+            parts.append(d)
+        leafm = C.mat("M_StaffLeaf", "#7fae5a", 0.7)
+        for i in range(3):
+            a = i * 2.1 + 0.3
+            lp = top + Vector((math.cos(a) * 0.035 * s, math.sin(a) * 0.035 * s, 0.05 * s))
+            parts.append(C.ellipsoid("StaffLeaf", lp + Vector((math.cos(a) * 0.03, math.sin(a) * 0.03, 0.01)), (0.012 * s, 0.03 * s, 0.006 * s), leafm, segs=6, rings=4))
         rib = C.mat("M_Plum_Ribbon", "#7b4f7a", 0.7)
         rp = top + Vector((0, 0, -0.06 * s))
         parts.append(C.tube("Ribbon", [rp, rp + Vector((0.02, 0.03, -0.08)) * s, rp + Vector((0.01, 0.05, -0.2)) * s],

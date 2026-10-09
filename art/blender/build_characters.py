@@ -17,11 +17,11 @@ from lib_character import smooth_pulse as sp_  # noqa: E402
 SPECS = {
     "linnaea": {
         "name": "linnaea", "height": 1.68, "ears": "elf", "hair_style": "long", "bangs": 7,
-        "outfit": "mage", "staff": "staff", "eye_size": 1.0, "smile": 0.25,
+        "outfit": "mage", "staff": "staff", "eye_size": 1.0, "smile": 0.25, "boot_top": 0.42,
         "colors": {
             "skin": "#f6dfd2", "hair": "#e6ebf2", "brow": "#c4c8d6", "eyes": "#2fae94", "lash": "#4a3b52",
             "tunic": "#9cbc8a", "cream": "#efe5cc", "mantle": "#5f8b83", "plum": "#7b4f7a",
-            "legs": "#4b3a52", "boots": "#6b4a32", "sleeve": "#efe5cc", "torso": "#9cbc8a", "mouth": "#c07a7a",
+            "legs": "#3d3140", "boots": "#7a5236", "sleeve": "#efe5cc", "torso": "#9cbc8a", "mouth": "#c07a7a",
         },
     },
     "edda": {
