@@ -22,3 +22,5 @@ Thumbs.db
 build/
 # Owner-provided vision references: local only until source/rights are confirmed
 art/reference/
+# Third-party source models (large / not redistributed as-is)
+art/source/

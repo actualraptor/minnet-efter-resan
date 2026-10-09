@@ -2,16 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://6o3m3db7joxj"
-path="res://.godot/imported/linnaea_surprised.png-537f403c118a040009828e9ef7335100.ctex"
+uid="uid://47ytqbqumw5l"
+path="res://.godot/imported/linnaea_linnaea_tex_0.png-03a3f6f3a439725b2a82d7e17c6bcd67.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "15353a36f8a57d9f8d8937c91958eeb8"
 }
 
 [deps]
 
-source_file="res://assets/models/characters/faces/linnaea_surprised.png"
-dest_files=["res://.godot/imported/linnaea_surprised.png-537f403c118a040009828e9ef7335100.ctex"]
+source_file="res://assets/models/characters/linnaea_linnaea_tex_0.png"
+dest_files=["res://.godot/imported/linnaea_linnaea_tex_0.png-03a3f6f3a439725b2a82d7e17c6bcd67.ctex"]
 
 [params]
 
@@ -23,7 +26,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

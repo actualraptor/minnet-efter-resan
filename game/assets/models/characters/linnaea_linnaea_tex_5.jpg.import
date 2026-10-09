@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c5uip7we8rq1x"
-path="res://.godot/imported/linnaea_Face_linnaea.png-85337179861039e5ada8e609cc729d4d.ctex"
+uid="uid://bobsf2tro8r6h"
+path="res://.godot/imported/linnaea_linnaea_tex_5.jpg-91a3700443705b9702f0a2081297dcde.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "6142f631298f6b5651d56e1f1184b86e"
+"md5": "bf673a4c92cfb4ca00f184129dd8c488"
 }
 
 [deps]
 
-source_file="res://assets/models/characters/linnaea_Face_linnaea.png"
-dest_files=["res://.godot/imported/linnaea_Face_linnaea.png-85337179861039e5ada8e609cc729d4d.ctex"]
+source_file="res://assets/models/characters/linnaea_linnaea_tex_5.jpg"
+dest_files=["res://.godot/imported/linnaea_linnaea_tex_5.jpg-91a3700443705b9702f0a2081297dcde.ctex"]
 
 [params]
 

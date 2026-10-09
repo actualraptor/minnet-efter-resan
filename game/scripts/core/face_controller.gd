@@ -17,6 +17,10 @@ var _next_flap := 0.0
 var _next_blink := 0.0
 var _blink_end := 0.0
 var _shown := ""
+## Bone mode: models with eyeball meshes rigged to eye.L / eye.R bones.
+var _skel: Skeleton3D
+var _eye_bones: Array[int] = []
+const EYE_SCALE := {"neutral": 1.0, "talk": 1.0, "blink": 0.07, "happy": 0.28, "surprised": 1.16}
 
 
 func setup(model: Node, character: String) -> bool:
@@ -30,12 +34,26 @@ func setup(model: Node, character: String) -> bool:
 			var mat := m.get_active_material(s)
 			if mat is ShaderMaterial and mat.resource_name.to_lower().contains("face"):
 				_materials.append(mat)
+	if _materials.is_empty() or not _tex.has("neutral"):
+		_materials.clear()
+		for sk in model.find_children("*", "Skeleton3D", true, false):
+			for bn in ["eye.L", "eye.R"]:
+				var i := (sk as Skeleton3D).find_bone(bn)
+				if i >= 0:
+					_skel = sk
+					_eye_bones.append(i)
+		for e in EYE_SCALE:
+			_tex[e] = null
 	_schedule_blink()
-	return not _materials.is_empty() and _tex.has("neutral")
+	return is_ready()
+
+
+func is_ready() -> bool:
+	return (not _materials.is_empty() and _tex.get("neutral") != null) or not _eye_bones.is_empty()
 
 
 func set_expression(expr: String, hold := 0.0) -> void:
-	if not _tex.has(expr):
+	if not _tex.has(expr) and not EYE_SCALE.has(expr):
 		return
 	_base = expr
 	_base_until = _now() + hold if hold > 0.0 else 0.0
@@ -58,7 +76,7 @@ func _schedule_blink() -> void:
 
 
 func _process(_delta: float) -> void:
-	if _materials.is_empty():
+	if not is_ready():
 		return
 	var t := _now()
 	if _base_until > 0.0 and t > _base_until:
@@ -80,6 +98,12 @@ func _process(_delta: float) -> void:
 
 
 func _show(expr: String) -> void:
+	if not _eye_bones.is_empty():
+		var sc: float = EYE_SCALE.get(expr, 1.0)
+		for i in _eye_bones:
+			_skel.set_bone_pose_scale(i, Vector3(1.0, sc, 1.0))
+		_shown = expr
+		return
 	if expr == _shown or not _tex.has(expr):
 		return
 	_shown = expr
