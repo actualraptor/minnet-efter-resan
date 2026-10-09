@@ -33,6 +33,11 @@ func _ready() -> void:
 	Audio.ambience("fireplace", -40.0, 0.1)
 	Audio.music("meadow_theme", -16.0, 6.0)
 	var args := OS.get_cmdline_user_args()
+	if "--motion" in args:
+		fade.visible = false
+		title.visible = false
+		add_child(load("res://tests/motion_tour.gd").new())
+		return
 	if "--smoke-test" in args or "--tour" in args:
 		fade.visible = false
 		title.visible = false

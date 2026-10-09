@@ -196,6 +196,98 @@ def build_rig(J, hair_chain):
     return arm
 
 
+def _radius_at(pts, a_deg, z, pct=92, band=0.03, wedge=12):
+    ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0])) % 360
+    m = (np.abs(pts[:, 2] - z) < band) & (np.abs(((ang - a_deg) + 180) % 360 - 180) < wedge)
+    if m.sum() < 3:
+        m = np.abs(pts[:, 2] - z) < band
+    return float(np.percentile(np.hypot(pts[m, 0], pts[m, 1]), pct)) if m.any() else 0.15
+
+
+def add_dynamic_chains(arm, objs):
+    """Bone chains driven at runtime by Godot's SpringBoneSimulator3D:
+    hairB_k_* (back hair), hairS_{L,R}_* (side locks), skirt_k_* (ring), cape_k_* (rim)."""
+    hair = surface_points([o for n, o in objs.items() if n.startswith("HairBackV3")])
+    cap = surface_points([o for n, o in objs.items() if n.startswith("Object_6_")])
+    skirt = surface_points([o for n, o in objs.items() if n.startswith("Dress Skirt_M_Frieren_001_Skirt")])
+    cape = surface_points([o for n, o in objs.items() if n.startswith("Dress Skirt_M_Frieren_00")])
+    chains = {}
+    # Back hair strands.
+    zs = [1.5, 1.28, 1.06, 0.84, 0.64]
+    for k, x in enumerate(np.linspace(-0.09, 0.09, 7)):
+        pts = []
+        for z in zs:
+            m = (np.abs(hair[:, 0] - x) < 0.025) & (np.abs(hair[:, 2] - z) < 0.04)
+            y = float(hair[m, 1].mean()) if m.any() else 0.12
+            pts.append(Vector((x, y, z)))
+        chains[f"hairB_{k}"] = ("head", pts)
+    # Side locks (long front strands of the hair cap).
+    for sfx, sgn in (("L", 1), ("R", -1)):
+        sel = cap[(np.sign(cap[:, 0]) == sgn) & (np.abs(cap[:, 0]) > 0.06) & (cap[:, 2] < 1.42)]
+        if len(sel) > 10:
+            zt, zb = 1.41, float(sel[:, 2].min()) + 0.01
+            pts = []
+            for z in np.linspace(zt, zb, 4):
+                m = np.abs(sel[:, 2] - z) < 0.03
+                c = sel[m].mean(axis=0) if m.any() else sel.mean(axis=0)
+                pts.append(Vector(c))
+            chains[f"hairS_{sfx}"] = ("head", pts)
+    # Skirt ring.
+    if len(skirt):
+        hem = float(np.percentile(skirt[:, 2], 1))
+        zl = [0.97, 0.86, 0.75, hem + 0.02]
+        for k in range(10):
+            a = k * 36.0 + 18.0
+            pts = []
+            for z in zl:
+                r = _radius_at(skirt, a, z) - 0.012
+                pts.append(Vector((math.cos(math.radians(a)) * r, math.sin(math.radians(a)) * r, z)))
+            chains[f"skirt_{k}"] = ("hips", pts)
+    # Capelet rim (short, stiff).
+    if len(cape):
+        for k in range(8):
+            a = k * 45.0 + 22.5
+            pts = []
+            for z in (1.39, 1.32, 1.25):
+                r = _radius_at(cape, a, z) - 0.01
+                pts.append(Vector((math.cos(math.radians(a)) * r, math.sin(math.radians(a)) * r, z)))
+            chains[f"cape_{k}"] = ("chest", pts)
+    bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.mode_set(mode="EDIT")
+    eb = arm.data.edit_bones
+    for prefix, (parent, pts) in chains.items():
+        prev = eb[parent]
+        for i in range(len(pts) - 1):
+            b = eb.new(f"{prefix}_{i + 1}")
+            b.head, b.tail, b.roll = pts[i], pts[i + 1], 0.0
+            b.parent = prev
+            prev = b
+    bpy.ops.object.mode_set(mode="OBJECT")
+    print("DYN CHAINS", {k: len(v[1]) - 1 for k, v in chains.items()})
+    return chains
+
+
+def _strip_groups(o, prefix, keep_if):
+    """Remove weights of bones starting with `prefix` from vertices failing keep_if(co), renormalise."""
+    me = o.data
+    gidx = {g.index: g.name for g in o.vertex_groups}
+    for v in me.vertices:
+        if keep_if(v.co):
+            continue
+        tot = 0.0
+        drop = []
+        for g in v.groups:
+            if gidx[g.group].startswith(prefix):
+                drop.append(g.group)
+            else:
+                tot += g.weight
+        for gi in drop:
+            o.vertex_groups[gidx[gi]].remove([v.index])
+        if drop and tot > 0:
+            for g in v.groups:
+                g.weight = g.weight / tot
+
+
 def run(root, mesh_objects, target_h):
     import build_characters as BC
     import lib_character as Lc
@@ -207,7 +299,7 @@ def run(root, mesh_objects, target_h):
     spec["height"] = Lc.BASE_H
     rig = Lc.Rig(spec)
     parts = accessories(objs, rig)
-    arm = build_rig(J, [(0, 0.03, 1.56), (0, 0.08, 1.33), (0, 0.11, 1.1), (0, 0.13, 0.86), (0, 0.15, 0.6)])
+    arm = build_rig(J, [])  # hair is driven by dynamic chains (add_dynamic_chains)
     rig.arm = arm
     # Eye bones (blink / squint / wide) placed at each eyeball's centre.
     eye_objs = [o for n, o in objs.items() if n.startswith("FrierenEyes")]
@@ -221,25 +313,46 @@ def run(root, mesh_objects, target_h):
         b.head, b.tail, b.roll = c, c + Vector((0, 0, 0.02)), 0.0
         b.parent = arm.data.edit_bones["head"]
     bpy.ops.object.mode_set(mode="OBJECT")
-    head_bits = ("Object_3_", "Object_4_", "Object_6_", "FrierenEyes")
-    body_bones = [b.name for b in arm.data.bones if not b.name.startswith("hair")]
+    add_dynamic_chains(arm, objs)
+    names = [b.name for b in arm.data.bones]
+    dyn = lambda p: [n for n in names if n.startswith(p)]
+    head_bits = ("Object_3_", "Object_4_", "FrierenEyes")
+    core = [n for n in names if not n.startswith(("hair", "skirt_", "cape_", "eye."))]
+    skirt_bones = ["hips", "thigh.L", "thigh.R"] + dyn("skirt_")
     for n, o in objs.items():
         if n.startswith(head_bits):
             rig.add(o, rigid="head")
+        elif n.startswith("Object_6_"):
+            rig.add(o, allowed=["head"] + dyn("hairS_"))
         elif n.startswith("HairBackV3"):
-            rig.add(o, allowed=["head", "neck", "hair.1", "hair.2", "hair.3", "hair.4"])
+            rig.add(o, allowed=["head", "neck"] + dyn("hairB_"))
         elif n.startswith(("Boots_", "Leggings_")):
             rig.add(o, allowed=["thigh.L", "thigh.R", "shin.L", "shin.R", "foot.L", "foot.R", "hips"])
+        elif n.startswith("Dress Skirt_M_Frieren_001_Skirt"):
+            rig.add(o, allowed=skirt_bones)
+        elif n.startswith("Dress Skirt_"):
+            rig.add(o, allowed=core + dyn("cape_"))
         else:
-            rig.add(o, allowed=body_bones)
+            rig.add(o, allowed=core)
     for (o, bones) in parts:
         if bones is None:
             rig.add(o, rigid="head")
+        elif o.name.startswith(("PlumPanels", "Petticoat")):
+            rig.add(o, allowed=skirt_bones)
         else:
             rig.add(o, allowed=bones)
     for (o, _, _) in rig.objects:
         C.set_origin_world(o)
     Lc.skin_all(rig, falloff=5.0)
+    # Keep dynamic weights only where they belong: capelet rim (outside the torso),
+    # skirt below the waist, side locks below the ears.
+    for n, o in objs.items():
+        if n.startswith("Dress Skirt_") and not n.startswith("Dress Skirt_M_Frieren_001_Skirt"):
+            _strip_groups(o, "cape_", lambda co: math.hypot(co.x, co.y) > 0.19 and co.z < 1.42)
+        if n.startswith("Dress Skirt_M_Frieren_001_Skirt"):
+            _strip_groups(o, "skirt_", lambda co: co.z < 0.97)
+        if n.startswith("Object_6_"):
+            _strip_groups(o, "hairS_", lambda co: co.z < 1.43 and abs(co.x) > 0.06)
     for o in eye_objs:
         o.vertex_groups.clear()
         gl, gr = o.vertex_groups.new(name="eye.L"), o.vertex_groups.new(name="eye.R")
@@ -266,7 +379,16 @@ def run(root, mesh_objects, target_h):
     bpy.context.view_layer.update()
     tip.matrix_world = Matrix.Translation(rig.staff_tip)
     anim = Lc.Animator(rig)
+    import mocap_retarget as MR
+    mocap = os.path.join(root, "art", "source", "mocap")
+    speeds = MR.retarget_clips(arm, [("Walk", "07_01.bvh", {"hold_right": 0.55, "staff": True, "staff_tilt": 6}),
+                                     ("Run", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 30})], mocap)
+    import json
+    with open(os.path.join(root, "game", "data", "characters", "linnaea_locomotion.json"), "w") as fh:
+        json.dump({"natural_speed": speeds, "source": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu)"}, fh, indent=1)
     for (aname, frames, fn, loop) in BC.ANIMS["mage"]:
+        if aname in speeds:
+            continue
         anim.action(aname, frames, fn, loop)
     anim.reset()
     objs_out = [arm] + [o for o, _, _ in rig.objects] + [tip]
@@ -281,6 +403,7 @@ def run(root, mesh_objects, target_h):
                      height=target_h * 1.12, look_z=target_h * 0.55, size=(1800, 900))
     for (aname, frames, fn, loop) in BC.ANIMS["mage"]:
         act = bpy.data.actions.get(aname)
+        bpy.context.scene.frame_set(0)
         ad.action = act
         try:
             if act.slots:

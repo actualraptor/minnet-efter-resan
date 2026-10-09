@@ -5,9 +5,11 @@ extends CharacterBody3D
 
 signal focus_changed(target: Node)
 
-@export var walk_speed := 2.1
-@export var run_speed := 5.4
-@export var acceleration := 13.0
+@export var walk_speed := 1.45
+@export var run_speed := 4.3
+## Human-like ground acceleration / braking (m/s^2).
+@export var acceleration := 7.5
+@export var deceleration := 10.0
 @export var air_acceleration := 3.5
 @export var jump_velocity := 4.9
 @export var gravity := 15.0
@@ -32,7 +34,13 @@ var _staff_tip: Node3D
 var _was_on_floor := true
 var _meshes: Array[GeometryInstance3D] = []
 var face: FaceController
+var secondary: SpringBoneSimulator3D
 var _fade := 0.0
+var loco: LocomotionAnimator
+var _talking := false
+var _lean := 0.0
+var _prev_yaw := 0.0
+var _prev_speed := 0.0
 
 
 func _ready() -> void:
@@ -48,6 +56,10 @@ func _ready() -> void:
 	face.name = "Face"
 	add_child(face)
 	face.setup(model, "linnaea")
+	secondary = CharacterPhysics.setup(model)
+	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
+		loco = LocomotionAnimator.new()
+		loco.setup(_anim, "linnaea")
 	if caster.spells.is_empty():
 		caster.spells.append(load("res://data/spells/field_of_flowers.tres") as SpellDefinition)
 		caster.equip(0)
@@ -102,7 +114,10 @@ func facing_basis() -> Basis:
 func begin_cast(anim: StringName, _duration: float) -> void:
 	_casting = true
 	_cast_anim = anim
-	_play(anim, 0.15)
+	if loco:
+		loco.cast()
+	else:
+		_play(anim, 0.15)
 
 
 func end_cast() -> void:
@@ -132,8 +147,9 @@ func _physics_process(delta: float) -> void:
 	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
 	var target_speed := (run_speed if running else walk_speed) * minf(input.length(), 1.0)
 	var target := dir.normalized() * target_speed if dir.length() > 0.01 else Vector3.ZERO
-	var accel := acceleration if on_floor else air_acceleration
-	var hv := Vector3(velocity.x, 0.0, velocity.z).move_toward(target, accel * delta * maxf(run_speed, 1.0))
+	var cur := Vector3(velocity.x, 0.0, velocity.z)
+	var accel := (acceleration if target.length() >= cur.length() else deceleration) if on_floor else air_acceleration
+	var hv := cur.move_toward(target, accel * delta)
 	velocity.x = hv.x
 	velocity.z = hv.z
 
@@ -148,7 +164,19 @@ func _physics_process(delta: float) -> void:
 
 	if dir.length() > 0.05:
 		var want := atan2(dir.x, dir.z)
-		model.rotation.y = lerp_angle(model.rotation.y, want, 1.0 - exp(-turn_speed * delta))
+		# Turn slower at speed, like a person carrying momentum.
+		var ts := turn_speed * lerpf(1.0, 0.55, clampf(hv.length() / run_speed, 0.0, 1.0))
+		model.rotation.y = lerp_angle(model.rotation.y, want, 1.0 - exp(-ts * delta))
+	# Lean into turns (bank) and slightly forward when speeding up.
+	var yaw_rate := wrapf(model.rotation.y - _prev_yaw, -PI, PI) / maxf(delta, 1e-4)
+	_prev_yaw = model.rotation.y
+	var accel_fwd := (hv.length() - _prev_speed) / maxf(delta, 1e-4)
+	_prev_speed = hv.length()
+	var bank := clampf(-yaw_rate * hv.length() * 0.035, -0.18, 0.18) if on_floor else 0.0
+	_lean = lerpf(_lean, bank, 1.0 - exp(-6.0 * delta))
+	var pitch := clampf(accel_fwd * 0.012, -0.06, 0.08) if on_floor else 0.0
+	model.rotation.z = _lean
+	model.rotation.x = lerpf(model.rotation.x, pitch, 1.0 - exp(-5.0 * delta))
 
 	if on_floor and not _was_on_floor and velocity.y <= 0.0:
 		_footstep(-6.0)
@@ -173,7 +201,7 @@ func _update_footsteps(delta: float, speed: float) -> void:
 		_step_accum = 0.0
 		return
 	_step_accum += speed * delta
-	var stride := 1.45 if speed > walk_speed + 0.5 else 0.82
+	var stride := 1.35 if speed > walk_speed + 0.8 else 0.7
 	if _step_accum >= stride:
 		_step_accum -= stride
 		_footstep(-9.0 if speed > walk_speed + 0.5 else -13.0)
@@ -185,6 +213,9 @@ func _footstep(volume: float) -> void:
 
 func _update_animation(speed: float) -> void:
 	if _anim == null:
+		return
+	if loco:
+		loco.update(get_physics_process_delta_time(), speed, walk_speed, run_speed, is_on_floor(), velocity.y, _talking)
 		return
 	if _casting:
 		return
@@ -211,6 +242,9 @@ func _play(anim_name: StringName, blend: float, speed: float = 1.0) -> void:
 
 ## Dialogue gestures. Falls back to Idle when an animation is missing.
 func emote(anim_name: String) -> void:
+	if loco:
+		_talking = anim_name == "Talk"
+		return
 	if _anim and _anim.has_animation(anim_name):
 		_play(StringName(anim_name), 0.3)
 

@@ -87,6 +87,7 @@ func _run() -> void:
 	check("player standing on terrain", player.is_on_floor(), "y=%.2f ground=%.2f" % [player.global_position.y, terrain.height_at(player.global_position.x, player.global_position.z)])
 	check("player model has animations", CharacterVisual.find_animation_player(player.model) != null and CharacterVisual.find_animation_player(player.model).has_animation(&"Cast"))
 	check("staff tip attachment found", player.model.find_child("StaffTip", true, false) != null)
+	check("hair/cloth spring bones active", player.secondary != null and player.secondary.setting_count >= 20, "%d chains" % (player.secondary.setting_count if player.secondary else 0))
 	check("face expressions ready", player.face != null and player.face.is_ready(), "eye bones: %d, face materials: %d" % [player.face._eye_bones.size(), player.face._materials.size()])
 
 	# Intro monologue

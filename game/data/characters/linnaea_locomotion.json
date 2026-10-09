@@ -1,0 +1,7 @@
+{
+ "natural_speed": {
+  "Walk": 1.227,
+  "Run": 2.979
+ },
+ "source": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu)"
+}
