@@ -53,7 +53,7 @@ func _place_cast() -> void:
 	# Edda by the armchair, facing the door; Pippa by her carrots.
 	var pad := terrain.pad_height() + WorldLayout.COTTAGE_FLOOR
 	var c := WorldLayout.COTTAGE_POS
-	edda.set_home(Vector3(c.x + 1.8, pad + 0.05, c.z + 0.9), atan2(-1.8, 2.4))
+	edda.set_home(Vector3(c.x + 1.4, pad + 0.05, c.z - 1.6), atan2(-1.4, 4.95))
 	pippa.set_home(_ground(4.6, 0.9) + Vector3.UP * 0.05, -0.5)
 	if GameState.quest(QUEST) in ["bloomed", "complete"]:
 		_move_edda_to_bench()

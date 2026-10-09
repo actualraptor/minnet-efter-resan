@@ -59,6 +59,9 @@ func _process(delta: float) -> void:
 	var want_len := indoor_length if target.is_indoors() else outdoor_length
 	_arm.spring_length = lerpf(_arm.spring_length, want_len, 1.0 - exp(-4.0 * delta))
 	_apply()
+	# Fade the mage out when walls push the camera right up against her.
+	var hit := _arm.get_hit_length()
+	target.set_model_fade(clampf((1.35 - hit) / 0.9, 0.0, 0.75) if camera.current else 0.0)
 
 
 func _apply() -> void:

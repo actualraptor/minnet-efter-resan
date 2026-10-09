@@ -23,7 +23,12 @@ func _wait(s: float) -> void:
 	await get_tree().create_timer(s, false).timeout
 
 
-func _shot(name: String) -> void:
+func _shot(name: String, clean := true) -> void:
+	var ui: CanvasLayer = main.get_node("UI")
+	ui.visible = not clean
+	for n in get_tree().get_nodes_in_group("npc"):
+		(n as NPC)._bark.visible = not clean
+	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	var path := out_dir.path_join(name + ".png")
@@ -69,7 +74,7 @@ func _tour() -> void:
 	await _wait(1.4)
 	main.director.box._text.visible_characters = -1
 	await _wait(0.3)
-	await _shot("04_dialogue")
+	await _shot("04_dialogue", false)
 	main.director.runner.stop()
 	await _wait(0.5)
 	# 5. Casting in the meadow.
@@ -91,3 +96,18 @@ func _tour() -> void:
 	_pose(m + Vector3(0.0, 0, 3.0), PI * 0.5, deg_to_rad(160.0), -10.0)
 	await _wait(1.0)
 	await _shot("08_flowers_closeup")
+	# 7. Hero: flowers in the front meadow, looking back up the path at the cottage.
+	var hpos := Vector3(-4.5, 0, 11.0)
+	hpos.y = t.height_at(hpos.x, hpos.z) + 0.1
+	p.caster._cooldowns.clear()
+	p.caster.mana = p.caster.max_mana
+	_pose(hpos, PI, 0.0, -4.0)
+	await _wait(0.6)
+	p.caster.try_cast()
+	await _wait(6.5)
+	var cam_pos := Vector3(-2.2, 0, 17.5)
+	cam_pos.y = t.height_at(cam_pos.x, cam_pos.z) + 0.1
+	_pose(cam_pos, PI + 0.3, 0.12, -3.0)
+	p.camera_rig.outdoor_length = 3.4
+	await _wait(1.6)
+	await _shot("00_hero")

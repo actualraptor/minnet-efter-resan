@@ -23,7 +23,7 @@
         {"title": "Text dialogue with choices and stable line IDs", "status": "complete"},
         {"title": "The Garden Behind the Cottage quest and memory event", "status": "complete"},
         {"title": "Original audio: ambience, SFX, meadow theme", "status": "complete"},
-        {"title": "Human playtest and feel polish", "status": "in_progress"},
+        {"title": "Human playtest and feel polish", "status": "testing"},
         {"title": "Character art pass against the concept sheet", "status": "blocked", "note": "Waiting for the official character sheet."}
       ]
     },

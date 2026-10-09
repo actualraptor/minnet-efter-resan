@@ -30,6 +30,8 @@ var _jump_buffer := 0.0
 var _step_accum := 0.0
 var _staff_tip: Node3D
 var _was_on_floor := true
+var _meshes: Array[GeometryInstance3D] = []
+var _fade := 0.0
 
 
 func _ready() -> void:
@@ -39,9 +41,20 @@ func _ready() -> void:
 	_anim = CharacterVisual.find_animation_player(model)
 	_staff_tip = model.find_child("StaffTip", true, false) as Node3D
 	CharacterVisual.prepare(model)
+	for n in model.find_children("*", "GeometryInstance3D", true, false):
+		_meshes.append(n)
 	if caster.spells.is_empty():
 		caster.spells.append(load("res://data/spells/field_of_flowers.tres") as SpellDefinition)
 		caster.equip(0)
+
+
+## 0 = fully visible, 1 = invisible. Used by the camera in tight interiors.
+func set_model_fade(amount: float) -> void:
+	if absf(amount - _fade) < 0.01:
+		return
+	_fade = lerpf(_fade, amount, 0.25)
+	for m in _meshes:
+		m.transparency = _fade
 
 
 func lock_input() -> void:

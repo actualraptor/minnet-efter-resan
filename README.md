@@ -8,7 +8,7 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 
 - 🌐 **Website:** https://actualraptor.github.io/minnet-efter-resan/ (coming-soon page and public roadmap)
 - 🗺️ **Roadmap:** [site/roadmap.html](site/roadmap.html), data in [site/data/roadmap.json](site/data/roadmap.json)
-- 📋 **Development board:** [Issues](https://github.com/actualraptor/minnet-efter-resan/issues) · [Project board](https://github.com/users/actualraptor/projects)
+- 📋 **Development board:** [Issues](https://github.com/actualraptor/minnet-efter-resan/issues) · [Project board (kanban)](https://github.com/users/actualraptor/projects/1)
 - 📒 **Current state:** [PROJECT_STATE.md](PROJECT_STATE.md) · [CHANGELOG.md](CHANGELOG.md)
 
 ## What's playable now (milestone 001: "A Cottage, a Mage, and a Memory")

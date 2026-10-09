@@ -96,6 +96,12 @@ func _frame(speaker: Node3D, listener: Node3D) -> void:
 	dir.y = 0.0
 	dir = dir.normalized() if dir.length() > 0.01 else Vector3.FORWARD
 	var side := dir.cross(Vector3.UP).normalized()
+	# Over the player's free (left, +X) shoulder, never through the staff.
+	if listener is Player:
+		var lx := (listener as Player).model.global_basis.x
+		lx.y = 0.0
+		if lx.length() > 0.01 and side.dot(lx.normalized()) < 0.0:
+			side = -side
 	var want := l - dir * 1.35 + side * 1.05 + Vector3.UP * 0.18
 	# Keep the shot out of walls: pull toward the speaker if blocked.
 	var space := _cam.get_world_3d().direct_space_state

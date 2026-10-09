@@ -50,6 +50,10 @@ func set_open(open: bool) -> void:
 func _process(_delta: float) -> void:
 	if not is_open:
 		return
-	var p := get_tree().get_first_node_in_group("player") as Node3D
-	if p and p.global_position.distance_to(global_position) > auto_close_distance:
+	var p := get_tree().get_first_node_in_group("player") as Player
+	if p == null:
+		return
+	var d := p.global_position.distance_to(global_position)
+	# Shut it behind her once she is inside, or once she has wandered off.
+	if d > auto_close_distance or (p.is_indoors() and d > 1.8):
 		set_open(false)

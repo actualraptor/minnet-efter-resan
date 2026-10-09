@@ -23,12 +23,20 @@ _Last updated: 2026-10-09_
 
 ## Partially complete / known issues
 - **Characters** are an original scripted base. The official concept sheet was not provided. Faces are static decals, hands are mittens, and cloth is rigid.
-- **Indoor camera** sits close behind Linnaea in tight spots, and her hair can fill the frame.
+- **Indoor camera:** in tight spots Linnaea now fades out as the camera closes in. It still needs a feel check by hand (#10).
 - **Edda's shawl** reads as a large plum shape from the front.
 - **The interior** has improved but is still warmer and plainer than the reference art.
 - The meadow wave glow is tuned for this lighting and may need retuning if the time of day changes.
 - No options menu (sensitivity, volume, key rebinding) yet.
 - The tree ring is deterministic random placement, not fully hand-composed.
+
+## GitHub (verified 2026-10-09)
+- Repository (public): https://github.com/actualraptor/minnet-efter-resan
+- GitHub Pages (Actions deploy, verified HTTP 200): https://actualraptor.github.io/minnet-efter-resan/ and `/roadmap.html`
+- CI `Godot checks` on ubuntu-24.04 with Godot 4.7.2: import plus smoke test **PASS** on the first push.
+- Board: Projects v2 https://github.com/users/actualraptor/projects/1 (public). The Status field is Backlog / Ready / In Progress / Review-Testing / Done / Blocked, with 20 issues placed. **Limitation:** the API cannot create a *Board-layout view*, so the project opens in table layout. Switch it once via *View → Layout → Board* in the GitHub UI.
+- 8 milestones (001–008), labels for type/priority/area/status, and 20 issues (8 done and closed with verification notes; #9 playtest in Review/Testing; #10 and #12 Ready; #11 Blocked on the character sheet; #13 and #14–#20 epics in Backlog). Seeded by `tools/github/seed_board.js` and `setup_project.js`.
+- Status sync: `site/data/roadmap.json` is the single source for the site, and the board is updated alongside it (manual for now).
 
 ## Architecture
 See [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md). In short: `GameState` (the one narrative singleton) plus `Audio` autoloads; the scene-node systems are terrain, grass, flowers, world builder, player, caster, dialogue director and UI.
@@ -39,9 +47,10 @@ See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from sc
 ## Tests actually run (2026-10-09, Windows 11, RTX 5070 Ti, Godot 4.7.2)
 - `godot --headless --path game --import`: no script errors.
 - `godot --headless --path game -- --smoke-test`: **PASS, 34/34 checks.**
-- `godot --path game -- --tour`: 8 runtime screenshots captured and inspected.
+- `godot --path game -- --tour`: 9 runtime screenshots captured at 1080p and inspected (used on the site, labelled in-game).
+- GitHub Actions on Linux: import plus smoke test PASS.
 - Blender 4.5.14 builds of all assets: success. Pose previews inspected.
-- **Not done:** human playtest with keyboard, mouse or gamepad. Performance profiling (no FPS numbers recorded). Linux CI run (pending the first push).
+- **Not done:** human playtest with keyboard, mouse or gamepad. Performance profiling (no FPS numbers recorded). 
 
 ## Skills and tools
 - Installed project skills: 28 Godot skills from `jame581/GodotPrompter` (MIT, skill text only, no hooks) plus the local `creature-rigging` skill. See `.claude/skills/SKILLS_PROVENANCE.md` (local only, git-ignored).
