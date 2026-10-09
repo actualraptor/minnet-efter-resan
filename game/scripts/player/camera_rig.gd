@@ -12,6 +12,7 @@ extends Node3D
 @export var follow_speed := 12.0
 @export var min_pitch := deg_to_rad(-62.0)
 @export var max_pitch := deg_to_rad(28.0)
+@export var shoulder_offset := 0.35
 
 var yaw := 0.0
 var pitch := deg_to_rad(-14.0)
@@ -61,7 +62,8 @@ func _process(delta: float) -> void:
 	_apply()
 	# Fade the mage out when walls push the camera right up against her.
 	var hit := _arm.get_hit_length()
-	target.set_model_fade(clampf((1.35 - hit) / 0.9, 0.0, 0.75) if camera.current else 0.0)
+	var obstructed := hit < _arm.spring_length - 0.15
+	target.set_model_fade(clampf((1.35 - hit) / 0.9, 0.0, 0.75) if camera.current and obstructed else 0.0)
 
 
 func _apply() -> void:
@@ -69,7 +71,7 @@ func _apply() -> void:
 	_pitch_node.rotation = Vector3(pitch, 0.0, 0.0)
 	# Offset slightly over the shoulder for a more cinematic frame.
 	var indoors := target != null and target.is_indoors()
-	_arm.position = _arm.position.lerp(Vector3(0.12 if indoors else 0.35, 0.0, 0.0), 0.1)
+	_arm.position = _arm.position.lerp(Vector3(minf(0.12, shoulder_offset) if indoors else shoulder_offset, 0.0, 0.0), 0.1)
 
 
 func snap_behind(model_yaw: float) -> void:

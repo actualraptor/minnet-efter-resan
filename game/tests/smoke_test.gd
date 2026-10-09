@@ -87,6 +87,7 @@ func _run() -> void:
 	check("player standing on terrain", player.is_on_floor(), "y=%.2f ground=%.2f" % [player.global_position.y, terrain.height_at(player.global_position.x, player.global_position.z)])
 	check("player model has animations", CharacterVisual.find_animation_player(player.model) != null and CharacterVisual.find_animation_player(player.model).has_animation(&"Cast"))
 	check("staff tip attachment found", player.model.find_child("StaffTip", true, false) != null)
+	check("face expressions loaded", player.face != null and player.face._materials.size() > 0 and player.face._tex.size() == 5, "%d materials" % player.face._materials.size())
 
 	# Intro monologue
 	var t0 := await _talk_monologue()

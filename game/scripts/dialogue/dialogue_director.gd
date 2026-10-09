@@ -77,6 +77,13 @@ func _on_line(line: Dictionary, _info: Dictionary) -> void:
 			(speaker as NPC).play(StringName(line["emote"]))
 		elif speaker is Player:
 			(speaker as Player).emote(line["emote"])
+	# Painted-face expressions and lip flap for whoever speaks (if they have a face rig).
+	if speaker and "face" in speaker and speaker.face:
+		var f: FaceController = speaker.face
+		f.set_expression(line.get("face", "neutral"))
+		f.talk(0.25 + String(line.get("text", "")).length() / 48.0)
+	if _player and speaker != _player and _player.face:
+		_player.face.stop_talking()
 	if _npc and _player and speaker_id != "narrator":
 		var speaking: Node3D = _npc if speaker == _npc else _player
 		var listening: Node3D = _player if speaking == _npc else _npc
@@ -133,6 +140,9 @@ func _restore() -> void:
 	if _prev_cam:
 		_prev_cam.current = true
 	if _player:
+		if _player.face:
+			_player.face.stop_talking()
+			_player.face.set_expression("neutral")
 		_player.unlock_input()
 		_player.emote("Idle")
 	_npc = null

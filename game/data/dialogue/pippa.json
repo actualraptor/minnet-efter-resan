@@ -13,7 +13,7 @@
 				{"id": "pippa.first.01", "speaker": "char_pippa", "text": "Stop! Don't step on the — oh. You didn't. Good.", "emote": "Talk"},
 				{"id": "pippa.first.02", "speaker": "char_pippa", "text": "Those are carrots. Probably. I planted them yesterday and I've been checking."},
 				{"id": "pippa.first.03", "speaker": "char_pippa", "text": "...Are those real ears? Can I — no. Sorry. Grandma says you don't ask to touch people's ears."},
-				{"id": "pippa.first.04", "speaker": "char_linnaea", "text": "They're real. They can also hear you whispering about them from the road.", "emote": "Talk"},
+				{"id": "pippa.first.04", "face": "happy", "speaker": "char_linnaea", "text": "They're real. They can also hear you whispering about them from the road.", "emote": "Talk"},
 				{"id": "pippa.first.05", "speaker": "char_pippa", "text": "How old are you?"}
 			],
 			"choices": [
@@ -72,7 +72,7 @@
 		"bloomed": {
 			"lines": [
 				{"id": "pippa.bloomed.01", "speaker": "char_pippa", "text": "You DID it! There's a blue one! There's a — what's that one?", "emote": "Talk"},
-				{"id": "pippa.bloomed.02", "speaker": "char_linnaea", "text": "Sky bell. Or harebell, around here. Or 'the blue one.'"},
+				{"id": "pippa.bloomed.02", "face": "happy", "speaker": "char_linnaea", "text": "Sky bell. Or harebell, around here. Or 'the blue one.'"},
 				{"id": "pippa.bloomed.03", "speaker": "char_pippa", "text": "I'm writing 'the blue one.'"},
 				{"id": "pippa.bloomed.04", "speaker": "char_pippa", "text": "Will they stay? Forever?"}
 			],

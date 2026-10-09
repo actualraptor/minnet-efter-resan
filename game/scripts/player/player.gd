@@ -31,6 +31,7 @@ var _step_accum := 0.0
 var _staff_tip: Node3D
 var _was_on_floor := true
 var _meshes: Array[GeometryInstance3D] = []
+var face: FaceController
 var _fade := 0.0
 
 
@@ -43,6 +44,10 @@ func _ready() -> void:
 	CharacterVisual.prepare(model)
 	for n in model.find_children("*", "GeometryInstance3D", true, false):
 		_meshes.append(n)
+	face = FaceController.new()
+	face.name = "Face"
+	add_child(face)
+	face.setup(model, "linnaea")
 	if caster.spells.is_empty():
 		caster.spells.append(load("res://data/spells/field_of_flowers.tres") as SpellDefinition)
 		caster.equip(0)

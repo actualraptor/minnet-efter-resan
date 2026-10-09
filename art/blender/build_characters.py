@@ -19,7 +19,7 @@ from lib_character import smooth_pulse as sp_  # noqa: E402
 SPECS = {
     "linnaea": {
         "name": "linnaea", "height": 1.68, "ears": "elf", "hair_style": "long2", "bangs": 7,
-        "outfit": "mage2", "staff": None, "eye_size": 1.05, "smile": 0.25, "boot_top": 0.47, "anim_set": "mage",
+        "outfit": "mage2", "staff": None, "eye_size": 1.22, "face_texture": True, "head_scale": 1.1, "ear_color": "#f3c3bb", "smile": 0.25, "boot_top": 0.47, "anim_set": "mage",
         "colors": {
             "skin": "#f7e1d6", "hair": "#ebe8f2", "brow": "#c9c4d8", "eyes": "#2fae94", "lash": "#4a3b52",
             "tunic": "#9cbc8a", "cream": "#efe5cc", "mantle": "#5f8b83", "plum": "#7b4f7a",
@@ -342,6 +342,11 @@ def build(name, root):
         anim.action(aname, frames, fn, loop)
     anim.reset()
     out_dir = os.path.join(root, "game", "assets", "models", "characters")
+    if spec.get("face_texture"):
+        import lib_face
+        hr = rig.head_radii()
+        for expr in lib_face.EXPRESSIONS:
+            lib_face.save_png(lib_face.paint_face(spec, hr.x, hr.z, expr), os.path.join(out_dir, "faces", f"{name}_{expr}.png"))
     objs = [arm] + [o for o, _, _ in rig.objects] + ([tip_empty] if tip_empty else [])
     C.export_glb(os.path.join(out_dir, f"{name}.glb"), objs)
     # Previews: rest turnaround + key frames of each animation (verifies the rig).
@@ -351,6 +356,8 @@ def build(name, root):
     anim.reset()
     bpy.context.view_layer.update()
     C.render_preview(prev, objs, height=spec["height"] * 1.12, look_z=spec["height"] * 0.55)
+    C.render_preview(prev.replace(".png", "_head.png"), objs, views=((0, "front"), (35, "tq"), (180, "back")),
+                     height=0.62 * spec["height"] / 1.68, look_z=spec["height"] * 0.86, size=(1500, 620), elevation=4)
     ad = arm.animation_data
     for tr in ad.nla_tracks:
         tr.mute = True

@@ -45,7 +45,7 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 ```bash
 godot --headless --path game --import          # import, fail on script errors
 godot --headless --path game -- --smoke-test   # scripted playthrough of the whole quest
-godot --path game -- --tour --out=/abs/path    # capture real runtime screenshots (needs a GPU)
+godot --path game --position 20000,20000 -- --tour --out=/abs/path    # runtime screenshots (GPU), window placed off-screen
 ```
 The smoke test checks systems (dialogue, quests, spell, flowers, memory, save/load). It is **not** a substitute for a human playtest.
 

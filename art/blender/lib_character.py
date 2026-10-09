@@ -262,15 +262,29 @@ def build_head(rig):
             for k in range(2):
                 arc = [_on_head(rig, x + side * (0.026 + 0.004 * k) * es, eye_z + (t * 0.009 - 0.004 * k) * es, 0.002)[0] for t in (-1, 0, 1)]
                 parts.append(C.tube("Wrinkle", arc, [0.0009] * 3, wm, segs=4))
-    face = C.join(parts, "Face")
-    rig.add(face, rigid="head")
+    if sp.get("face_texture"):
+        # Painted face replaces the geometric decals (see lib_face.py).
+        import lib_face
+        for o in parts:
+            bpy.data.objects.remove(o)
+        rgba = lib_face.paint_face(sp, r.x, r.z)
+        img = lib_face.make_image("Face_" + sp["name"], rgba)
+        fm = lib_face.textured_material("M_Skin_Face_" + sp["name"], img)
+        head.data.materials.clear()
+        head.data.materials.append(fm)
+        lib_face.apply_face_uv(head, c, r.x, r.z)
+    else:
+        face = C.join(parts, "Face")
+        rig.add(face, rigid="head")
     # Ears
     ear_type = sp.get("ears", "human")
+    if sp.get("ear_color"):
+        skin = C.mat("M_Skin_Ear_" + sp["name"], sp["ear_color"], 0.6)
     ears = []
     for side in (1, -1):
         base = Vector((r.x * 0.93 * side, c.y + 0.012 * hs, c.z - 0.005 * hs))
         if ear_type == "elf":
-            tip = base + Vector((0.115 * hs * side, 0.035 * hs, 0.085 * hs))
+            tip = base + Vector((0.13 * hs * side, 0.03 * hs, 0.06 * hs))
             mid = base.lerp(tip, 0.45) + Vector((0.0, 0.004, -0.008))
             ears.append(C.tube("Ear", [base, mid, tip], [0.024 * hs, 0.017 * hs, 0.0005], skin, segs=8,
                                flatten=0.32, flat_axis=(0.25 * side, -1.0, 0.0)))

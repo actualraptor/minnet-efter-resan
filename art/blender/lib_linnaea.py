@@ -75,23 +75,24 @@ def hair(rig, M):
     hs = sp.get("head_scale", 1.0) * s
     rnd = random.Random(11)
     head_parts = [L._hair_cap(rig, M["hair"])]
-    # Bangs: soft, slightly parted, covering the brows.
-    n_b = 9
+    # Bangs: many soft overlapping sheets, swept slightly to her right, tips at the lashes.
+    n_b = 15
     for i in range(n_b):
         t = (i / (n_b - 1)) * 2 - 1
-        x = t * r.x * 0.82
-        root, _ = L._on_head(rig, x * 0.55, c.z + r.z * 0.8, 0.012)
-        length = (0.07 + 0.025 * (1 - abs(t)) + 0.012 * rnd.random())
-        tip, _ = L._on_head(rig, x * 1.08 + 0.012 * t, c.z + r.z * 0.8 - length * hs, 0.018)
-        head_parts.append(L._strand(rig, "Bang", root, tip, (0, -0.012, 0), 0.021 * hs, M["hair"], flatten=0.35))
-    # Face-framing locks behind the ears, falling to the chest.
+        x = t * r.x * 0.86
+        root, _ = L._on_head(rig, x * 0.45 - 0.01 * hs, c.z + r.z * 0.86, 0.012)
+        length = (0.072 + 0.03 * (1 - abs(t)) ** 1.5 + 0.012 * rnd.random())
+        sweep = -0.012 * hs * (1 - abs(t))
+        tip, _ = L._on_head(rig, x * 1.08 + sweep, c.z + r.z * 0.86 - length * hs, 0.02)
+        head_parts.append(L._strand(rig, "Bang", root, tip, (0.004 * t, -0.016, 0), 0.03 * hs, M["hair"] if i % 3 else M["hair_shadow"], flatten=0.22))
+    # Long side locks: wide ribbons from in front of the ears, falling over the chest to the waist.
     for side in (1, -1):
-        for k in range(2):
-            root = Vector((r.x * (0.9 - 0.08 * k) * side, c.y + r.y * (0.05 + 0.25 * k), c.z + r.z * 0.25))
-            tip = Vector(((0.12 + 0.04 * k) * s * side, (-0.04 + 0.05 * k) * s, (1.18 - 0.08 * k) * s))
-            head_parts.append(_wavy_strand(root, tip, 0.03 * hs, M["hair"], 0.02 * s, 3.0, k + side,
-                                           (side, 0.4, 0), push=(0.03 * side, 0.0, 0)))
-    rig.add(C.join(head_parts, "HairHead"), allowed=["head", "neck", "chest"])
+        for k in range(3):
+            root = Vector((r.x * (0.97 - 0.06 * k) * side, c.y - r.y * (0.15 - 0.15 * k), c.z + r.z * (0.35 - 0.1 * k)))
+            tip = Vector(((0.13 + 0.035 * k) * s * side, (-0.075 + 0.04 * k) * s, (1.0 - 0.06 * k) * s))
+            head_parts.append(_wavy_strand(root, tip, (0.042 - 0.006 * k) * hs, M["hair"] if k != 1 else M["hair_shadow"], 0.015 * s, 2.0, k * 1.7 + side,
+                                           (0.25 * side, 1.0, 0), flatten=0.28, push=(0.035 * side, -0.02, 0), n=14))
+    rig.add(C.join(head_parts, "HairHead"), allowed=["head", "neck", "chest", "spine"])
 
     # Back fall: three layers of wavy ribbons fanning out to mid-thigh.
     back = []
@@ -100,11 +101,11 @@ def hair(rig, M):
         for i in range(count):
             t = (i / (count - 1)) * 2 - 1
             root = Vector((t * r.x * 0.92, c.y + r.y * depth, c.z + r.z * (0.4 - 0.12 * layer) - abs(t) * 0.05 * hs))
-            tip = Vector((t * spread * s + (rnd.random() - 0.5) * 0.04, (0.17 - 0.03 * layer) * s + abs(t) * 0.03,
+            tip = Vector((t * spread * s + (rnd.random() - 0.5) * 0.04, (0.2 - 0.03 * layer) * s + abs(t) * 0.03,
                           (z_tip + abs(t) * 0.1 + rnd.random() * 0.06) * s))
             back.append(_wavy_strand(root, tip, (thick - abs(t) * 0.014) * hs, M["hair"] if (i + layer) % 4 else M["hair_shadow"],
                                      0.025 * s, 2.5 + rnd.random(), rnd.random() * 6.0, (0, 1, 0),
-                                     push=(0.02 * t, 0.07, 0), n=14, segs=8))
+                                     push=(0.02 * t, 0.11, 0), n=14, segs=8))
     rig.add(C.join(back, "HairBack"), allowed=["head", "hair.1", "hair.2", "hair.3", "hair.4"])
 
     # Crown braid: from the left temple over the crown to the back of the head.
@@ -119,32 +120,30 @@ def hair(rig, M):
             p = p.lerp(c + Vector((r.x * 0.15, r.y * 1.02, r.z * 0.2)), (t - 0.6) / 0.4 * 0.6)
         wob = Vector((0, 0, 0.007 * hs * (1 if k % 2 else -1)))
         braid.append(C.ellipsoid("Braid", p + wob, (0.02 * hs, 0.02 * hs, 0.015 * hs), M["hair"], segs=8, rings=6))
-    # Flower cluster + leaves + ribbon bow at the back of the head.
-    fc = c + Vector((r.x * 0.2, r.y * 1.04, r.z * 0.18))
-    for j, (dx, dz, sc) in enumerate(((0.0, 0.0, 1.0), (0.04, -0.035, 0.75), (-0.035, -0.03, 0.7))):
-        fp = fc + Vector((dx * hs, 0.012, dz * hs))
-        for k in range(5):
-            a = k * math.tau / 5 + j
-            braid.append(C.ellipsoid("HairPetal", fp + Vector((math.cos(a) * 0.022 * sc, 0.004, math.sin(a) * 0.022 * sc)) * hs,
-                                     (0.016 * sc * hs, 0.006 * hs, 0.016 * sc * hs), M["flower"], segs=8, rings=4))
-        braid.append(C.ellipsoid("HairFlowerC", fp + Vector((0, 0.01, 0)), (0.007 * hs, 0.006 * hs, 0.007 * hs), M["flower_c"], segs=8, rings=4))
-    for k, a in enumerate((0.4, 1.3, 2.4, 3.3)):
-        braid.append(C.ellipsoid("HairLeaf", fc + Vector((math.cos(a) * 0.05, 0.004, math.sin(a) * 0.045)) * hs,
-                                 (0.012 * hs, 0.004 * hs, 0.03 * hs), M["leaf"], segs=6, rings=4))
-    bow = fc + Vector((0, 0.02, -0.06 * hs))
+    # Flower circlet: white blossoms and leaves wrapping the back of the head ear to ear.
+    for k in range(15):
+        t = k / 14
+        a = math.radians(15 + 150 * t)
+        p = c + Vector((math.cos(a) * r.x * 1.07, math.sin(a) * r.y * 1.1, r.z * (0.28 + 0.18 * math.sin(t * math.pi))))
+        sc = 0.8 + 0.35 * ((k * 7) % 3) / 2
+        out = Vector((math.cos(a), math.sin(a), 0.25)).normalized()
+        for j in range(5):
+            pa = j * math.tau / 5 + k
+            tang = Vector((-math.sin(a), math.cos(a), 0))
+            off = (tang * math.cos(pa) + Vector((0, 0, 1)) * math.sin(pa)) * 0.016 * sc * hs
+            braid.append(C.ellipsoid("HairPetal", p + off + out * 0.004, (0.011 * sc * hs, 0.011 * sc * hs, 0.011 * sc * hs), M["flower"], segs=7, rings=4))
+        braid.append(C.ellipsoid("HairFlowerC", p + out * 0.012, (0.006 * hs, 0.006 * hs, 0.006 * hs), M["flower_c"], segs=6, rings=4))
+        if k % 2 == 0:
+            lp = p + Vector((0, 0, -0.022 * hs)) + out * 0.004
+            braid.append(C.ellipsoid("HairLeaf", lp, (0.009 * hs, 0.009 * hs, 0.022 * hs), M["leaf"], segs=6, rings=4))
+    # Burgundy tassels and a gold leaf charm hanging at the back.
     for side in (1, -1):
-        braid.append(C.tube("BowLoop", [bow, bow + Vector((0.04 * side, 0.01, 0.025)) * hs, bow + Vector((0.065 * side, 0.012, -0.005)) * hs, bow],
-                            [0.01 * hs, 0.016 * hs, 0.012 * hs, 0.008 * hs], M["ribbon"], segs=5, flatten=0.3, flat_axis=(0, 1, 0), caps=False))
-    braid.append(C.ellipsoid("BowKnot", bow, (0.012 * hs, 0.01 * hs, 0.012 * hs), M["ribbon"], segs=8, rings=5))
+        tp = c + Vector((0.035 * side, r.y * 1.12, r.z * 0.22))
+        braid.append(C.tube("TasselCord", [tp, tp + Vector((0.002 * side, 0.004, -0.04))], [0.003, 0.003], M["gold"], segs=4))
+        braid.append(C.ellipsoid("TasselKnot", tp + Vector((0, 0.004, -0.045)), (0.008, 0.008, 0.008), M["ribbon"], segs=6, rings=4))
+        braid.append(C.cylinder("Tassel", tp + Vector((0, 0.004, -0.05)), tp + Vector((0, 0.006, -0.1)), 0.008, 0.014, material=M["ribbon"], segs=8))
+    bow = c + Vector((0, r.y * 1.05, r.z * 0.1))
     rig.add(C.join(braid, "HairBraid"), rigid="head")
-    tails = []
-    for side in (1, -1):
-        pts = [bow + Vector((0.008 * side, 0.008, -0.01)),
-               bow + Vector((0.03 * side, 0.03, -0.14)) * 1.0,
-               bow + Vector((0.025 * side, 0.05, -0.3)),
-               bow + Vector((0.04 * side, 0.06, -0.42))]
-        tails.append(C.tube("RibbonTail", pts, [0.012, 0.014, 0.014, 0.012], M["ribbon"], segs=5, flatten=0.22, flat_axis=(0, 1, 0)))
-    rig.add(C.join(tails, "RibbonTails"), allowed=["head", "hair.1", "hair.2"])
 
 
 # ---------------------------------------------------------------------------
@@ -222,25 +221,52 @@ def outfit(rig, M):
         belt_parts.append(C.box("Buckle", (0, -0.1 * s, z * s), (0.018 * s, 0.008 * s, 0.014 * s), M["gold"], bevel=0.003))
     belt_parts.append(L.trim_ring(rig, "BeltLow", 0.13, 1.015, 0.82, M["leather_dark"], thick=0.012))
     rig.add(C.join(belt_parts, "Corset"), allowed=["hips", "spine", "chest"])
-    # Crystal dangles on chains from the belt.
-    dang = []
-    for k, a_deg in enumerate((205, 235, 300, 330, 20, 160)):
-        a = math.radians(a_deg)
-        top = Vector((math.cos(a) * 0.14 * s, math.sin(a) * 0.12 * s, 1.0 * s))
-        length = (0.2 + 0.08 * (k % 3)) * s
-        low = top + Vector((math.cos(a) * 0.07 * s, math.sin(a) * 0.06 * s, -length))
-        dang.append(C.tube("Chain", [top, top.lerp(low, 0.5) + Vector((math.cos(a) * 0.03, math.sin(a) * 0.03, 0)), low], [0.003] * 3, M["gold"], segs=4))
-        cr = C.ellipsoid("Dangle", low + Vector((0, 0, -0.035 * s)), (0.013 * s, 0.013 * s, 0.04 * s), M["crystal"], segs=6, rings=4)
-        dang.append(cr)
-    rig.add(C.join(dang, "BeltDangles"), allowed=["hips", "thigh.L", "thigh.R"])
-    # Capelet with frilled collar.
-    cape = C.lathe("Capelet", L._scaled_profile(rig, [(0.06, 1.47), (0.09, 1.455), (0.16, 1.43), (0.21, 1.38), (0.226, 1.33)]), 36, M["sage"], scale_xy=(1.0, 0.86))
-    cape_trim = L.trim_ring(rig, "CapeTrim", 0.227, 1.33, 0.86, M["gold"], thick=0.008)
-    collar = C.lathe("Collar", L._scaled_profile(rig, [(0.052, 1.47), (0.06, 1.5), (0.07, 1.52)]), 32, M["cream"], scale_xy=(1.0, 0.9))
-    L.ruffle(collar, 1.53 * s, 0.006 * s, 0.005 * s, 14)
-    clasp = C.ellipsoid("Clasp", (0, -0.078 * s, 1.44 * s), (0.016 * s, 0.008 * s, 0.016 * s), M["gold"], segs=10, rings=6)
-    gem = C.ellipsoid("ClaspGem", (0, -0.087 * s, 1.44 * s), (0.009 * s, 0.006 * s, 0.011 * s), M["crystal"], segs=8, rings=6)
-    rig.add(C.join([cape, cape_trim, collar, clasp, gem], "CapeletSet"), allowed=["chest", "neck", "shoulder.L", "shoulder.R", "spine"])
+    # Lower hip belt with a big gold buckle, a front pouch and gold coin / leaf charms.
+    hip = [L.trim_ring(rig, "HipBelt", 0.15, 0.995, 0.84, M["leather_dark"], thick=0.014)]
+    hip.append(C.box("HipBuckle", (0.02 * s, -0.13 * s, 0.995 * s), (0.022 * s, 0.008 * s, 0.018 * s), M["gold"], bevel=0.004))
+    pc = Vector((0.135 * s, -0.1 * s, 0.94 * s))
+    hip.append(C.box("Pouch", pc, (0.045 * s, 0.03 * s, 0.045 * s), M["leather"], bevel=0.01 * s))
+    hip.append(C.box("PouchFlap", pc + Vector((0, -0.031 * s, 0.018 * s)), (0.047 * s, 0.005 * s, 0.03 * s), M["leather_dark"], bevel=0.004))
+    hip.append(C.box("PouchClasp", pc + Vector((0, -0.037 * s, 0.0)), (0.009 * s, 0.003 * s, 0.009 * s), M["gold"]))
+    leafm = M["leaf"]
+    for k, (dx, ln, kind) in enumerate(((-0.07, 0.07, "coin"), (-0.045, 0.1, "coin"), (-0.02, 0.06, "leaf"), (0.0, 0.09, "coin"), (-0.095, 0.05, "leaf"))):
+        top = Vector((dx * s, -0.13 * s, 0.985 * s))
+        low = top + Vector((0, -0.006, -ln * s))
+        hip.append(C.tube("CharmChain", [top, low], [0.0022, 0.0022], M["gold"], segs=4))
+        if kind == "coin":
+            coin = C.cylinder("Coin", low + Vector((0, 0.002, -0.012 * s)), low + Vector((0, -0.002, -0.012 * s)), 0.012 * s, material=M["gold"], segs=12)
+            hip.append(coin)
+        else:
+            hip.append(C.ellipsoid("LeafCharm", low + Vector((0, 0, -0.022 * s)), (0.011 * s, 0.003 * s, 0.022 * s), leafm, segs=6, rings=4))
+    rig.add(C.join(hip, "HipBelt"), allowed=["hips", "thigh.L", "thigh.R", "spine"])
+    # Off-shoulder capelet band: gold trim top and bottom, gold brooch at the front.
+    prof = [(0.056, 1.475), (0.11, 1.455), (0.175, 1.415), (0.228, 1.355), (0.256, 1.29), (0.262, 1.25)]
+    cape = C.lathe("Capelet", L._scaled_profile(rig, prof), 48, M["sage"], scale_xy=(1.0, 0.86))
+    # Pointed drop at the front and back, like a short poncho.
+    for v in cape.data.vertices:
+        if v.co.z < 1.33 * s:
+            a = math.atan2(v.co.y, v.co.x)
+            k = (1.33 * s - v.co.z) / (0.08 * s)
+            for centre in (-math.pi / 2, math.pi / 2):
+                da = abs((a - centre + math.pi) % math.tau - math.pi)
+                v.co.z -= max(0.0, 1 - da / 0.9) * 0.075 * s * min(1.0, k)
+    hem = []
+    for i in range(97):
+        a = i / 96 * math.tau
+        z = 1.25
+        for centre in (-math.pi / 2, math.pi / 2):
+            da = abs((a - centre + math.pi) % math.tau - math.pi)
+            z -= max(0.0, 1 - da / 0.9) * 0.075
+        hem.append(Vector((math.cos(a) * 0.264 * s, math.sin(a) * 0.264 * s * 0.86, z * s)))
+    cape_trims = [C.tube("CapeHem", hem, [0.007 * s] * len(hem), M["gold"], segs=5, caps=False),
+                  L.trim_ring(rig, "CapeTrimTop", 0.112, 1.455, 0.86, M["gold"], thick=0.005)]
+    # Gold filigree on the front point.
+    for k, (dx, dz, sx, sz) in enumerate(((0, 1.24, 0.008, 0.03), (-0.025, 1.27, 0.022, 0.006), (0.025, 1.27, 0.022, 0.006), (0, 1.3, 0.006, 0.012))):
+        cape_trims.append(C.ellipsoid("Filigree", (dx * s, -0.235 * s, dz * s), (sx * s, 0.004 * s, sz * s), M["gold"], segs=6, rings=4))
+    collar = C.lathe("Collar", L._scaled_profile(rig, [(0.046, 1.455), (0.05, 1.49), (0.054, 1.515)]), 32, M["cream"], scale_xy=(1.0, 0.92))
+    brooch = [C.ellipsoid("Brooch", (0.05 * s, -0.17 * s, 1.37 * s), (0.02 * s, 0.008 * s, 0.017 * s), M["gold"], segs=10, rings=6),
+              C.ellipsoid("BroochGem", (0.05 * s, -0.178 * s, 1.37 * s), (0.013 * s, 0.006 * s, 0.011 * s), M["crystal"], segs=8, rings=5)]
+    rig.add(C.join([cape, collar] + cape_trims + brooch, "CapeletSet"), allowed=["chest", "neck", "shoulder.L", "shoulder.R", "upper_arm.L", "upper_arm.R", "spine"])
     # Big puffed sleeves to the wrist with ruffled cuffs and dark bands.
     sleeves = []
     for side in (1, -1):
@@ -269,7 +295,7 @@ def outfit(rig, M):
     strap = C.tube("Strap", [p * s for p in strap_pts], [0.008 * s] * 5, M["leather"], segs=4, flatten=0.35, flat_axis=(0, -1, 0))
     back_pts = [Vector((0.1, 0.08, 1.41)), Vector((0.03, 0.13, 1.26)), Vector((-0.06, 0.15, 1.1)), Vector((-0.1, 0.15, 1.02))]
     strap2 = C.tube("Strap2", [p * s for p in back_pts], [0.008 * s] * 4, M["leather"], segs=4, flatten=0.35, flat_axis=(0, 1, 0))
-    rig.add(C.join([sat, flap, strap, strap2] + emb, "Satchel"), allowed=["hips", "spine", "chest"])
+    rig.add(C.join([strap, strap2], "Satchel"), allowed=["hips", "spine", "chest"])
     # Boots: folded cuffs and gold buckles just below the knee.
     bc = []
     for side in (1, -1):
@@ -281,6 +307,11 @@ def outfit(rig, M):
             q = k.lerp(a, z)
             bc.append(C.tube("BootStrap", [q, q + Vector((0, 0, 0.018))], [0.05 * s, 0.05 * s], M["leather_dark"], segs=14))
             bc.append(C.box("BootBuckle", q + Vector((0.045 * side * s, -0.015, 0.009)), (0.006, 0.012, 0.012), M["gold"]))
+    heels = []
+    for side in (1, -1):
+        an = rig.p("ankle", side)
+        heels.append(C.box("Heel", an + Vector((0, 0.022 * s, -0.068 * s)), (0.021 * s, 0.022 * s, 0.024 * s), M["leather_dark"], bevel=0.005))
+    rig.add(C.join(heels, "Heels"), allowed=["foot.L", "foot.R", "shin.L", "shin.R"])
     rig.add(C.join(bc, "BootCuffs"), allowed=["shin.L", "shin.R"])
 
 

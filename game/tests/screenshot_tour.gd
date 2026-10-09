@@ -122,3 +122,19 @@ func _tour() -> void:
 	_pose(cpos, 0.4, 0.4 + 0.45, -4.0)
 	await _wait(1.5)
 	await _shot("10_linnaea_front")
+	# 9. Face close-ups with expressions.
+	p.camera_rig.outdoor_length = 1.05
+	p.camera_rig.height = 1.52
+	p.camera_rig.shoulder_offset = 0.0
+	_pose(cpos, 0.4, 0.4, 2.0)
+	p.camera_rig._arm.spring_length = 1.05
+	p.face.set_expression("neutral", 10.0)
+	p.face._next_blink = 1e9
+	await _wait(1.5)
+	await _shot("11_face_neutral")
+	p.face.set_expression("happy", 10.0)
+	await _wait(0.4)
+	await _shot("12_face_happy")
+	p.face.set_expression("surprised", 10.0)
+	await _wait(0.4)
+	await _shot("13_face_surprised")

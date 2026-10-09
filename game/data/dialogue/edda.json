@@ -33,7 +33,7 @@
 			"lines": [
 				{"id": "edda.elves.01", "speaker": "char_edda", "text": "One. At the market in Brenn's Crossing, the summer the Hollow King fell."},
 				{"id": "edda.elves.02", "speaker": "char_edda", "text": "She bought nothing and asked my husband the proper names of weeds for an hour."},
-				{"id": "edda.elves.03", "speaker": "char_linnaea", "text": "...That sounds uncomfortably like me.", "pause": 0.4},
+				{"id": "edda.elves.03", "face": "surprised", "speaker": "char_linnaea", "text": "...That sounds uncomfortably like me.", "pause": 0.4},
 				{"id": "edda.elves.04", "speaker": "char_edda", "text": "Does it now.", "do": ["flag:edda_market_elf"]}
 			],
 			"goto": "garden"
@@ -55,7 +55,7 @@
 		"offer_spell": {
 			"lines": [
 				{"id": "edda.offer_spell.01", "speaker": "char_edda", "text": "A spell. For flowers."},
-				{"id": "edda.offer_spell.02", "speaker": "char_linnaea", "text": "It's a very good spell. It's useless for almost everything else."},
+				{"id": "edda.offer_spell.02", "face": "happy", "speaker": "char_linnaea", "text": "It's a very good spell. It's useless for almost everything else."},
 				{"id": "edda.offer_spell.03", "speaker": "char_edda", "text": "Ha! Now that I'd like to see.", "emote": "Talk", "do": ["affinity:char_edda:1"]}
 			],
 			"goto": "request"
@@ -94,7 +94,7 @@
 			"lines": [
 				{"id": "edda.bench.01", "speaker": "char_edda", "text": "...", "pause": 1.2},
 				{"id": "edda.bench.02", "speaker": "char_edda", "text": "He'd have hated it."},
-				{"id": "edda.bench.03", "speaker": "char_linnaea", "text": "...Oh.", "pause": 0.5},
+				{"id": "edda.bench.03", "face": "surprised", "speaker": "char_linnaea", "text": "...Oh.", "pause": 0.5},
 				{"id": "edda.bench.04", "speaker": "char_edda", "text": "Hated that he didn't do it himself. Then he'd have been out here all night with his book, naming every one of them wrong."},
 				{"id": "edda.bench.05", "speaker": "char_edda", "text": "The blue ones are by the stones. You put the blue ones by the stones."},
 				{"id": "edda.bench.06", "speaker": "char_linnaea", "text": "The spell decides where they go. Mostly."},
@@ -136,7 +136,7 @@
 				{"id": "edda.seed_story.02", "speaker": "char_edda", "text": "He asked which flower lasts the longest. Jonas told him none of them do, that's the whole point of flowers."},
 				{"id": "edda.seed_story.03", "speaker": "char_edda", "text": "The boy laughed and bought a packet of everything. Said he had a friend who'd outlive the lot of us, and he wanted to know what she'd like."},
 				{"id": "edda.seed_story.04", "speaker": "char_linnaea", "text": "...", "pause": 1.0},
-				{"id": "edda.seed_story.05", "speaker": "char_linnaea", "text": "Teodor. He bought something from everyone. I don't think he ever planted any of it."},
+				{"id": "edda.seed_story.05", "face": "neutral", "speaker": "char_linnaea", "text": "Teodor. He bought something from everyone. I don't think he ever planted any of it."},
 				{"id": "edda.seed_story.06", "speaker": "char_edda", "text": "Hm. Maybe he wasn't buying them to plant."},
 				{"id": "edda.seed_story.07", "speaker": "char_linnaea", "text": "Then what for?"},
 				{"id": "edda.seed_story.08", "speaker": "char_edda", "text": "Ask him."},
@@ -152,7 +152,7 @@
 				{"id": "edda.farewell.01", "speaker": "char_edda", "text": "Come back when they've gone to seed. Bring the girl a packet of something."},
 				{"id": "edda.farewell.02", "speaker": "char_linnaea", "text": "In a few years, then."},
 				{"id": "edda.farewell.03", "speaker": "char_edda", "text": "I'm seventy-nine, elf. Come back in a few weeks."},
-				{"id": "edda.farewell.04", "speaker": "char_linnaea", "text": "...Weeks. Right. I'll write it down.", "emote": "Talk", "do": ["quest:garden_of_jonas=complete", "memory:memory_cottage_garden_restored"]},
+				{"id": "edda.farewell.04", "face": "happy", "speaker": "char_linnaea", "text": "...Weeks. Right. I'll write it down.", "emote": "Talk", "do": ["quest:garden_of_jonas=complete", "memory:memory_cottage_garden_restored"]},
 				{"id": "edda.farewell.05", "speaker": "char_edda", "text": "And shut the gate on your way. The goat's still about."}
 			]
 		},
