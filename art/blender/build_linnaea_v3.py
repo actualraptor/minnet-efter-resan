@@ -206,7 +206,11 @@ def recolor(objs):
             if m.name == "Leggings":
                 bsdf = m.node_tree.nodes.get("Principled BSDF") if m.use_nodes else None
                 if bsdf:
-                    bsdf.inputs["Base Color"].default_value = (0.05, 0.035, 0.04, 1)
+                    for lk in list(bsdf.inputs["Base Color"].links) + list(bsdf.inputs["Emission Color"].links):
+                        m.node_tree.links.remove(lk)
+                    bsdf.inputs["Base Color"].default_value = (0.035, 0.025, 0.03, 1)
+                    bsdf.inputs["Emission Strength"].default_value = 0.0
+                    bsdf.inputs["Roughness"].default_value = 0.85
             if m.name == "eyelashes_and_stuff":
                 pass
 

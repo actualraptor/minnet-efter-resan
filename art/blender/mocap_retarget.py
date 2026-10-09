@@ -32,8 +32,8 @@ MAP = {
     "thigh.L": ("LeftUpLeg", "LeftLeg"), "shin.L": ("LeftLeg", "LeftFoot"), "foot.L": ("LeftFoot", "LeftToeBase"),
     "thigh.R": ("RightUpLeg", "RightLeg"), "shin.R": ("RightLeg", "RightFoot"), "foot.R": ("RightFoot", "RightToeBase"),
 }
-ORDER = ["hips", "spine", "chest", "neck", "head", "upper_arm.L", "forearm.L", "hand.L",
-         "upper_arm.R", "forearm.R", "hand.R", "thigh.L", "shin.L", "foot.L", "thigh.R", "shin.R", "foot.R"]
+ORDER = ["hips", "spine", "chest", "neck", "head", "upper_arm.L", "forearm.L",
+         "upper_arm.R", "forearm.R", "thigh.L", "shin.L", "foot.L", "thigh.R", "shin.R", "foot.R"]
 TWIST = {"hips": ("LeftUpLeg", "RightUpLeg"), "chest": ("LeftArm", "RightArm"), "spine": ("LeftUpLeg", "RightUpLeg")}
 
 
