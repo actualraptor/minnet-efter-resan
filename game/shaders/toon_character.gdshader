@@ -11,6 +11,7 @@ uniform float ramp_softness = 0.12;
 uniform float rim_strength = 0.35;
 uniform float emission_strength = 0.0;
 uniform float light_scale = 0.62;
+uniform float sheen = 0.0; // anime hair highlight band
 
 void fragment() {
 	vec4 c = albedo;
@@ -19,6 +20,12 @@ void fragment() {
 	}
 	ALBEDO = c.rgb * COLOR.rgb;
 	EMISSION = c.rgb * emission_strength;
+	if (sheen > 0.0) {
+		// Angel-ring: a soft bright band where the view-space normal tilts slightly upward.
+		float ny = NORMAL.y;
+		float band = smoothstep(0.25, 0.4, ny) * (1.0 - smoothstep(0.5, 0.68, ny));
+		EMISSION += vec3(1.0, 0.98, 1.0) * band * sheen;
+	}
 }
 
 void light() {

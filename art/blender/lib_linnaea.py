@@ -75,16 +75,18 @@ def hair(rig, M):
     hs = sp.get("head_scale", 1.0) * s
     rnd = random.Random(11)
     head_parts = [L._hair_cap(rig, M["hair"])]
-    # Bangs: many soft overlapping sheets, swept slightly to her right, tips at the lashes.
-    n_b = 15
-    for i in range(n_b):
-        t = (i / (n_b - 1)) * 2 - 1
+    # Bangs: separated, layered locks. A long lock falls between the eyes, side
+    # bangs lengthen toward the temples, and alternate tips lift off the face.
+    locks = [(-1.0, 0.105, 0.9), (-0.82, 0.088, 1.0), (-0.64, 0.074, 0.85), (-0.46, 0.082, 1.0), (-0.27, 0.07, 0.9),
+             (-0.1, 0.098, 1.05), (0.06, 0.112, 1.0), (0.22, 0.078, 0.9), (0.4, 0.07, 1.0), (0.58, 0.08, 0.85),
+             (0.76, 0.09, 1.0), (0.95, 0.108, 0.9)]
+    for i, (t, length, w) in enumerate(locks):
         x = t * r.x * 0.86
-        root, _ = L._on_head(rig, x * 0.45 - 0.01 * hs, c.z + r.z * 0.86, 0.012)
-        length = (0.072 + 0.03 * (1 - abs(t)) ** 1.5 + 0.012 * rnd.random())
-        sweep = -0.012 * hs * (1 - abs(t))
-        tip, _ = L._on_head(rig, x * 1.08 + sweep, c.z + r.z * 0.86 - length * hs, 0.02)
-        head_parts.append(L._strand(rig, "Bang", root, tip, (0.004 * t, -0.016, 0), 0.03 * hs, M["hair"] if i % 3 else M["hair_shadow"], flatten=0.22))
+        root, _ = L._on_head(rig, x * 0.42 - 0.008 * hs, c.z + r.z * 0.9, 0.012)
+        lift = 0.016 + 0.012 * (i % 2)
+        tip, _ = L._on_head(rig, x * 1.1 - 0.006 * hs * (1 - abs(t)), c.z + r.z * 0.9 - length * hs, lift)
+        mat = M["hair_shadow"] if i % 4 == 1 else M["hair"]
+        head_parts.append(L._strand(rig, "Bang", root, tip, (0.003 * t, -0.018 - 0.006 * (i % 2), 0), 0.026 * hs * w, mat, flatten=0.2))
     # Long side locks: wide ribbons from in front of the ears, falling over the chest to the waist.
     for side in (1, -1):
         for k in range(3):

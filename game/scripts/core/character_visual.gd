@@ -73,4 +73,5 @@ static func convert_material(src: Material) -> Material:
 		m.set_shader_parameter("ramp_softness", 0.4)
 		m.set_shader_parameter("light_scale", 0.5)
 		m.set_shader_parameter("rim_strength", 0.5)
+		m.set_shader_parameter("sheen", 0.14)
 	return m
