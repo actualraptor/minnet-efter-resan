@@ -1,0 +1,15 @@
+{
+	"garden_of_jonas": {
+		"title": "The Garden Behind the Cottage",
+		"states": {
+			"active": "Grow flowers in the meadow behind Edda's cottage.",
+			"bloomed": "Edda has come out to the bench. Go and sit with her.",
+			"complete": "Come back in a few weeks. Not years. Weeks."
+		},
+		"journal": {
+			"active": "Edda Brenn's husband Jonas kept a garden behind their cottage. It gave up two springs after he did. I offered a spell.",
+			"bloomed": "The meadow is flowering. Edda came outside on her own. I should go to her.",
+			"complete": "Done, and noted, so that I remember: weeks, not years."
+		}
+	}
+}

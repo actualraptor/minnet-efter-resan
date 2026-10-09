@@ -1,0 +1,106 @@
+{
+	"id": "pippa",
+	"entries": [
+		{"if": "quest(\"garden_of_jonas\") == \"complete\"", "node": "after"},
+		{"if": "quest(\"garden_of_jonas\") == \"bloomed\"", "node": "bloomed"},
+		{"if": "quest(\"garden_of_jonas\") == \"active\"", "node": "active"},
+		{"if": "has_flag(\"pippa_met\")", "node": "repeat"},
+		{"node": "first"}
+	],
+	"nodes": {
+		"first": {
+			"lines": [
+				{"id": "pippa.first.01", "speaker": "char_pippa", "text": "Stop! Don't step on the — oh. You didn't. Good.", "emote": "Talk"},
+				{"id": "pippa.first.02", "speaker": "char_pippa", "text": "Those are carrots. Probably. I planted them yesterday and I've been checking."},
+				{"id": "pippa.first.03", "speaker": "char_pippa", "text": "...Are those real ears? Can I — no. Sorry. Grandma says you don't ask to touch people's ears."},
+				{"id": "pippa.first.04", "speaker": "char_linnaea", "text": "They're real. They can also hear you whispering about them from the road.", "emote": "Talk"},
+				{"id": "pippa.first.05", "speaker": "char_pippa", "text": "How old are you?"}
+			],
+			"choices": [
+				{"id": "pippa.first.c_forgot", "text": "Old enough to have forgotten.", "goto": "age_forgot"},
+				{"id": "pippa.first.c_number", "text": "A little over a thousand.", "goto": "age_number"},
+				{"id": "pippa.first.c_back", "text": "How old are you?", "goto": "age_back"}
+			]
+		},
+		"age_forgot": {
+			"lines": [
+				{"id": "pippa.age_forgot.01", "speaker": "char_pippa", "text": "That's not a number. That's what Grandma says when she doesn't want to tell me either."},
+				{"id": "pippa.age_forgot.02", "speaker": "char_linnaea", "text": "Your grandmother sounds sensible."}
+			],
+			"goto": "intro"
+		},
+		"age_number": {
+			"lines": [
+				{"id": "pippa.age_number.01", "speaker": "char_pippa", "text": "A thousand? That's more than all my fingers and toes. Times... a lot of times.", "do": ["flag:pippa_knows_age"]},
+				{"id": "pippa.age_number.02", "speaker": "char_pippa", "text": "I'm writing it down. I have a book of facts. You're fact forty-one."},
+				{"id": "pippa.age_number.03", "speaker": "char_linnaea", "text": "What was fact forty?"},
+				{"id": "pippa.age_number.04", "speaker": "char_pippa", "text": "Goats can't eat tin. Grandma's goat didn't know that either."}
+			],
+			"goto": "intro"
+		},
+		"age_back": {
+			"lines": [
+				{"id": "pippa.age_back.01", "speaker": "char_pippa", "text": "Ten and three-quarters. Now you go. That's the rule."},
+				{"id": "pippa.age_back.02", "speaker": "char_linnaea", "text": "A thousand and some. I stopped counting the quarters.", "do": ["flag:pippa_knows_age"]},
+				{"id": "pippa.age_back.03", "speaker": "char_pippa", "text": "...You stopped counting a whole thousand?"}
+			],
+			"goto": "intro"
+		},
+		"intro": {
+			"lines": [
+				{"id": "pippa.intro.01", "speaker": "char_pippa", "text": "I'm Pippa. I'm staying with Grandma Edda for spring, because Mum says Grandma's getting stubborn."},
+				{"id": "pippa.intro.02", "speaker": "char_pippa", "text": "I think she was always stubborn and now there's just more time for it."},
+				{"id": "pippa.intro.03", "speaker": "char_linnaea", "text": "Linnaea. I'm a mage. Mostly I'm passing through."},
+				{"id": "pippa.intro.04", "speaker": "char_pippa", "text": "A MAGE? A real one? Can you do lightning? Can you make Grandpa's garden come back?", "emote": "Talk"},
+				{"id": "pippa.intro.05", "speaker": "char_linnaea", "text": "Your grandfather's garden?"},
+				{"id": "pippa.intro.06", "speaker": "char_pippa", "text": "Behind the house. Grandpa Jonas planted it. Grandma says it was flowers all the way to the trees."},
+				{"id": "pippa.intro.07", "speaker": "char_pippa", "text": "Now it's just grass. Grandma's knees don't bend anymore, and I tried, but I think I planted the seeds upside down."},
+				{"id": "pippa.intro.08", "speaker": "char_pippa", "text": "She's inside. She'll pretend she doesn't want company. She does.", "do": ["flag:pippa_met", "affinity:char_pippa:1"]}
+			]
+		},
+		"repeat": {
+			"lines": [
+				{"id": "pippa.repeat.01", "speaker": "char_pippa", "text": "Grandma's inside. Knock loud. She says she can't hear, but she can."}
+			]
+		},
+		"active": {
+			"lines": [
+				{"id": "pippa.active.01", "speaker": "char_pippa", "text": "Are you really doing it? The garden? Can I watch? I won't talk. Much."},
+				{"id": "pippa.active.02", "speaker": "char_pippa", "text": "It's round the back. Where the grass looks bored."}
+			]
+		},
+		"bloomed": {
+			"lines": [
+				{"id": "pippa.bloomed.01", "speaker": "char_pippa", "text": "You DID it! There's a blue one! There's a — what's that one?", "emote": "Talk"},
+				{"id": "pippa.bloomed.02", "speaker": "char_linnaea", "text": "Sky bell. Or harebell, around here. Or 'the blue one.'"},
+				{"id": "pippa.bloomed.03", "speaker": "char_pippa", "text": "I'm writing 'the blue one.'"},
+				{"id": "pippa.bloomed.04", "speaker": "char_pippa", "text": "Will they stay? Forever?"}
+			],
+			"choices": [
+				{"id": "pippa.bloomed.c_truth", "text": "Until autumn. Then seeds. Then spring again.", "goto": "bloomed_truth"},
+				{"id": "pippa.bloomed.c_soft", "text": "As long as someone looks after them.", "goto": "bloomed_soft"}
+			]
+		},
+		"bloomed_truth": {
+			"lines": [
+				{"id": "pippa.bloomed_truth.01", "speaker": "char_pippa", "text": "That's not forever."},
+				{"id": "pippa.bloomed_truth.02", "speaker": "char_linnaea", "text": "Nothing is. Flowers just admit it sooner."},
+				{"id": "pippa.bloomed_truth.03", "speaker": "char_pippa", "text": "...I'm writing that down too. Grandma's on the bench. Go! She's doing her not-crying face.", "do": ["flag:pippa_heard_forever"]}
+			]
+		},
+		"bloomed_soft": {
+			"lines": [
+				{"id": "pippa.bloomed_soft.01", "speaker": "char_pippa", "text": "Then I'll look after them. I'm here till summer. And next spring. Probably."},
+				{"id": "pippa.bloomed_soft.02", "speaker": "char_pippa", "text": "Grandma's on the bench. Go! She's doing her not-crying face.", "do": ["flag:pippa_will_tend"]}
+			]
+		},
+		"after": {
+			"lines": [
+				{"id": "pippa.after.01", "speaker": "char_pippa", "text": "I counted {flowers_counted} flowers before I lost count. Then I started again and got a different number."},
+				{"id": "pippa.after.02", "if": "has_flag(\"pippa_heard_forever\")", "speaker": "char_pippa", "text": "I wrote down what you said. About forever. Grandma read it and went quiet and then made me a pancake."},
+				{"id": "pippa.after.03", "if": "has_flag(\"pippa_will_tend\")", "speaker": "char_pippa", "text": "I'm in charge of watering now. Grandma says not the bluebells, they like it dry. I'm writing that down."},
+				{"id": "pippa.after.04", "speaker": "char_pippa", "text": "When you come back I'll be taller. You'll be the same, I bet. That's fact forty-two."}
+			]
+		}
+	}
+}

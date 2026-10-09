@@ -1,0 +1,250 @@
+class_name Player
+extends CharacterBody3D
+## Third-person mage controller: camera-relative movement, walk/run/jump,
+## interaction focus, and the caster interface used by SpellCaster.
+
+signal focus_changed(target: Node)
+
+@export var walk_speed := 2.1
+@export var run_speed := 5.4
+@export var acceleration := 13.0
+@export var air_acceleration := 3.5
+@export var jump_velocity := 4.9
+@export var gravity := 15.0
+@export var turn_speed := 11.0
+@export var interact_range := 2.6
+
+@onready var model: Node3D = $Model
+@onready var caster: SpellCaster = $SpellCaster
+var camera_rig: CameraRig
+
+var input_locks := 0
+var focus: Node = null
+var _anim: AnimationPlayer
+var _current_anim := ""
+var _casting := false
+var _cast_anim: StringName = &"Cast"
+var _indoors := 0
+var _coyote := 0.0
+var _jump_buffer := 0.0
+var _step_accum := 0.0
+var _staff_tip: Node3D
+var _was_on_floor := true
+
+
+func _ready() -> void:
+	add_to_group("player")
+	collision_layer = 2
+	collision_mask = 1 | 4
+	_anim = CharacterVisual.find_animation_player(model)
+	_staff_tip = model.find_child("StaffTip", true, false) as Node3D
+	CharacterVisual.prepare(model)
+	if caster.spells.is_empty():
+		caster.spells.append(load("res://data/spells/field_of_flowers.tres") as SpellDefinition)
+		caster.equip(0)
+
+
+func lock_input() -> void:
+	input_locks += 1
+
+
+func unlock_input() -> void:
+	input_locks = maxi(0, input_locks - 1)
+
+
+func has_control() -> bool:
+	return input_locks == 0 and not get_tree().paused
+
+
+# --- Caster interface -----------------------------------------------------------
+
+func can_start_cast() -> bool:
+	return has_control() and is_on_floor() and not _casting
+
+
+func is_indoors() -> bool:
+	return _indoors > 0
+
+
+func set_indoors(entered: bool) -> void:
+	_indoors += 1 if entered else -1
+	_indoors = maxi(_indoors, 0)
+
+
+func staff_tip() -> Vector3:
+	if _staff_tip:
+		return _staff_tip.global_position
+	return global_position + Vector3(0, 1.9, 0) + model.global_basis.z * 0.3
+
+
+func facing_basis() -> Basis:
+	return model.global_basis
+
+
+func begin_cast(anim: StringName, _duration: float) -> void:
+	_casting = true
+	_cast_anim = anim
+	_play(anim, 0.15)
+
+
+func end_cast() -> void:
+	_casting = false
+
+
+# --- Movement -------------------------------------------------------------------
+
+func _physics_process(delta: float) -> void:
+	var on_floor := is_on_floor()
+	if not on_floor:
+		velocity.y -= gravity * delta
+		_coyote -= delta
+	else:
+		_coyote = 0.12
+	_jump_buffer -= delta
+
+	var input := Vector2.ZERO
+	var running := false
+	if has_control() and not _casting:
+		input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		running = Input.is_action_pressed("run")
+		if Input.is_action_just_pressed("jump"):
+			_jump_buffer = 0.13
+
+	var yaw := camera_rig.yaw if camera_rig else 0.0
+	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
+	var target_speed := (run_speed if running else walk_speed) * minf(input.length(), 1.0)
+	var target := dir.normalized() * target_speed if dir.length() > 0.01 else Vector3.ZERO
+	var accel := acceleration if on_floor else air_acceleration
+	var hv := Vector3(velocity.x, 0.0, velocity.z).move_toward(target, accel * delta * maxf(run_speed, 1.0))
+	velocity.x = hv.x
+	velocity.z = hv.z
+
+	if _jump_buffer > 0.0 and _coyote > 0.0:
+		velocity.y = jump_velocity
+		_jump_buffer = 0.0
+		_coyote = 0.0
+		Audio.sfx("jump", -10.0)
+
+	_apply_soft_boundary()
+	move_and_slide()
+
+	if dir.length() > 0.05:
+		var want := atan2(dir.x, dir.z)
+		model.rotation.y = lerp_angle(model.rotation.y, want, 1.0 - exp(-turn_speed * delta))
+
+	if on_floor and not _was_on_floor and velocity.y <= 0.0:
+		_footstep(-6.0)
+	_was_on_floor = on_floor
+	_update_footsteps(delta, hv.length())
+	_update_animation(hv.length())
+	_update_focus()
+	RenderingServer.global_shader_parameter_set("player_position", global_position)
+
+
+func _apply_soft_boundary() -> void:
+	var flat := Vector2(global_position.x, global_position.z)
+	var over := flat.length() - WorldLayout.PLAY_RADIUS
+	if over > 0.0:
+		var push := -flat.normalized() * over * 6.0
+		velocity.x += push.x
+		velocity.z += push.y
+
+
+func _update_footsteps(delta: float, speed: float) -> void:
+	if not is_on_floor() or speed < 0.4:
+		_step_accum = 0.0
+		return
+	_step_accum += speed * delta
+	var stride := 1.45 if speed > walk_speed + 0.5 else 0.82
+	if _step_accum >= stride:
+		_step_accum -= stride
+		_footstep(-9.0 if speed > walk_speed + 0.5 else -13.0)
+
+
+func _footstep(volume: float) -> void:
+	Audio.sfx("step_wood_*" if is_indoors() else "step_grass_*", volume, 0.08)
+
+
+func _update_animation(speed: float) -> void:
+	if _anim == null:
+		return
+	if _casting:
+		return
+	if not is_on_floor():
+		_play(&"Jump" if velocity.y > 0.5 else &"Fall", 0.2)
+	elif speed > walk_speed + 0.6:
+		_play(&"Run", 0.25, speed / run_speed)
+	elif speed > 0.25:
+		_play(&"Walk", 0.25, clampf(speed / walk_speed, 0.6, 1.4))
+	elif input_locks > 0 and _anim.has_animation(&"Talk") and _current_anim == "Talk":
+		pass
+	else:
+		_play(&"Idle", 0.35)
+
+
+func _play(anim_name: StringName, blend: float, speed: float = 1.0) -> void:
+	if _anim == null or not _anim.has_animation(anim_name):
+		return
+	if _current_anim != anim_name:
+		_anim.play(anim_name, blend)
+		_current_anim = anim_name
+	_anim.speed_scale = speed
+
+
+## Dialogue gestures. Falls back to Idle when an animation is missing.
+func emote(anim_name: String) -> void:
+	if _anim and _anim.has_animation(anim_name):
+		_play(StringName(anim_name), 0.3)
+
+
+# --- Interaction ------------------------------------------------------------------
+
+func _update_focus() -> void:
+	var best: Node = null
+	if has_control() and not _casting:
+		var best_score := INF
+		var fwd := model.global_basis.z
+		for n in get_tree().get_nodes_in_group("interactable"):
+			if not n.has_method("can_interact") or not n.can_interact(self):
+				continue
+			var p: Vector3 = n.interaction_point()
+			var to := p - global_position
+			to.y = 0.0
+			var d := to.length()
+			if d > interact_range:
+				continue
+			var facing := fwd.dot(to.normalized()) if d > 0.01 else 1.0
+			var score := d - facing * 0.8
+			if score < best_score:
+				best_score = score
+				best = n
+	if best != focus:
+		focus = best
+		focus_changed.emit(focus)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not has_control():
+		return
+	if event.is_action_pressed("interact") and focus:
+		get_viewport().set_input_as_handled()
+		focus.interact(self)
+	elif (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
+		get_viewport().set_input_as_handled()
+		var reason := caster.try_cast()
+		if reason != "" and reason != "busy":
+			GameState.toast.emit(reason)
+
+
+func teleport(pos: Vector3, yaw: float) -> void:
+	global_position = pos
+	velocity = Vector3.ZERO
+	model.rotation.y = yaw
+	if camera_rig:
+		camera_rig.snap_behind(yaw)
+
+
+func face_towards(point: Vector3) -> void:
+	var to := point - global_position
+	if Vector2(to.x, to.z).length() > 0.01:
+		model.rotation.y = atan2(to.x, to.z)

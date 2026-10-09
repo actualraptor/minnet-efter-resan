@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SpellDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/spells/spell_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/effects/field_of_flowers_effect.tscn" id="2_fx"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"spell_field_of_flowers"
+display_name = "Field of Flowers"
+description = "An old, gentle, entirely impractical spell. The ground remembers it was once a garden, and agrees to be one again."
+category = 1
+targeting = 0
+mana_cost = 30.0
+cooldown = 2.5
+cast_time = 1.0
+recovery_time = 0.6
+radius = 10.5
+max_range = 0.0
+allowed_indoors = false
+cast_animation = &"Cast"
+gather_color = Color(0.82, 1, 0.55, 1)
+effect_scene = ExtResource("2_fx")
+cast_sound = "spell_gather"
+release_sound = "spell_release"

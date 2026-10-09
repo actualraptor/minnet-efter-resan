@@ -1,0 +1,21 @@
+# Godot
+game/.godot/
+game/export/
+*.translation
+export_presets.local.cfg
+# Builds
+build/
+*.exe
+*.pck
+*.zip
+# Local tooling / caches
+.claude/
+art/previews/
+art/blender/__pycache__/
+*.blend1
+.DS_Store
+Thumbs.db
+# Secrets (never commit)
+.env
+*.pem
+*.key

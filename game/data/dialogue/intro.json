@@ -1,0 +1,14 @@
+{
+	"id": "intro",
+	"entries": [{"node": "arrival"}],
+	"nodes": {
+		"arrival": {
+			"lines": [
+				{"id": "intro.arrival.01", "speaker": "narrator", "text": "Fifty years after the Hollow King fell, the elf who helped end him came back down the old south road."},
+				{"id": "intro.arrival.02", "speaker": "char_linnaea", "text": "The road used to bend left here. Either it moved, or the river did.", "emote": "Idle"},
+				{"id": "intro.arrival.03", "speaker": "char_linnaea", "text": "...Or I'm thinking of a different road. That happens."},
+				{"id": "intro.arrival.04", "speaker": "char_linnaea", "text": "There's a cottage. Smoke from the chimney. Someone's home."}
+			]
+		}
+	}
+}

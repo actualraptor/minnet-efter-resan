@@ -1,0 +1,106 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/world/meadow_terrain.gd" id="2_terrain"]
+[ext_resource type="Script" path="res://scripts/world/world_builder.gd" id="3_world"]
+[ext_resource type="Script" path="res://scripts/spells/flower_field.gd" id="4_flowers"]
+[ext_resource type="Script" path="res://scripts/world/grass_field.gd" id="5_grass"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="6_player"]
+[ext_resource type="Script" path="res://scripts/player/camera_rig.gd" id="7_cam"]
+[ext_resource type="PackedScene" path="res://scenes/npc_edda.tscn" id="8_edda"]
+[ext_resource type="PackedScene" path="res://scenes/npc_pippa.tscn" id="9_pippa"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="10_hud"]
+[ext_resource type="Script" path="res://scripts/ui/dialogue_box.gd" id="11_box"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="12_pause"]
+[ext_resource type="Script" path="res://scripts/dialogue/dialogue_director.gd" id="13_director"]
+[ext_resource type="Script" path="res://scripts/world/wildflowers.gd" id="14_wild"]
+
+[sub_resource type="LabelSettings" id="Title_settings"]
+font_size = 72
+font_color = Color(0.96, 0.93, 0.86, 1)
+shadow_size = 8
+shadow_color = Color(0, 0, 0, 0.35)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Terrain" type="StaticBody3D" parent="."]
+script = ExtResource("2_terrain")
+
+[node name="World" type="Node3D" parent="."]
+script = ExtResource("3_world")
+
+[node name="FlowerField" type="Node3D" parent="."]
+script = ExtResource("4_flowers")
+
+[node name="Grass" type="Node3D" parent="."]
+script = ExtResource("5_grass")
+
+[node name="Wildflowers" type="Node3D" parent="."]
+script = ExtResource("14_wild")
+
+[node name="Player" parent="." instance=ExtResource("6_player")]
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("7_cam")
+target_path = NodePath("../Player")
+
+[node name="Pitch" type="Node3D" parent="CameraRig"]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig/Pitch"]
+spring_length = 4.3
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch/SpringArm3D"]
+current = true
+fov = 62.0
+far = 1200.0
+
+[node name="Edda" parent="." instance=ExtResource("8_edda")]
+
+[node name="Pippa" parent="." instance=ExtResource("9_pippa")]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Hud" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("10_hud")
+player_path = NodePath("../../Player")
+
+[node name="DialogueBox" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("11_box")
+
+[node name="Fade" type="ColorRect" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.09, 0.07, 0.11, 1)
+
+[node name="Title" type="Label" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "Minnet efter resan"
+label_settings = SubResource("Title_settings")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PauseMenu" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("12_pause")
+
+[node name="DialogueDirector" type="Node" parent="."]
+script = ExtResource("13_director")
+dialogue_box_path = NodePath("../UI/DialogueBox")
