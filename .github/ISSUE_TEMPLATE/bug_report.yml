@@ -1,0 +1,32 @@
+name: Bug report
+description: Something in the prototype doesn't work as expected.
+labels: ["type:bug", "status:backlog"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Walk into the cottage\n2. Talk to Edda\n3. ..."
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build / commit
+      placeholder: e.g. 0.1.0-prototype @ abc1234
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, GPU, Godot version if running from source.
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or logs

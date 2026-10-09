@@ -1,0 +1,45 @@
+{
+  "updated": "2026-10-09",
+  "current_milestone": "001",
+  "statuses": {
+    "planned": "Planned",
+    "in_progress": "In progress",
+    "testing": "Review / testing",
+    "complete": "Complete",
+    "blocked": "Blocked"
+  },
+  "phases": [
+    {
+      "id": "001",
+      "title": "A Cottage, a Mage, and a Memory",
+      "summary": "A sunlit meadow, Edda's cottage with a real interior, a rigged elven mage, the Field of Flowers spell, text dialogue, and one warm story recorded as a memory.",
+      "status": "testing",
+      "items": [
+        {"title": "Third-person controller and orbit camera", "status": "complete"},
+        {"title": "Meadow terrain, grass, wildflowers and scenery", "status": "complete"},
+        {"title": "Cottage exterior and furnished interior", "status": "complete"},
+        {"title": "Rigged, animated characters (Linnaea, Edda, Pippa)", "status": "complete"},
+        {"title": "Field of Flowers spell and spell framework", "status": "complete"},
+        {"title": "Text dialogue with choices and stable line IDs", "status": "complete"},
+        {"title": "The Garden Behind the Cottage quest and memory event", "status": "complete"},
+        {"title": "Original audio: ambience, SFX, meadow theme", "status": "complete"},
+        {"title": "Human playtest and feel polish", "status": "in_progress"},
+        {"title": "Character art pass against the concept sheet", "status": "blocked", "note": "Waiting for the official character sheet."}
+      ]
+    },
+    {"id": "002", "title": "Village and Quests", "summary": "Brenn's village to the south: lived-in homes, schedules, small humane errands and an eccentric grimoire hunt.", "status": "planned"},
+    {"id": "003", "title": "Companions and Campfires", "summary": "Two travelling companions who follow, banter and have their own priorities. Shared meals and scenic walks.", "status": "planned"},
+    {"id": "004", "title": "Dungeons and Combat", "summary": "Readable third-person magic combat, barriers and creature weaknesses, ruins and caves worth exploring.", "status": "planned"},
+    {"id": "005", "title": "Relationships and Memories", "summary": "Memory events grow into a living journal. Promises, gifts and callbacks to moments you actually lived.", "status": "planned"},
+    {"id": "006", "title": "Time and Generations", "summary": "Years and decades pass: aging, descendants, inherited homes, and people who remember the elf from their grandparents' stories.", "status": "planned"},
+    {"id": "007", "title": "Storybook Prologue", "summary": "An illustrated, animated flipbook of the original journey and the fall of the Hollow King.", "status": "planned"},
+    {"id": "008", "title": "World Expansion and Polish", "summary": "More regions, seasons, performance, accessibility and the long arc toward the coast.", "status": "planned"}
+  ],
+  "updates": [
+    {
+      "date": "2026-10-09",
+      "title": "The first playable slice",
+      "body": "Linnaea can walk the meadow road, step into Edda's cottage, hear about Jonas's garden and grow it back with the Field of Flowers. The moment is written into her journal as a memory. Everything is an early prototype: scripted 3D models, synthesised audio, and a lot still to polish."
+    }
+  ]
+}

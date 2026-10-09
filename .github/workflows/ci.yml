@@ -1,0 +1,51 @@
+name: Godot checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  import-and-smoke-test:
+    name: Headless import + scripted smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GODOT_VERSION: 4.7.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Godot
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip
+          mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot && chmod +x godot
+      - name: Validate JSON data
+        run: |
+          for f in game/data/**/*.json game/data/*/*.json site/data/*.json; do
+            [ -f "$f" ] && python3 -m json.tool "$f" > /dev/null && echo "ok $f"
+          done
+      - name: Import project (headless)
+        run: ~/godot/godot --headless --path game --import 2>&1 | tee import.log
+      - name: Fail on script errors during import
+        run: "! grep -E 'SCRIPT ERROR|Parse Error' import.log"
+      - name: Smoke test (scripted playthrough, headless)
+        run: |
+          ~/godot/godot --headless --path game -- --smoke-test 2>&1 | tee smoke.log
+          grep -q "==== PASS" smoke.log
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-logs
+          path: "*.log"

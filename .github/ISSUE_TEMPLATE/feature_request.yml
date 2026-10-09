@@ -1,0 +1,20 @@
+name: Feature / content request
+description: Propose a feature, spell, scene or piece of art.
+labels: ["type:feature", "status:backlog"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it fits the game
+      description: Which pillar does it serve? (exploration, quiet magic, relationships, time)
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "- [ ] ...\n- [ ] ..."

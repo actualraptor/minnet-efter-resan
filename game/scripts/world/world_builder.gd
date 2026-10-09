@@ -169,11 +169,20 @@ func _cottage() -> void:
 	add_child(fire_light)
 	fire_light.global_position = base + Vector3(3.3, WorldLayout.COTTAGE_FLOOR + 0.7, -1.2)
 	var fill := OmniLight3D.new()
-	fill.light_color = Color(1.0, 0.9, 0.8)
-	fill.light_energy = 0.6
+	fill.light_color = Color(1.0, 0.95, 0.88)
+	fill.light_energy = 0.75
 	fill.omni_range = 7.0
 	add_child(fill)
 	fill.global_position = base + Vector3(-1.0, WorldLayout.COTTAGE_FLOOR + 2.7, 0.0)
+	# Daylight spilling through the windows keeps the interior from going all-orange.
+	for wp in [Vector3(-2.3, 1.55, 2.7), Vector3(2.3, 1.55, 2.7), Vector3(-1.9, 1.55, -2.7), Vector3(2.0, 1.55, -2.7), Vector3(-3.8, 1.55, 0.0)]:
+		var wl := OmniLight3D.new()
+		wl.light_color = Color(0.86, 0.92, 1.0)
+		wl.light_energy = 0.55
+		wl.omni_range = 3.6
+		wl.light_specular = 0.2
+		add_child(wl)
+		wl.global_position = base + Vector3(wp.x, WorldLayout.COTTAGE_FLOOR + wp.y, wp.z)
 	var lantern := OmniLight3D.new()
 	lantern.light_color = Color(1.0, 0.78, 0.45)
 	lantern.light_energy = 0.8

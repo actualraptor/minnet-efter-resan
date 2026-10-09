@@ -1,0 +1,40 @@
+Minnet efter resan — licensing
+
+1. SOURCE CODE (MIT License)
+   Applies to: game/scripts/, game/shaders/, game/tests/, art/blender/*.py,
+   tools/, site/ code (HTML/CSS/JS), and .github/ workflows.
+
+   Copyright (c) 2026 actualraptor and contributors
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+2. GAME CONTENT (All rights reserved, pending a decision by the owner)
+   Applies to: story, dialogue, characters, lore (game/data/, docs/lore/,
+   docs/narrative/), generated 3D models (game/assets/models/), audio
+   (game/assets/audio/) and site imagery.
+   Copyright (c) 2026 actualraptor. You may view and play this content as part
+   of this repository; no other rights are granted.
+
+3. THIRD-PARTY
+   Fonts are licensed under the SIL Open Font License 1.1 (see
+   game/assets/fonts/OFL-*.txt). See docs/ASSETS.md for full provenance.
+
+This is an original, non-commercial fan homage inspired by the mood of quiet,
+post-adventure fantasy. It is not affiliated with or endorsed by the creators
+or publishers of any existing work, and uses no material from them.
