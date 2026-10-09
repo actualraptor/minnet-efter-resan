@@ -87,12 +87,15 @@ func _run() -> void:
 	check("player standing on terrain", player.is_on_floor(), "y=%.2f ground=%.2f" % [player.global_position.y, terrain.height_at(player.global_position.x, player.global_position.z)])
 	check("player model has animations", CharacterVisual.find_animation_player(player.model) != null and CharacterVisual.find_animation_player(player.model).has_animation(&"Cast"))
 	check("staff tip attachment found", player.model.find_child("StaffTip", true, false) != null)
+	check("staff starts stowed", player.staff != null and not player.staff.out)
+	await player.staff.summon()
+	check("staff summoned from thin air", player.staff.out)
 	check("hair/cloth spring bones active", player.secondary != null and player.secondary.setting_count >= 20, "%d chains" % (player.secondary.setting_count if player.secondary else 0))
 	check("face expressions ready", player.face != null and player.face.is_ready(), "eye bones: %d, face materials: %d" % [player.face._eye_bones.size(), player.face._materials.size()])
 
 	# Intro monologue
 	var t0 := await _talk_monologue()
-	check("intro monologue plays protagonist lines", t0.contains("Linnaea:"), t0.get_slice("\n", 1))
+	check("intro monologue plays protagonist lines", t0.contains("Freyja:"), t0.get_slice("\n", 1))
 
 	# Pippa
 	var pippa: NPC = main.pippa
@@ -100,7 +103,7 @@ func _run() -> void:
 	await _frames(10)
 	var t1 := await _talk(pippa, [1])
 	check("Pippa first conversation", GameState.has_flag("pippa_met"), "%d lines" % t1.count("\n"))
-	check("dialogue shows both NPC and protagonist", t1.contains("Pippa:") and t1.contains("Linnaea:"))
+	check("dialogue shows both NPC and protagonist", t1.contains("Pippa:") and t1.contains("Freyja:"))
 
 	# Edda: enter the cottage and talk.
 	var door: Door = main.world.door

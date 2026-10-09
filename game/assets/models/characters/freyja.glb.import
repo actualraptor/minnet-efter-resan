@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bj8j3rup008qw"
-path="res://.godot/imported/linnaea.glb-9f7ca48ae4a5d9ccbe51150fa5919637.scn"
+uid="uid://cyb88o8cmq3n2"
+path="res://.godot/imported/freyja.glb-593d470a888f18b3d1d83002568d68a9.scn"
 
 [deps]
 
-source_file="res://assets/models/characters/linnaea.glb"
-dest_files=["res://.godot/imported/linnaea.glb-9f7ca48ae4a5d9ccbe51150fa5919637.scn"]
+source_file="res://assets/models/characters/freyja.glb"
+dest_files=["res://.godot/imported/freyja.glb-593d470a888f18b3d1d83002568d68a9.scn"]
 
 [params]
 

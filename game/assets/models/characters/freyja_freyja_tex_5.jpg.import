@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://lslywxh1brmt"
-path="res://.godot/imported/linnaea_linnaea_tex_4.png-6926eae2591facd30ed581c6c35e1043.ctex"
+uid="uid://dnfewnjsj51mk"
+path="res://.godot/imported/freyja_freyja_tex_5.jpg-5de44898973f845ea4edde82304fd767.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "e29d992d162fc807736b7893a16f20ec"
+"md5": "bf673a4c92cfb4ca00f184129dd8c488"
 }
 
 [deps]
 
-source_file="res://assets/models/characters/linnaea_linnaea_tex_4.png"
-dest_files=["res://.godot/imported/linnaea_linnaea_tex_4.png-6926eae2591facd30ed581c6c35e1043.ctex"]
+source_file="res://assets/models/characters/freyja_freyja_tex_5.jpg"
+dest_files=["res://.godot/imported/freyja_freyja_tex_5.jpg-5de44898973f845ea4edde82304fd767.ctex"]
 
 [params]
 

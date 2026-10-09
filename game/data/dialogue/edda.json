@@ -10,21 +10,21 @@
 		"first": {
 			"lines": [
 				{"id": "edda.first.01", "speaker": "char_edda", "text": "If you're selling something, I've got one of everything. If you're lost, the road's behind you.", "emote": "Talk"},
-				{"id": "edda.first.02", "speaker": "char_linnaea", "text": "Neither. Your granddaughter sent me in.", "if": "has_flag(\"pippa_met\")"},
-				{"id": "edda.first.03", "speaker": "char_linnaea", "text": "Neither. The door was open. Well. Unlatched.", "if": "not has_flag(\"pippa_met\")"},
+				{"id": "edda.first.02", "speaker": "char_freyja", "text": "Neither. Your granddaughter sent me in.", "if": "has_flag(\"pippa_met\")"},
+				{"id": "edda.first.03", "speaker": "char_freyja", "text": "Neither. The door was open. Well. Unlatched.", "if": "not has_flag(\"pippa_met\")"},
 				{"id": "edda.first.04", "speaker": "char_edda", "text": "Pippa sends in everyone. Last week it was a goat.", "if": "has_flag(\"pippa_met\")"},
 				{"id": "edda.first.05", "speaker": "char_edda", "text": "...Hm. An elf. There's a thing. Haven't seen one of you since I had both my knees.", "pause": 0.6},
 				{"id": "edda.first.06", "speaker": "char_edda", "text": "Edda Brenn. This is my house, that's my kettle, and the chair you're eyeing is older than Pippa and twice as loud."}
 			],
 			"choices": [
-				{"id": "edda.first.c_name", "text": "Linnaea. A mage. Mostly retired.", "goto": "name"},
+				{"id": "edda.first.c_name", "text": "Freyja. A mage. Mostly retired.", "goto": "name"},
 				{"id": "edda.first.c_elves", "text": "You've met an elf before?", "goto": "elves"}
 			]
 		},
 		"name": {
 			"lines": [
 				{"id": "edda.name.01", "speaker": "char_edda", "text": "Retired from being a mage? Can you retire from being tall?"},
-				{"id": "edda.name.02", "speaker": "char_linnaea", "text": "I stopped saving kingdoms. The magic kept happening on its own."},
+				{"id": "edda.name.02", "speaker": "char_freyja", "text": "I stopped saving kingdoms. The magic kept happening on its own."},
 				{"id": "edda.name.03", "speaker": "char_edda", "text": "Like knitting, then. Never quite put it down.", "do": ["affinity:char_edda:1"]}
 			],
 			"goto": "garden"
@@ -33,15 +33,15 @@
 			"lines": [
 				{"id": "edda.elves.01", "speaker": "char_edda", "text": "One. At the market in Brenn's Crossing, the summer the Hollow King fell."},
 				{"id": "edda.elves.02", "speaker": "char_edda", "text": "She bought nothing and asked my husband the proper names of weeds for an hour."},
-				{"id": "edda.elves.03", "face": "surprised", "speaker": "char_linnaea", "text": "...That sounds uncomfortably like me.", "pause": 0.4},
+				{"id": "edda.elves.03", "face": "surprised", "speaker": "char_freyja", "text": "...That sounds uncomfortably like me.", "pause": 0.4},
 				{"id": "edda.elves.04", "speaker": "char_edda", "text": "Does it now.", "do": ["flag:edda_market_elf"]}
 			],
 			"goto": "garden"
 		},
 		"garden": {
 			"lines": [
-				{"id": "edda.garden.01", "speaker": "char_linnaea", "text": "Pippa mentioned a garden.", "if": "has_flag(\"pippa_met\")"},
-				{"id": "edda.garden.02", "speaker": "char_linnaea", "text": "There's a meadow behind your house that looks like it used to be something else.", "if": "not has_flag(\"pippa_met\")"},
+				{"id": "edda.garden.01", "speaker": "char_freyja", "text": "Pippa mentioned a garden.", "if": "has_flag(\"pippa_met\")"},
+				{"id": "edda.garden.02", "speaker": "char_freyja", "text": "There's a meadow behind your house that looks like it used to be something else.", "if": "not has_flag(\"pippa_met\")"},
 				{"id": "edda.garden.03", "speaker": "char_edda", "text": "...Of course.", "pause": 0.8},
 				{"id": "edda.garden.04", "speaker": "char_edda", "text": "Jonas's garden. My husband. He had the whole back meadow in flowers once. Bluebells by the stones, daisies wherever they pleased, those pink things he could never spell."},
 				{"id": "edda.garden.05", "speaker": "char_edda", "text": "Four winters gone now, Jonas. The garden managed two more springs without him and then it gave up. Sensible of it."}
@@ -55,7 +55,7 @@
 		"offer_spell": {
 			"lines": [
 				{"id": "edda.offer_spell.01", "speaker": "char_edda", "text": "A spell. For flowers."},
-				{"id": "edda.offer_spell.02", "face": "happy", "speaker": "char_linnaea", "text": "It's a very good spell. It's useless for almost everything else."},
+				{"id": "edda.offer_spell.02", "face": "happy", "speaker": "char_freyja", "text": "It's a very good spell. It's useless for almost everything else."},
 				{"id": "edda.offer_spell.03", "speaker": "char_edda", "text": "Ha! Now that I'd like to see.", "emote": "Talk", "do": ["affinity:char_edda:1"]}
 			],
 			"goto": "request"
@@ -64,7 +64,7 @@
 			"lines": [
 				{"id": "edda.offer_wilt.01", "speaker": "char_edda", "text": "...", "pause": 1.0},
 				{"id": "edda.offer_wilt.02", "speaker": "char_edda", "text": "Everything wilts, elf. That's never once stopped anyone planting.", "do": ["flag:said_flowers_wilt", "affinity:char_edda:-1"]},
-				{"id": "edda.offer_wilt.03", "speaker": "char_linnaea", "text": "...I could make some. I know a spell for it."},
+				{"id": "edda.offer_wilt.03", "speaker": "char_freyja", "text": "...I could make some. I know a spell for it."},
 				{"id": "edda.offer_wilt.04", "speaker": "char_edda", "text": "Then don't stand there being wise at me. Go on."}
 			],
 			"goto": "request"
@@ -73,7 +73,7 @@
 			"lines": [
 				{"id": "edda.offer_what.01", "speaker": "char_edda", "text": "Everything he could get seed for. He kept a book. Names, dates, little drawings."},
 				{"id": "edda.offer_what.02", "speaker": "char_edda", "text": "Terrible drawings. His daisies looked like fried eggs.", "do": ["flag:asked_what_jonas_planted", "affinity:char_edda:2"]},
-				{"id": "edda.offer_what.03", "speaker": "char_linnaea", "text": "I know a spell that grows flowers. They'd be the right ones. More or less."},
+				{"id": "edda.offer_what.03", "speaker": "char_freyja", "text": "I know a spell that grows flowers. They'd be the right ones. More or less."},
 				{"id": "edda.offer_what.04", "speaker": "char_edda", "text": "More or less is how Jonas did everything. Go on, then."}
 			],
 			"goto": "request"
@@ -94,10 +94,10 @@
 			"lines": [
 				{"id": "edda.bench.01", "speaker": "char_edda", "text": "...", "pause": 1.2},
 				{"id": "edda.bench.02", "speaker": "char_edda", "text": "He'd have hated it."},
-				{"id": "edda.bench.03", "face": "surprised", "speaker": "char_linnaea", "text": "...Oh.", "pause": 0.5},
+				{"id": "edda.bench.03", "face": "surprised", "speaker": "char_freyja", "text": "...Oh.", "pause": 0.5},
 				{"id": "edda.bench.04", "speaker": "char_edda", "text": "Hated that he didn't do it himself. Then he'd have been out here all night with his book, naming every one of them wrong."},
 				{"id": "edda.bench.05", "speaker": "char_edda", "text": "The blue ones are by the stones. You put the blue ones by the stones."},
-				{"id": "edda.bench.06", "speaker": "char_linnaea", "text": "The spell decides where they go. Mostly."},
+				{"id": "edda.bench.06", "speaker": "char_freyja", "text": "The spell decides where they go. Mostly."},
 				{"id": "edda.bench.07", "speaker": "char_edda", "text": "Mostly. Then your spell's got better taste than most people."}
 			],
 			"choices": [
@@ -111,7 +111,7 @@
 				{"id": "edda.bench_tell.01", "speaker": "char_edda", "text": "He hummed when he weeded. Badly. He proposed to me with a radish, because roses were for people who hadn't thought about it."},
 				{"id": "edda.bench_tell.02", "speaker": "char_edda", "text": "Forty-six years and he never once remembered where he'd put his hat. I remembered for him."},
 				{"id": "edda.bench_tell.03", "speaker": "char_edda", "text": "That's what it is, mostly. Remembering for each other."},
-				{"id": "edda.bench_tell.04", "speaker": "char_linnaea", "text": "I'm bad at that part.", "pause": 0.5},
+				{"id": "edda.bench_tell.04", "speaker": "char_freyja", "text": "I'm bad at that part.", "pause": 0.5},
 				{"id": "edda.bench_tell.05", "speaker": "char_edda", "text": "Then practise. You've got the time for it.", "do": ["flag:heard_jonas_story", "affinity:char_edda:2"]}
 			],
 			"goto": "seed_story"
@@ -126,7 +126,7 @@
 		"bench_wilt": {
 			"lines": [
 				{"id": "edda.bench_wilt.01", "speaker": "char_edda", "text": "Yes. And I'll have had a summer."},
-				{"id": "edda.bench_wilt.02", "speaker": "char_linnaea", "text": "...That's a better answer than mine was.", "do": ["flag:conceded_wilt", "affinity:char_edda:2"]}
+				{"id": "edda.bench_wilt.02", "speaker": "char_freyja", "text": "...That's a better answer than mine was.", "do": ["flag:conceded_wilt", "affinity:char_edda:2"]}
 			],
 			"goto": "seed_story"
 		},
@@ -135,14 +135,14 @@
 				{"id": "edda.seed_story.01", "speaker": "char_edda", "text": "That summer at Brenn's Crossing. There was a young man at Jonas's stall. Sword on his back, hat like a fallen cake."},
 				{"id": "edda.seed_story.02", "speaker": "char_edda", "text": "He asked which flower lasts the longest. Jonas told him none of them do, that's the whole point of flowers."},
 				{"id": "edda.seed_story.03", "speaker": "char_edda", "text": "The boy laughed and bought a packet of everything. Said he had a friend who'd outlive the lot of us, and he wanted to know what she'd like."},
-				{"id": "edda.seed_story.04", "speaker": "char_linnaea", "text": "...", "pause": 1.0},
-				{"id": "edda.seed_story.05", "face": "neutral", "speaker": "char_linnaea", "text": "Teodor. He bought something from everyone. I don't think he ever planted any of it."},
+				{"id": "edda.seed_story.04", "speaker": "char_freyja", "text": "...", "pause": 1.0},
+				{"id": "edda.seed_story.05", "face": "neutral", "speaker": "char_freyja", "text": "Teodor. He bought something from everyone. I don't think he ever planted any of it."},
 				{"id": "edda.seed_story.06", "speaker": "char_edda", "text": "Hm. Maybe he wasn't buying them to plant."},
-				{"id": "edda.seed_story.07", "speaker": "char_linnaea", "text": "Then what for?"},
+				{"id": "edda.seed_story.07", "speaker": "char_freyja", "text": "Then what for?"},
 				{"id": "edda.seed_story.08", "speaker": "char_edda", "text": "Ask him."},
-				{"id": "edda.seed_story.09", "speaker": "char_linnaea", "text": "He lives on the coast now. I think. It's been a while."},
+				{"id": "edda.seed_story.09", "speaker": "char_freyja", "text": "He lives on the coast now. I think. It's been a while."},
 				{"id": "edda.seed_story.10", "speaker": "char_edda", "text": "How long's 'a while', for you?"},
-				{"id": "edda.seed_story.11", "speaker": "char_linnaea", "text": "...Fifty years.", "pause": 0.4},
+				{"id": "edda.seed_story.11", "speaker": "char_freyja", "text": "...Fifty years.", "pause": 0.4},
 				{"id": "edda.seed_story.12", "speaker": "char_edda", "text": "Then it isn't a while. Go and ask him while he can still answer you.", "do": ["flag:heard_teodor_seed_story", "flag:resolve_visit_teodor"]}
 			],
 			"goto": "farewell"
@@ -150,9 +150,9 @@
 		"farewell": {
 			"lines": [
 				{"id": "edda.farewell.01", "speaker": "char_edda", "text": "Come back when they've gone to seed. Bring the girl a packet of something."},
-				{"id": "edda.farewell.02", "speaker": "char_linnaea", "text": "In a few years, then."},
+				{"id": "edda.farewell.02", "speaker": "char_freyja", "text": "In a few years, then."},
 				{"id": "edda.farewell.03", "speaker": "char_edda", "text": "I'm seventy-nine, elf. Come back in a few weeks."},
-				{"id": "edda.farewell.04", "face": "happy", "speaker": "char_linnaea", "text": "...Weeks. Right. I'll write it down.", "emote": "Talk", "do": ["quest:garden_of_jonas=complete", "memory:memory_cottage_garden_restored"]},
+				{"id": "edda.farewell.04", "face": "happy", "speaker": "char_freyja", "text": "...Weeks. Right. I'll write it down.", "emote": "Talk", "do": ["quest:garden_of_jonas=complete", "memory:memory_cottage_garden_restored"]},
 				{"id": "edda.farewell.05", "speaker": "char_edda", "text": "And shut the gate on your way. The goat's still about."}
 			]
 		},

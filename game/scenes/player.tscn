@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/spells/spell_caster.gd" id="2_caster"]
-[ext_resource type="PackedScene" path="res://assets/models/characters/linnaea.glb" id="3_model"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/freyja.glb" id="3_model"]
 
 [sub_resource type="CapsuleShape3D" id="Capsule_body"]
 radius = 0.28
@@ -19,7 +19,7 @@ shape = SubResource("Capsule_body")
 
 [node name="Model" type="Node3D" parent="."]
 
-[node name="Linnaea" parent="Model" instance=ExtResource("3_model")]
+[node name="Freyja" parent="Model" instance=ExtResource("3_model")]
 
 [node name="SpellCaster" type="Node" parent="."]
 script = ExtResource("2_caster")

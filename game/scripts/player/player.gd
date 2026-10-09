@@ -37,6 +37,7 @@ var face: FaceController
 var secondary: SpringBoneSimulator3D
 var _fade := 0.0
 var loco: LocomotionAnimator
+var staff: StaffSummon
 var _talking := false
 var _lean := 0.0
 var _prev_yaw := 0.0
@@ -55,11 +56,17 @@ func _ready() -> void:
 	face = FaceController.new()
 	face.name = "Face"
 	add_child(face)
-	face.setup(model, "linnaea")
+	face.setup(model, "freyja")
 	secondary = CharacterPhysics.setup(model)
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
-		loco.setup(_anim, "linnaea")
+		loco.setup(_anim, "freyja")
+		staff = StaffSummon.new()
+		staff.name = "Staff"
+		add_child(staff)
+		if not staff.setup(self, model, loco):
+			staff.queue_free()
+			staff = null
 	if caster.spells.is_empty():
 		caster.spells.append(load("res://data/spells/field_of_flowers.tres") as SpellDefinition)
 		caster.equip(0)
@@ -283,9 +290,29 @@ func _unhandled_input(event: InputEvent) -> void:
 		focus.interact(self)
 	elif (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
 		get_viewport().set_input_as_handled()
-		var reason := caster.try_cast()
-		if reason != "" and reason != "busy":
-			GameState.toast.emit(reason)
+		_cast_with_staff()
+	elif event.is_action_pressed("summon") and staff:
+		get_viewport().set_input_as_handled()
+		if staff.out:
+			staff.stow()
+		elif not is_indoors():
+			staff.summon()
+
+
+## Freyja summons her staff out of thin air before casting if it isn't out.
+func _cast_with_staff() -> void:
+	if staff and not staff.out:
+		if is_indoors() or staff.busy or not can_start_cast():
+			var r := caster.try_cast()  # let the caster explain (e.g. indoors)
+			if r != "" and r != "busy":
+				GameState.toast.emit(r)
+			return
+		await staff.summon()
+	var reason := caster.try_cast()
+	if reason == "" and staff:
+		staff.touch()
+	elif reason != "" and reason != "busy":
+		GameState.toast.emit(reason)
 
 
 func teleport(pos: Vector3, yaw: float) -> void:

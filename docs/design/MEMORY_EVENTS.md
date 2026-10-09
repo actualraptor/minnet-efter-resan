@@ -9,7 +9,7 @@ Memory events are compact, append-only records of moments that later dialogue, a
   "schema": 1,
   "title": "The garden behind Edda's cottage",
   "kind": "shared_moment",                  // shared_moment | promise | first_meeting | argument | gift | journey | death | reunion
-  "participants": ["char_linnaea", "char_edda", "char_pippa"],
+  "participants": ["char_freyja", "char_edda", "char_pippa"],
   "absent_but_present": ["char_jonas_brenn", "char_teodor"],
   "location": {"id": "loc_brenn_cottage_back_meadow", "region": "reg_brenns_meadow", "position": [x, y, z]},
   "world_date": {"year": 1031, "season": "spring", "day": 14, "hour": 15.0},
@@ -19,14 +19,14 @@ Memory events are compact, append-only records of moments that later dialogue, a
   "promises": [{"id": "promise_return_to_edda", "to": "char_edda", "text": "Come back in a few weeks. Not years.", "due_in_days": 21, "kept": null}],
   "seeds": ["heard_jonas_story", "teodor_bought_seeds_for_her"],
   "tags": ["garden", "jonas", "promise", "mortality", "flowers"],
-  "journal_text": "In Linnaea's voice — shown in the journal.",
-  "recorded_by": "char_linnaea"
+  "journal_text": "In Freyja's voice — shown in the journal.",
+  "recorded_by": "char_freyja"
 }
 ```
 
 ## Rules
 - Record only events the player actually lived through.
-- `journal_text` is written in Linnaea's voice and varies with the player's choices.
+- `journal_text` is written in Freyja's voice and varies with the player's choices.
 - Future systems (aging, descendants) query memories by participant, tag or location, and never re-simulate them.
 - Bump `schema` and add a migration in `GameState._migrate` when fields change meaning.
 

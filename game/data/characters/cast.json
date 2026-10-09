@@ -1,5 +1,5 @@
 {
-	"char_linnaea": {"name": "Linnaea", "title": "Elven mage", "color": "#9fc79a", "birth_year": -10},
+	"char_freyja": {"name": "Freyja", "title": "Elven mage", "color": "#9fc79a", "birth_year": -10},
 	"char_edda": {"name": "Edda Brenn", "title": "Keeper of the cottage", "color": "#d6a3c9", "birth_year": 952},
 	"char_pippa": {"name": "Pippa", "title": "Edda's granddaughter", "color": "#f2b38a", "birth_year": 1020},
 	"narrator": {"name": "", "title": "", "color": "#e9dfc8"}

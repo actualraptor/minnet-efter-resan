@@ -13,7 +13,7 @@ const SAVE_VERSION := 1
 const SAVE_PATH := "user://save_slot_1.json"
 
 ## Stable IDs for the protagonist and the cast. Keep in sync with docs/lore/CHARACTER_BIBLE.md.
-const PROTAGONIST_ID := "char_linnaea"
+const PROTAGONIST_ID := "char_freyja"
 
 var flags: Dictionary = {}
 var quests: Dictionary = {}

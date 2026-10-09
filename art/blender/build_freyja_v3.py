@@ -1,14 +1,14 @@
-"""Linnaea v3: built on a CC-BY-4.0 anime base model, turned into Linnaea.
+"""Freyja v3: built on a CC-BY-4.0 anime base model, turned into Freyja.
 
 Base: "Frieren — 3D Anime Character Model" by SammyCAnimations (Sketchfab),
 CC-BY-4.0. We keep only generic parts (body, head, face, hair cap and bangs)
 and change everything that identifies the original character: the twin-tails
 become long loose hair with a flower circlet, the white/gold outfit and
-striped shirt are recoloured to Linnaea's sage/cream/plum, the staff is
-replaced, and Linnaea's own accessories are added. The base file stays out of
+striped shirt are recoloured to Freyja's sage/cream/plum, the staff is
+replaced, and Freyja's own accessories are added. The base file stays out of
 git (art/source/ is ignored); only the derived, credited result is shipped.
 
-    blender -b --factory-startup --python art/blender/build_linnaea_v3.py -- <repo_root> [stage]
+    blender -b --factory-startup --python art/blender/build_freyja_v3.py -- <repo_root> [stage]
 """
 import math
 import os
@@ -135,7 +135,7 @@ def load_and_clean():
             bpy.data.objects.remove(o, do_unlink=True)
     objs = mesh_objects()
     apply_transforms(objs)
-    # Normalise: feet on the ground, centred, scaled to Linnaea's height.
+    # Normalise: feet on the ground, centred, scaled to Freyja's height.
     mn = Vector((1e9,) * 3)
     mx = Vector((-1e9,) * 3)
     for o in objs:
@@ -274,7 +274,7 @@ def rebuild_hair(objs, body_objs):
 
 def preview(tag):
     objs = mesh_objects()
-    out = os.path.join(ROOT, "art", "previews", f"linnaea_v3_{tag}.png")
+    out = os.path.join(ROOT, "art", "previews", f"freyja_v3_{tag}.png")
     C.render_preview(out, objs, views=((0, "front"), (35, "tq"), (90, "side"), (180, "back")), height=TARGET_H * 1.12, look_z=TARGET_H * 0.55, size=(1800, 900))
 
 
@@ -292,8 +292,8 @@ def build(stage="look"):
     total = sum(len(o.data.polygons) for o in mesh_objects())
     print("POLYS", total)
     if stage == "full":
-        import linnaea_v3_rig
-        linnaea_v3_rig.run(ROOT, mesh_objects, TARGET_H)
+        import freyja_v3_rig
+        freyja_v3_rig.run(ROOT, mesh_objects, TARGET_H)
     else:
         preview(stage)
 

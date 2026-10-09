@@ -1,6 +1,6 @@
-"""Stage 2 of Linnaea v3: measured joints, Linnaea's own accessories (shaped to
+"""Stage 2 of Freyja v3: measured joints, Freyja's own accessories (shaped to
 the outfit's real surface), rig, skin weights, animations, export.
-Called from build_linnaea_v3.build(stage="full")."""
+Called from build_freyja_v3.build(stage="full")."""
 import math
 import os
 
@@ -95,7 +95,7 @@ def wrap_surface(name, pts, z_top, z_bot, a0, a1, offset, mat, rows=8, segs=24, 
 
 def accessories(objs, rig):
     import lib_character as Lc
-    import lib_linnaea as LL
+    import lib_freyja as LL
     M = LL.mats(rig.spec)
     cloth = [o for n, o in objs.items() if n.startswith(("Dress Skirt_", "Body01_"))]
     cp = surface_points(cloth)
@@ -440,7 +440,7 @@ def run(root, mesh_objects, target_h):
     body = [o for n, o in objs.items() if n.startswith("Body01_defaultMat_0")]
     J = measure_joints(body)
     Lc.J.update(J)
-    spec = dict(BC.SPECS["linnaea"])
+    spec = dict(BC.SPECS["freyja"])
     spec["height"] = Lc.BASE_H
     rig = Lc.Rig(spec)
     parts = accessories(objs, rig)
@@ -598,19 +598,19 @@ def run(root, mesh_objects, target_h):
         gl, gr = o.vertex_groups.new(name="eye.L"), o.vertex_groups.new(name="eye.R")
         gl.add([v.index for v in o.data.vertices if v.co.x > 0], 1.0, "REPLACE")
         gr.add([v.index for v in o.data.vertices if v.co.x <= 0], 1.0, "REPLACE")
-    # Neutral, Linnaea-specific names in the shipped asset.
-    renames = {"FrierenIris": "M_Eye_Iris_linnaea", "FrierenSclera": "M_Eye_White_linnaea", "FrierenBoots": "M_Outfit_Sleeves_linnaea",
-               "M_Frieren_001_Skirt": "M_Outfit_Skirt_linnaea", "M_Frieren_001_Glass": "M_Outfit_Gem_linnaea", "M_Frieren_001": "M_Outfit_A_linnaea",
-               "M_Frieren_002": "M_Outfit_B_linnaea", "defaultMat": "M_Skin_linnaea", "eyelashes_and_stuff": "M_Hair_linnaea",
-               "Leggings": "M_Tights_linnaea", "Panties": "M_Under_linnaea", "Teeth": "M_Teeth_linnaea", "Tongue": "M_Tongue_linnaea"}
+    # Neutral, Freyja-specific names in the shipped asset.
+    renames = {"FrierenIris": "M_Eye_Iris_freyja", "FrierenSclera": "M_Eye_White_freyja", "FrierenBoots": "M_Outfit_Sleeves_freyja",
+               "M_Frieren_001_Skirt": "M_Outfit_Skirt_freyja", "M_Frieren_001_Glass": "M_Outfit_Gem_freyja", "M_Frieren_001": "M_Outfit_A_freyja",
+               "M_Frieren_002": "M_Outfit_B_freyja", "defaultMat": "M_Skin_freyja", "eyelashes_and_stuff": "M_Hair_freyja",
+               "Leggings": "M_Tights_freyja", "Panties": "M_Under_freyja", "Teeth": "M_Teeth_freyja", "Tongue": "M_Tongue_freyja"}
     for m in bpy.data.materials:
         if m.name in renames:
             m.name = renames[m.name]
     for o, _, _ in rig.objects:
-        o.name = o.name.replace("Frieren", "Linnaea").replace("Dress Skirt", "Outfit")
+        o.name = o.name.replace("Frieren", "Freyja").replace("Dress Skirt", "Outfit")
     for i, img in enumerate(list(bpy.data.images)):
-        if not img.name.startswith("linnaea_tex"):
-            img.name = f"linnaea_tex_{i}"
+        if not img.name.startswith("freyja_tex"):
+            img.name = f"freyja_tex_{i}"
     tip = bpy.data.objects.new("StaffTip", None)
     bpy.context.scene.collection.objects.link(tip)
     tip.parent = arm
@@ -621,10 +621,13 @@ def run(root, mesh_objects, target_h):
     anim = Lc.Animator(rig)
     import mocap_retarget as MR
     mocap = os.path.join(root, "art", "source", "mocap")
-    speeds = MR.retarget_clips(arm, [("Walk", "07_01.bvh", {"hold_right": 0.55, "staff": True, "staff_tilt": 6}),
-                                     ("Run", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 30})], mocap)
+    speeds = MR.retarget_clips(arm, [
+        ("Walk", "07_01.bvh", {"lean": 4.0}),
+        ("Run", "09_02.bvh", {"lean": 9.0}),
+        ("WalkStaff", "07_01.bvh", {"hold_right": 0.55, "staff": True, "staff_tilt": 6, "lean": 4.0}),
+        ("RunStaff", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 30, "lean": 9.0})], mocap)
     import json
-    with open(os.path.join(root, "game", "data", "characters", "linnaea_locomotion.json"), "w") as fh:
+    with open(os.path.join(root, "game", "data", "characters", "freyja_locomotion.json"), "w") as fh:
         json.dump({"natural_speed": speeds, "source": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu)"}, fh, indent=1)
     for (aname, frames, fn, loop) in BC.ANIMS["mage"]:
         if aname in speeds:
@@ -632,13 +635,13 @@ def run(root, mesh_objects, target_h):
         anim.action(aname, frames, fn, loop)
     anim.reset()
     objs_out = [arm] + [o for o, _, _ in rig.objects] + [tip]
-    C.export_glb(os.path.join(root, "game", "assets", "models", "characters", "linnaea.glb"), objs_out)
+    C.export_glb(os.path.join(root, "game", "assets", "models", "characters", "freyja.glb"), objs_out)
     ad = arm.animation_data
     for tr in ad.nla_tracks:
         tr.mute = True
     anim.reset()
     bpy.context.view_layer.update()
-    prev = os.path.join(root, "art", "previews", "linnaea_v3_full.png")
+    prev = os.path.join(root, "art", "previews", "freyja_v3_full.png")
     C.render_preview(prev, objs_out, views=((0, "front"), (35, "tq"), (90, "side"), (180, "back")),
                      height=target_h * 1.12, look_z=target_h * 0.55, size=(1800, 900))
     for (aname, frames, fn, loop) in BC.ANIMS["mage"]:
@@ -654,4 +657,4 @@ def run(root, mesh_objects, target_h):
         C.render_preview(prev.replace(".png", f"_pose_{aname}.png"), objs_out, views=((30, "q"),),
                          height=target_h * 1.25, look_z=target_h * 0.55, size=(400, 900))
     ad.action = None
-    print("BUILT linnaea v3", sum(len(o.data.polygons) for o, _, _ in rig.objects), "faces")
+    print("BUILT freyja v3", sum(len(o.data.polygons) for o, _, _ in rig.objects), "faces")

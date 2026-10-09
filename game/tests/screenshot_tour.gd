@@ -118,10 +118,10 @@ func _tour() -> void:
 	p.camera_rig.height = 1.2
 	_pose(cpos, PI - 0.25, -0.5, -2.0)
 	await _wait(1.5)
-	await _shot("09_linnaea_back")
+	await _shot("09_freyja_back")
 	_pose(cpos, 0.4, 0.4 + 0.45, -4.0)
 	await _wait(1.5)
-	await _shot("10_linnaea_front")
+	await _shot("10_freyja_front")
 	# 9. Face close-ups with expressions.
 	p.camera_rig.outdoor_length = 1.05
 	p.camera_rig.height = 1.52

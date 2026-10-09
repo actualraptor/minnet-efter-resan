@@ -4,7 +4,7 @@
 
 ---
 
-## Linnaea, `char_linnaea` [CANON]
+## Freyja, `char_freyja` [CANON]
 - **Species:** elf. **Born:** around year −10 (about 1,040 years old in 1031). **Looks:** in her twenties.
 - **Visual:** silver-lavender hair to mid-thigh, voluminous and wavy, with a crown braid ending at the back of the head in white star-flowers, leaves and a plum ribbon bow with long tails; long ears; green-teal eyes. Cream blouse with big puffed sleeves and ruffled cuffs, a short sage capelet with gold trim and a frilled collar, and a brown leather corset belt with gold buckles. Knee-length layered skirt: sage handkerchief-point panels with gold trim and embroidery, plum panels between, cream ruffled petticoats. Green crystal dangles hang on gold chains from the belt. Dark tights, tall buckled brown boots, and a leather satchel with a gold leaf emblem at the back hip. Twisted wooden staff whose top loop cradles a large green gem, with leaves and crystal dangles. *(Target: the owner's vision frames, kept locally in `art/reference/`.)*
 - **Personality:** reserved, curious, dry. Delighted by obscure, "useless" spells. Kind, but blind to the scale of mortal lives.
@@ -37,6 +37,6 @@
 - Gardener and seed-seller at Brenn's Crossing. He kept a notebook of flowers with terrible drawings ("daisies like fried eggs"), hummed badly while weeding, proposed with a radish, and never remembered where his hat was. He died about four winters before 1031.
 
 ## The original party (981) [CANON: names and roles / PROPOSAL: the rest]
-- **Teodor, `char_teodor`**: the human hero. Charismatic and attentive to Linnaea's eccentricities. He bought seed packets from Jonas "for a friend who'd outlive us all" [CANON]. He lives on the coast in 1031, about 75 years old. [PROPOSAL] He spent decades documenting the places and spells she loved, in a grimoire that becomes the late-game revelation.
+- **Teodor, `char_teodor`**: the human hero. Charismatic and attentive to Freyja's eccentricities. He bought seed packets from Jonas "for a friend who'd outlive us all" [CANON]. He lives on the coast in 1031, about 75 years old. [PROPOSAL] He spent decades documenting the places and spells she loved, in a grimoire that becomes the late-game revelation.
 - **Ragna Stenhammar, `char_ragna`** [PROPOSAL]: the warrior. A tall, laconic human woman who later becomes a famously gentle smith.
 - **Brother Edvin, `char_edvin`** [PROPOSAL]: the priest and healer. Anxious and earnest, tells terrible jokes, and is a devoted gardener (a possible link to Jonas).

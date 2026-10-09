@@ -18,7 +18,7 @@
         {"title": "Third-person controller and orbit camera", "status": "complete"},
         {"title": "Meadow terrain, grass, wildflowers and scenery", "status": "complete"},
         {"title": "Cottage exterior and furnished interior", "status": "complete"},
-        {"title": "Rigged, animated characters (Linnaea, Edda, Pippa)", "status": "complete"},
+        {"title": "Rigged, animated characters (Freyja, Edda, Pippa)", "status": "complete"},
         {"title": "Field of Flowers spell and spell framework", "status": "complete"},
         {"title": "Text dialogue with choices and stable line IDs", "status": "complete"},
         {"title": "The Garden Behind the Cottage quest and memory event", "status": "complete"},
@@ -39,7 +39,7 @@
     {
       "date": "2026-10-09",
       "title": "The first playable slice",
-      "body": "Linnaea can walk the meadow road, step into Edda's cottage, hear about Jonas's garden and grow it back with the Field of Flowers. The moment is written into her journal as a memory. Everything is an early prototype: scripted 3D models, synthesised audio, and a lot still to polish."
+      "body": "Freyja can walk the meadow road, step into Edda's cottage, hear about Jonas's garden and grow it back with the Field of Flowers. The moment is written into her journal as a memory. Everything is an early prototype: scripted 3D models, synthesised audio, and a lot still to polish."
     }
   ]
 }

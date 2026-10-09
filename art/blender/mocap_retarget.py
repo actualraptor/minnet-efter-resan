@@ -148,7 +148,7 @@ def _aim(pb, d_world, twist_ref=None):
     return rot
 
 
-def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0):
+def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_deg=4.0):
     """Keyframe the cycle onto `arm` (a mesh-free armature for speed)."""
     act = bpy.data.actions.new(name)
     if arm.animation_data is None:
@@ -158,6 +158,13 @@ def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0):
     for p in pbs:
         p.rotation_mode = "QUATERNION"
     hold = {"upper_arm.R": Vector((-0.25, -0.15, -1.0)), "forearm.R": Vector((-0.1, -0.7, -0.6))}
+    # Posture correction: the mocap subject's lumbar curve plus our straight rig
+    # read as leaning back. Rotate the spine chain so the mean torso axis is
+    # upright with a slight, natural forward lean.
+    torso = (cyc["Neck1"] - cyc["Hips"]).mean(axis=0)
+    want = Vector((0.0, -math.sin(math.radians(lean_deg)), math.cos(math.radians(lean_deg))))
+    posture = Vector(torso).normalized().rotation_difference(want).to_matrix()
+    spine_chain = {"hips", "spine", "chest", "neck", "head"}
     for f in range(n + 1):
         for p in pbs:
             p.matrix_basis = Matrix.Identity(4)
@@ -169,6 +176,8 @@ def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0):
             d = cyc[j1][f] - cyc[j0][f]
             if np.linalg.norm(d) < 1e-4:
                 continue
+            if bname in spine_chain:
+                d = posture @ Vector(d)
             if bname in hold and hold_right > 0:
                 d = Vector(d).normalized() * (1 - hold_right) + hold[bname].normalized() * hold_right
             tw = None
@@ -215,7 +224,7 @@ def retarget_clips(arm, clips, mocap_dir):
         fps, raw = sample_bvh(os.path.join(mocap_dir, fname))
         d = normalise(raw, hip_h)
         cyc, n, speed = make_cycle(d, fps)
-        act = bake(helper, name, cyc, n, hold_right=opt.get("hold_right", 0.0), staff=opt.get("staff", False), staff_tilt=opt.get("staff_tilt", 8.0))
+        act = bake(helper, name, cyc, n, hold_right=opt.get("hold_right", 0.0), staff=opt.get("staff", False), staff_tilt=opt.get("staff_tilt", 8.0), lean_deg=opt.get("lean", 4.0))
         speeds[name] = round(speed, 3)
         print(f"MOCAP {name}: {fname} cycle {n} frames, natural speed {speed:.2f} m/s")
     bpy.data.objects.remove(helper, do_unlink=True)

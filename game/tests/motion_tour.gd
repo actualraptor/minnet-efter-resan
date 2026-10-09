@@ -1,5 +1,5 @@
 extends Node
-## Drives Linnaea through a movement script for review videos:
+## Drives Freyja through a movement script for review videos:
 ##   godot --path game --audio-driver Dummy --write-movie out.avi --fixed-fps 30 -- --motion=<view>
 ## views: side (default), front, back, close
 
@@ -43,6 +43,10 @@ func _run() -> void:
 	var back: String = {"side": "move_left", "front": "move_forward", "back": "move_back", "close": "move_left"}[view]
 	await _hold([], 1.0)
 	await _hold([fwd], 2.5)
+	await _hold([], 0.6)
+	p.staff.summon()
+	await _hold([], 1.2)
+	await _hold([fwd], 2.0)
 	await _hold([fwd, "run"], 2.5)
 	await _hold([], 1.5)
 	await _hold([back], 1.2)

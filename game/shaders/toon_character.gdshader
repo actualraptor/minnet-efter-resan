@@ -12,6 +12,17 @@ uniform float rim_strength = 0.35;
 uniform float emission_strength = 0.0;
 uniform float light_scale = 0.62;
 uniform float sheen = 0.0; // anime hair highlight band
+// Materialise / dissolve from a point (the hand): visible within dissolve_radius,
+// with a glowing, sparkling edge. A large radius means fully solid.
+uniform vec3 dissolve_origin = vec3(0.0);
+uniform float dissolve_radius = 1000.0;
+uniform vec3 dissolve_glow : source_color = vec3(0.75, 1.0, 0.6);
+
+varying vec3 world_pos;
+
+void vertex() {
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
 
 void fragment() {
 	vec4 c = albedo;
@@ -20,6 +31,16 @@ void fragment() {
 	}
 	ALBEDO = c.rgb * COLOR.rgb;
 	EMISSION = c.rgb * emission_strength;
+	if (dissolve_radius < 100.0) {
+		float d = distance(world_pos, dissolve_origin);
+		vec3 cell = floor(world_pos * 90.0);
+		float n = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+		float edge = dissolve_radius - d + (n - 0.5) * 0.08;
+		if (edge < 0.0) {
+			discard;
+		}
+		EMISSION += dissolve_glow * (1.0 - smoothstep(0.0, 0.06, edge)) * 4.0;
+	}
 	if (sheen > 0.0) {
 		// Angel-ring: a soft bright band where the view-space normal tilts slightly upward.
 		float ny = NORMAL.y;

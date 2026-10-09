@@ -2,7 +2,7 @@
 
 *"The memory after the journey"*: a cozy, third-person 3D fantasy adventure in Godot 4.
 
-Fifty years after her party defeated the Hollow King, the centuries-old elven mage **Linnaea** walks the old roads again. Her friends have grown old, the world has moved on, and she is only beginning to notice how much ordinary lives matter.
+Fifty years after her party defeated the Hollow King, the centuries-old elven mage **Freyja** walks the old roads again. Her friends have grown old, the world has moved on, and she is only beginning to notice how much ordinary lives matter.
 
 > **Status: early prototype (milestone 001).** Not released and no release date. Everything here is work in progress.
 
@@ -14,10 +14,10 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 ## What's playable now (milestone 001: "A Cottage, a Mage, and a Memory")
 - A ~100 × 100 m sunlit meadow with rolling terrain, wind-blown grass, wildflowers, trees, hills, mountains, butterflies and chimney smoke.
 - Edda's cottage, with a furnished interior you can walk into through a working door.
-- Linnaea, a rigged and animated elven mage. Third-person movement (walk, run, jump), an orbit camera that avoids walls, footsteps.
+- Freyja, a rigged and animated elven mage. Third-person movement (walk, run, jump), an orbit camera that avoids walls, footsteps.
 - **Field of Flowers**: gather light at the staff, then a luminous wave travels along the ground and real 3D flowers sprout and bloom. They persist and are saved.
-- Text dialogue where both the NPCs and Linnaea speak, with choices, conditions, camera framing and voice-ready line IDs.
-- A short, complete story, *The Garden Behind the Cottage*, that records a structured **memory event** in Linnaea's journal.
+- Text dialogue where both the NPCs and Freyja speak, with choices, conditions, camera framing and voice-ready line IDs.
+- A short, complete story, *The Garden Behind the Cottage*, that records a structured **memory event** in Freyja's journal.
 - Original synthesised ambience and SFX, and a composed meadow theme.
 
 ## Controls
@@ -29,7 +29,8 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 | Interact / talk | E | X |
 | Advance dialogue | Space / E / Enter / click | A |
 | Choose | 1–3 or click | — |
-| Cast equipped spell | Left mouse or F | RB |
+| Summon / stow staff | Q | — |
+| Cast equipped spell (summons the staff if needed) | Left mouse or F | RB |
 | Journal / pause | J or Tab / Esc | Start |
 | Quick save / load | F5 / F9 | — |
 

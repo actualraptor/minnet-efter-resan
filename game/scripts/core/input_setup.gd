@@ -14,6 +14,7 @@ const KEYS := {
 	"pause": [KEY_ESCAPE],
 	"journal": [KEY_J, KEY_TAB],
 	"cast_alt": [KEY_F],
+	"summon": [KEY_Q],
 	"advance": [KEY_SPACE, KEY_ENTER, KEY_E],
 	"quick_save": [KEY_F5],
 	"quick_load": [KEY_F9],

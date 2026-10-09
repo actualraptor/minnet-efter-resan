@@ -1,4 +1,4 @@
-"""Linnaea v2: hair, outfit and staff rebuilt against the owner's vision frames.
+"""Freyja v2: hair, outfit and staff rebuilt against the owner's vision frames.
 
 Design notes (from art/reference, kept local):
   hair      silver-lavender, to mid-thigh, voluminous and wavy, fanned ends;

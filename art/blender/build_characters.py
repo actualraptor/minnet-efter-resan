@@ -12,13 +12,13 @@ from mathutils import Matrix, Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib_common as C  # noqa: E402
 import lib_character as L  # noqa: E402
-import lib_linnaea  # noqa: E402
+import lib_freyja  # noqa: E402
 import lib_villagers  # noqa: E402
 from lib_character import smooth_pulse as sp_  # noqa: E402
 
 SPECS = {
-    "linnaea": {
-        "name": "linnaea", "height": 1.68, "ears": "elf", "hair_style": "long2", "bangs": 7,
+    "freyja": {
+        "name": "freyja", "height": 1.68, "ears": "elf", "hair_style": "long2", "bangs": 7,
         "outfit": "mage2", "staff": None, "eye_size": 1.22, "face_texture": True, "head_scale": 1.1, "ear_color": "#f3c3bb", "smile": 0.25, "boot_top": 0.47, "anim_set": "mage",
         "colors": {
             "skin": "#f7e1d6", "hair": "#ebe8f2", "brow": "#c9c4d8", "eyes": "#2fae94", "lash": "#4a3b52",
@@ -72,6 +72,39 @@ def hair(a, h1, h2=None, h3=None):
     h3 = h3 if h3 is not None else h1 * 0.5
     a.rot("hair.3", rx=h3)
     a.rot("hair.4", rx=h3 * 1.1)
+
+
+def mage_idle_free(a, t, f):
+    """Staff away: relaxed arms, gentle breathing and a slow weight shift."""
+    p = math.tau * t
+    b = math.sin(p)
+    relaxed(a, staff=False)
+    a.rot("upper_arm.L", rx=-3 + 1.0 * b, ry=40 + 1.2 * math.sin(p + 0.5))
+    a.rot("upper_arm.R", rx=-3 - 1.0 * b, ry=-40 - 1.2 * math.sin(p + 1.1))
+    a.rot("forearm.L", rx=-10)
+    a.rot("forearm.R", rx=-10)
+    a.rot("hips", rz=1.5 * b, ry=1.2 * b)
+    a.hips_offset(dz=-0.004 * abs(b), dy=0.0)
+    a.rot("spine", rx=1.0 * b)
+    a.rot("chest", rx=-1.2 * b, rz=-1.2 * b)
+    a.rot("neck", rx=2)
+    a.rot("head", rx=-3 + 1.5 * math.sin(p + 1.0), ry=2.5 * math.sin(p))
+
+
+def mage_summon(a, t, f):
+    """Pull the staff out of thin air: right hand sweeps up and out, fingers open,
+    then closes around the staff as it materialises (at ~55%) and settles."""
+    reach = sp_(t, 0.0, 0.45) * (1 - sp_(t, 0.6, 1.0))
+    settle = sp_(t, 0.5, 1.0)
+    relaxed(a, staff=False)
+    a.rot("upper_arm.R", rx=-3 - 70 * reach - 15 * settle, ry=-40 + 30 * reach + 14 * settle)
+    a.rot("forearm.R", rx=-10 - 20 * reach - 28 * settle)
+    a.rot("hand.R", rx=-25 * reach, rz=-20 * reach)
+    a.rot("upper_arm.L", rx=-3 - 12 * reach, ry=40 - 10 * reach)
+    a.rot("chest", rz=-8 * reach, rx=-3 * reach)
+    a.rot("head", rz=-10 * reach, rx=-6 * reach)
+    # Keep the (still invisible) staff upright so it materialises standing.
+    a.staff_upright(tilt_x=6 - 2 * settle, tilt_y=-4 * settle)
 
 
 def mage_idle(a, t, f):
@@ -295,7 +328,7 @@ def child_hop(a, t, f):
 
 
 ANIMS = {
-    "mage": [("Idle", 90, mage_idle, True), ("Walk", 24, mage_walk, True), ("Run", 18, mage_run, True),
+    "mage": [("Idle", 120, mage_idle_free, True), ("IdleStaff", 90, mage_idle, True), ("Summon", 27, mage_summon, False), ("Walk", 24, mage_walk, True), ("Run", 18, mage_run, True),
              ("Jump", 14, mage_jump, False), ("Fall", 20, mage_fall, True), ("Cast", 48, mage_cast, False),
              ("Talk", 60, mage_talk, True)],
     "elder": [("Idle", 120, elder_idle, True), ("Talk", 72, elder_talk, True),
@@ -312,7 +345,7 @@ def build(name, root):
     L.build_body(rig)
     L.build_head(rig)
     if spec["outfit"] == "mage2":
-        lib_linnaea.build(rig)
+        lib_freyja.build(rig)
     elif spec["outfit"] == "elder2":
         lib_villagers.edda_hair(rig)
         lib_villagers.edda(rig)

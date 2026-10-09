@@ -23,17 +23,29 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 			walk_natural = float(d["natural_speed"].get("Walk", walk_natural))
 			run_natural = float(d["natural_speed"].get("Run", run_natural))
 	var bt := AnimationNodeBlendTree.new()
-	var bs := AnimationNodeBlendSpace1D.new()
-	bs.min_space = 0.0
-	bs.max_space = 2.0
-	bs.sync = true
-	for p in [["Idle", 0.0], ["Walk", 1.0], ["Run", 2.0]]:
-		var a := AnimationNodeAnimation.new()
-		a.animation = p[0]
-		bs.add_blend_point(a, p[1])
-	bt.add_node("loco", bs, Vector2(0, 0))
-	bt.add_node("stride", AnimationNodeTimeScale.new(), Vector2(200, 0))
-	bt.connect_node("stride", 0, "loco")
+	var sets := {"loco_free": ["Idle", "Walk", "Run"], "loco_staff": ["IdleStaff", "WalkStaff", "RunStaff"]}
+	var y := 0
+	for key in sets:
+		var bs := AnimationNodeBlendSpace1D.new()
+		bs.min_space = 0.0
+		bs.max_space = 2.0
+		bs.sync = true
+		for i in 3:
+			var clip: String = sets[key][i]
+			if not anim_player.has_animation(clip):
+				clip = sets["loco_free"][i]
+			var a := AnimationNodeAnimation.new()
+			a.animation = clip
+			bs.add_blend_point(a, float(i))
+		bt.add_node(key, bs, Vector2(0, y))
+		y += 160
+	var mix := AnimationNodeBlend2.new()
+	mix.sync = true
+	bt.add_node("staffmix", mix, Vector2(200, 0))
+	bt.connect_node("staffmix", 0, "loco_free")
+	bt.connect_node("staffmix", 1, "loco_staff")
+	bt.add_node("stride", AnimationNodeTimeScale.new(), Vector2(400, 0))
+	bt.connect_node("stride", 0, "staffmix")
 	var tr := AnimationNodeTransition.new()
 	tr.xfade_time = 0.22
 	for i in 4:
@@ -55,7 +67,19 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	bt.add_node("cast", shot, Vector2(600, 0))
 	bt.connect_node("cast", 0, "state")
 	bt.connect_node("cast", 1, "CastClip")
-	bt.connect_node("output", 0, "cast")
+	var summon_clip := AnimationNodeAnimation.new()
+	summon_clip.animation = "Summon"
+	bt.add_node("SummonClip", summon_clip, Vector2(600, 300))
+	var sshot := AnimationNodeOneShot.new()
+	sshot.fadein_time = 0.12
+	sshot.fadeout_time = 0.25
+	sshot.filter_enabled = true
+	for bone in ["upper_arm.R", "forearm.R", "hand.R", "upper_arm.L", "forearm.L", "chest", "neck", "head"]:
+		sshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), bone]), true)
+	bt.add_node("summon", sshot, Vector2(800, 0))
+	bt.connect_node("summon", 0, "cast")
+	bt.connect_node("summon", 1, "SummonClip")
+	bt.connect_node("output", 0, "summon")
 	tree = AnimationTree.new()
 	tree.name = "LocomotionTree"
 	tree.tree_root = bt
@@ -73,7 +97,10 @@ func update(delta: float, speed: float, walk_speed: float, run_speed: float, gro
 	else:
 		target = 1.0 + clampf((speed - walk_speed) / maxf(run_speed - walk_speed, 0.01), 0.0, 1.0)
 	_blend = lerpf(_blend, target, 1.0 - exp(-10.0 * delta))
-	tree.set("parameters/loco/blend_position", _blend)
+	tree.set("parameters/loco_free/blend_position", _blend)
+	tree.set("parameters/loco_staff/blend_position", _blend)
+	_staff = move_toward(_staff, _staff_target, delta / 0.35)
+	tree.set("parameters/staffmix/blend_amount", _staff)
 	# Stride matching: play the clips at the rate the feet actually cover ground.
 	var natural := lerpf(walk_natural, run_natural, clampf(_blend - 1.0, 0.0, 1.0))
 	var scale := 1.0
@@ -88,6 +115,25 @@ func update(delta: float, speed: float, walk_speed: float, run_speed: float, gro
 	if want != _state:
 		_state = want
 		tree.set("parameters/state/transition_request", want)
+
+
+var _staff := 0.0
+var _staff_target := 0.0
+
+
+static func _skeleton_path(anim_player: AnimationPlayer) -> String:
+	var root := anim_player.get_node(anim_player.root_node)
+	for sk in root.find_children("*", "Skeleton3D", true, false):
+		return String(root.get_path_to(sk))
+	return "Skeleton3D"
+
+
+func set_staff(on: bool) -> void:
+	_staff_target = 1.0 if on else 0.0
+
+
+func summon() -> void:
+	tree.set("parameters/summon/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 
 func cast() -> void:
