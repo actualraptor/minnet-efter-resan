@@ -812,7 +812,12 @@ def run(root, mesh_objects, target_h):
         ("Walk", "07_01.bvh", {"lean": 4.0}),
         ("Run", "09_02.bvh", {"lean": 9.0}),
         ("WalkStaff", "07_01.bvh", {"hold_right": 0.55, "staff": True, "staff_tilt": 6, "lean": 4.0}),
-        ("RunStaff", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 30, "lean": 9.0})], mocap)
+        ("RunStaff", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 30, "lean": 9.0}),
+        # CMU 16_05 forward jump, cut into take-off / airborne loop / landing.
+        # staff=True only turns the wrist so a summoned staff stays upright.
+        ("Jump", "16_05.bvh", {"segment": "jump", "lean": 6.0, "calm_head": 0.7, "staff": True, "staff_tilt": 12}),
+        ("Fall", "16_05.bvh", {"segment": "fall", "lean": 4.0, "calm_head": 0.7, "staff": True, "staff_tilt": 14}),
+        ("Land", "16_05.bvh", {"segment": "land", "lean": 6.0, "calm_head": 0.6, "staff": True, "staff_tilt": 10})], mocap)
     import json
     with open(os.path.join(root, "game", "data", "characters", "freyja_locomotion.json"), "w") as fh:
         json.dump({"natural_speed": speeds, "source": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu)"}, fh, indent=1)

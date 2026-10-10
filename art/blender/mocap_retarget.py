@@ -128,6 +128,51 @@ def make_cycle(d, fps, out_fps=30):
     return cyc, n_out, speed
 
 
+def jump_events(d, fps):
+    """Frame indices of a standing/forward jump: crouch, apex, touch-down, recovered."""
+    H = d["Hips"][:, 2]
+    foot = np.minimum(d["LeftToeBase"][:, 2], d["RightToeBase"][:, 2])
+    stand = float(np.median(H[: int(fps * 0.4)]))
+    apex = int(np.argmax(H))
+    crouch = int(np.argmin(H[:apex]))
+    td = apex + int(np.argmax(foot[apex:] < 0.02))
+    after = np.where(H[td + int(fps * 0.1):] > stand - 0.015)[0]
+    rec = td + int(fps * 0.1) + (int(after[0]) if len(after) else int(fps * 0.4))
+    return {"stand": stand, "crouch": crouch, "apex": apex, "touchdown": td, "recovered": rec}
+
+
+def make_segment(d, fps, kind, out_fps=30):
+    """Non-looping (or ping-pong looping) piece of a jump clip, in place.
+    Returns (cyc, n, hip_offsets) where hip_offsets only ever lower the hips:
+    physics lifts the body, the clip only shows crouch/absorb."""
+    ev = jump_events(d, fps)
+    if kind == "jump":
+        a, b = ev["crouch"], ev["apex"]
+    elif kind == "fall":
+        a, b = ev["apex"] - int(fps * 0.1), ev["apex"] + int(fps * 0.12)
+    else:  # land
+        a, b = ev["touchdown"] - int(fps * 0.03), ev["recovered"] + int(fps * 0.08)
+    H = d["Hips"]
+    idx = np.arange(a, b + 1)
+    if kind == "fall":
+        idx = np.concatenate([idx, idx[-2:0:-1]])  # ping-pong: loops seamlessly
+    n_out = max(6, int(round(len(idx) / fps * out_fps)))
+    src_t = np.linspace(0, len(idx) - 1, n_out + (1 if kind != "fall" else 0))
+    cyc = {}
+    for k, v in d.items():
+        seg = v[idx].copy()
+        seg[:, :2] -= H[idx][:, :2]  # in place (the controller moves her)
+        cyc[k] = np.stack([np.interp(src_t, np.arange(len(seg)), seg[:, i]) for i in range(3)], axis=1)
+    if kind == "fall":
+        for k in cyc:
+            cyc[k] = np.concatenate([cyc[k], cyc[k][:1]])
+    hip = np.minimum(0.0, cyc["Hips"][:, 2] - ev["stand"])
+    if kind == "fall":
+        hip[:] = 0.0
+    print("JUMP EVENTS", {k: (round(v / fps, 2) if k != "stand" else round(v, 3)) for k, v in ev.items()}, kind, "frames", len(hip) - 1)
+    return cyc, len(hip) - 1, hip
+
+
 def _aim(pb, d_world, twist_ref=None):
     M = pb.matrix.copy()
     cur = Vector(M.col[1][:3]).normalized()
@@ -154,7 +199,7 @@ GRIP_ALIGN = None  # world rotation turning the rest hand so its gripped staff p
 ARM_SPREAD = 9.0  # deg: Freyja's coat, corset and capelet are bulkier than the mocap actor
 
 
-def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_deg=4.0):
+def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_deg=4.0, hip_z=None, calm_head=0.0):
     """Keyframe the cycle onto `arm` (a mesh-free armature for speed)."""
     act = bpy.data.actions.new(name)
     if arm.animation_data is None:
@@ -184,6 +229,9 @@ def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_de
                 continue
             if bname in spine_chain:
                 d = posture @ Vector(d)
+            if calm_head > 0 and bname in ("neck", "head"):
+                # The jumper watches the ground; Freyja keeps her eyes up.
+                d = (Vector(d).normalized() * (1 - calm_head) + Vector((0, -0.12, 1)).normalized() * calm_head) * Vector(d).length
             if bname.startswith(("upper_arm.", "forearm.")):
                 side = 1.0 if pbs[bname].bone.head_local.x > 0 else -1.0
                 spread = Matrix.Rotation(math.radians(-side * ARM_SPREAD), 3, "Y")
@@ -199,7 +247,7 @@ def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_de
             if bname == "hips":
                 rest_head = pb.bone.head_local
                 loc = Vector(cyc["Hips"][f]) + Vector((0, 0, 0))
-                loc.z = rest_head.z + (cyc["Hips"][f][2] - cyc["Hips"][:, 2].mean())
+                loc.z = rest_head.z + (hip_z[f] if hip_z is not None else cyc["Hips"][f][2] - cyc["Hips"][:, 2].mean())
                 loc.x = rest_head.x + cyc["Hips"][f][0] * 0.6
                 loc.y = rest_head.y + cyc["Hips"][f][1] * 0.6
                 pb.matrix = Matrix.Translation(loc) @ rot.to_4x4()
@@ -235,8 +283,13 @@ def retarget_clips(arm, clips, mocap_dir):
     for name, fname, opt in clips:
         fps, raw = sample_bvh(os.path.join(mocap_dir, fname))
         d = normalise(raw, hip_h)
-        cyc, n, speed = make_cycle(d, fps)
-        act = bake(helper, name, cyc, n, hold_right=opt.get("hold_right", 0.0), staff=opt.get("staff", False), staff_tilt=opt.get("staff_tilt", 8.0), lean_deg=opt.get("lean", 4.0))
+        hip_z = None
+        if opt.get("segment"):
+            cyc, n, hip_z = make_segment(d, fps, opt["segment"])
+            speed = 0.0
+        else:
+            cyc, n, speed = make_cycle(d, fps)
+        act = bake(helper, name, cyc, n, hold_right=opt.get("hold_right", 0.0), staff=opt.get("staff", False), staff_tilt=opt.get("staff_tilt", 8.0), lean_deg=opt.get("lean", 4.0), hip_z=hip_z, calm_head=opt.get("calm_head", 0.0))
         speeds[name] = round(speed, 3)
         print(f"MOCAP {name}: {fname} cycle {n} frames, natural speed {speed:.2f} m/s")
     bpy.data.objects.remove(helper, do_unlink=True)

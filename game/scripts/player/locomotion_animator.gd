@@ -58,6 +58,20 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 		a.animation = names[i]
 		bt.add_node(names[i], a, Vector2(200, 120 * (i + 1)))
 		bt.connect_node("state", i + 1, names[i])
+	# Landing absorb (mocap) on the lower body + spine, after a real fall.
+	var land_clip := AnimationNodeAnimation.new()
+	land_clip.animation = "Land" if anim_player.has_animation("Land") else "Idle"
+	bt.add_node("LandClip", land_clip, Vector2(400, 480))
+	var lshot := AnimationNodeOneShot.new()
+	lshot.fadein_time = 0.05
+	lshot.fadeout_time = 0.2
+	lshot.filter_enabled = true
+	for bone in ["hips", "spine", "chest", "thigh.L", "shin.L", "foot.L", "thigh.R", "shin.R", "foot.R"]:
+		lshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), bone]), true)
+	bt.add_node("land", lshot, Vector2(500, 0))
+	bt.connect_node("land", 0, "state")
+	bt.connect_node("land", 1, "LandClip")
+	_has_land = anim_player.has_animation("Land")
 	var cast := AnimationNodeAnimation.new()
 	cast.animation = "Cast"
 	bt.add_node("CastClip", cast, Vector2(400, 300))
@@ -65,7 +79,7 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	shot.fadein_time = 0.15
 	shot.fadeout_time = 0.3
 	bt.add_node("cast", shot, Vector2(600, 0))
-	bt.connect_node("cast", 0, "state")
+	bt.connect_node("cast", 0, "land")
 	bt.connect_node("cast", 1, "CastClip")
 	var summon_clip := AnimationNodeAnimation.new()
 	_summon_clip = summon_clip
@@ -108,6 +122,12 @@ func update(delta: float, speed: float, walk_speed: float, run_speed: float, gro
 	if _blend > 0.35:
 		scale = clampf(speed / natural, 0.75, 1.6)
 	tree.set("parameters/stride/scale", scale)
+	if not grounded:
+		_air += delta
+	else:
+		if _air > 0.25 and _has_land:
+			tree.set("parameters/land/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+		_air = 0.0
 	var want := "ground"
 	if not grounded:
 		want = "jump" if vertical > 0.5 else "fall"
@@ -120,6 +140,8 @@ func update(delta: float, speed: float, walk_speed: float, run_speed: float, gro
 
 var _staff := 0.0
 var _staff_target := 0.0
+var _air := 0.0
+var _has_land := false
 
 
 static func _skeleton_path(anim_player: AnimationPlayer) -> String:

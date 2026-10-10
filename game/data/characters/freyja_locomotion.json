@@ -3,7 +3,10 @@
   "Walk": 1.227,
   "Run": 2.979,
   "WalkStaff": 1.227,
-  "RunStaff": 2.979
+  "RunStaff": 2.979,
+  "Jump": 0.0,
+  "Fall": 0.0,
+  "Land": 0.0
  },
  "source": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu)"
 }
