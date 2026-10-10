@@ -30,3 +30,4 @@ Blender 4.5.14 LTS (GPL; outputs are ours), FluidSynth 2.6.1 (LGPL), FFmpeg 8.0,
 
 ## Reference images
 The owner has shared AI-style concept images as an **aspirational art direction**. They are not in the repository and must not be shown as in-game screenshots. If they are ever published, they must be labelled "concept art" and their source and rights confirmed first.
+| VRM importer + MToon shader (`game/addons/vrm`, `game/addons/Godot-MToon-Shader`) | V-Sekai godot-vrm (github.com/V-Sekai/godot-vrm, main @ e15199f) | MIT | Imports the VRoid model; license in `addons/vrm/LICENSE`. |
