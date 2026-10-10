@@ -48,11 +48,31 @@ static func use_humanoid_library(root: Node) -> bool:
 		if a == null:
 			continue
 		var c := a.duplicate() as Animation
+		if game_name == "Run":
+			_soften_posture(c, sk, 0.45)
 		if lib.has_animation(game_name):
 			lib.remove_animation(game_name)
 		lib.add_animation(game_name, c)
 	src.free()
 	return true
+
+
+## The library jog leans like a sprinter; keep `keep` of the spine/neck/head
+## bend (blending each key toward the bone's rest rotation).
+static func _soften_posture(a: Animation, sk: Skeleton3D, keep: float) -> void:
+	for t in a.get_track_count():
+		if a.track_get_type(t) != Animation.TYPE_ROTATION_3D:
+			continue
+		var bone := String(a.track_get_path(t).get_concatenated_subnames())
+		if bone not in ["Spine", "Chest", "UpperChest", "Neck", "Head"]:
+			continue
+		var bi := sk.find_bone(bone)
+		if bi < 0:
+			continue
+		var rest := sk.get_bone_rest(bi).basis.get_rotation_quaternion()
+		for k in a.track_get_key_count(t):
+			var q: Quaternion = a.track_get_key_value(t, k)
+			a.track_set_key_value(t, k, rest.slerp(q, keep))
 
 
 static func prepare(root: Node) -> void:
