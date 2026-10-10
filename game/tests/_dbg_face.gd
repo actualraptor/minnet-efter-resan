@@ -24,13 +24,19 @@ func _ready() -> void:
 	rig.pitch = deg_to_rad(-2.0)
 	p.face._next_blink = 1e9
 	await get_tree().create_timer(1.5).timeout
-	for e in ["neutral", "blink", "happy", "surprised", "talk"]:
+	var list := ["neutral", "blink", "happy", "surprised", "talk"]
+	if OS.get_environment("DBG_EXPR") != "":
+		list = Array(OS.get_environment("DBG_EXPR").split(","))
+	for e in list:
 		p.face.set_expression(e, 10.0)
 		if e == "talk":
 			p.face.talk(5.0)
 		await get_tree().create_timer(0.6).timeout
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(out.path_join("face_%s.png" % e))
+	if OS.get_environment("DBG_EXPR") != "":
+		get_tree().quit()
+		return
 	p.face.set_expression("neutral")
 	rig.zoom = 0.2
 	for side in [-1, 1, 0]:
