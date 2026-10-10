@@ -24,3 +24,6 @@ build/
 art/reference/
 # Third-party source models (large / not redistributed as-is)
 art/source/
+
+# Local dev-only test assets (e.g. CC0 VRoid stand-in body)
+game/assets/dev/

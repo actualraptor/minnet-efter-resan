@@ -64,6 +64,9 @@ static func convert_material(src: Material) -> Material:
 	if lname.contains("crystal") or lname.contains("glow"):
 		m.set_shader_parameter("emission_strength", 0.9)
 	m.set_shader_parameter("ramp_softness", 0.22)
+	if lname.begins_with("m_outfit_"):
+		# Cloth: a softer light/shadow edge reads as fabric folds, not facets.
+		m.set_shader_parameter("ramp_softness", 0.32)
 	if lname.contains("skin"):
 		# Anime skin: soft, pale shadows; don't let golden light turn it orange.
 		m.set_shader_parameter("shadow_tint", Color(1.0, 0.86, 0.86))
