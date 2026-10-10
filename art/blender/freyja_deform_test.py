@@ -1,0 +1,170 @@
+"""Repeatable deformation test for Freyja (clipping gate).
+
+Loads the exported game model, plays every clip at several phases, and for each
+layer pair (inner garment/skin under an outer garment) counts inner vertices
+that are covered at rest but poke through the outer layer in the pose. Robust
+to flipped normals: a vertex counts only if its side of the outer surface
+changes between the rest pose and the test pose.
+
+    blender -b --factory-startup --python art/blender/freyja_deform_test.py -- <repo_root> [out_dir]
+
+Writes <out_dir>/deform_report.json and prints a table; exit code 1 if any pose
+exceeds the budget. Spring-bone motion is runtime-only and not covered here.
+"""
+import json
+import os
+import sys
+
+import bpy
+import numpy as np
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
+
+ROOT = os.path.abspath(sys.argv[sys.argv.index("--") + 1])
+OUT = sys.argv[sys.argv.index("--") + 2] if len(sys.argv) > sys.argv.index("--") + 2 else os.path.join(ROOT, "art", "previews")
+GLB = os.path.join(ROOT, "game", "assets", "models", "characters", "freyja.glb")
+
+# (label, inner prefix, outer prefix, z-range of inner verts to test or None)
+PAIRS = [
+    ("skin through coat", "Body01_", "Outfit_M_Freyja_001_0", None),
+    ("skin through tights", "Body01_", "Leggings_", (0.0, 0.95)),
+    ("tights through skirt", "Leggings_", "Outfit_M_Freyja_001_Skirt", (0.62, 1.0)),
+    ("coat through corset", "Outfit_M_Freyja_001_0", "Corset", (0.99, 1.13)),
+    ("sleeve through capelet", "Outfit_M_Freyja_001_0", "Outfit_M_Freyja_002", (1.15, 1.45)),
+    ("petticoat through skirt", "Petticoat", "Outfit_M_Freyja_001_Skirt", None),
+    ("tights through boots", "Leggings_", "Boots_", (0.0, 0.4)),
+]
+COVER = 0.035      # a vertex is "covered" if the outer layer is this close at rest
+POKE = 0.002       # and counts as clipping once it is this far on the other side
+BUDGET = 0.004     # max fraction of covered vertices allowed through, per pair and pose
+PHASES = (0.0, 0.2, 0.4, 0.6, 0.8)
+
+
+def load():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=GLB)
+    arm = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
+    if arm.animation_data:
+        for tr in arm.animation_data.nla_tracks:
+            tr.mute = True
+    else:
+        arm.animation_data_create()
+    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH" and o.parent == arm]
+    return arm, meshes
+
+
+def posed_verts(objs):
+    dg = bpy.context.evaluated_depsgraph_get()
+    out = {}
+    for o in objs:
+        ev = o.evaluated_get(dg)
+        me = ev.to_mesh()
+        v = np.array([o.matrix_world @ vv.co for vv in me.vertices])
+        tris = [tuple(p.vertices) for p in me.polygons]
+        out[o.name] = (v, tris)
+        ev.to_mesh_clear()
+    return out
+
+
+def signed(bvh, pts):
+    """Signed distance to the outer surface along its (possibly flipped) normal."""
+    s = np.full(len(pts), np.nan)
+    for i, p in enumerate(pts):
+        loc, nrm, idx, dist = bvh.find_nearest(Vector(p), COVER * 2)
+        if loc is not None:
+            s[i] = (Vector(p) - loc).dot(nrm)
+    return s
+
+
+def main_bone(o, i, names):
+    best, bw = "?", 0.0
+    for g in o.data.vertices[i].groups:
+        if g.weight > bw:
+            best, bw = names[g.group], g.weight
+    return best
+
+
+def run():
+    arm, meshes = load()
+    by = lambda pre: [o for o in meshes if o.name.startswith(pre)]
+    # Rest pose reference.
+    arm.animation_data.action = None
+    for pb in arm.pose.bones:
+        pb.matrix_basis.identity()
+    bpy.context.view_layer.update()
+    rest = posed_verts(meshes)
+    plan = []
+    for label, ipre, opre, zr in PAIRS:
+        inner, outer = by(ipre), by(opre)
+        if not inner or not outer:
+            print("SKIP", label)
+            continue
+        ov = np.concatenate([rest[o.name][0] for o in outer])
+        ot, off = [], 0
+        for o in outer:
+            ot += [tuple(i + off for i in t) for t in rest[o.name][1]]
+            off += len(rest[o.name][0])
+        bvh = BVHTree.FromPolygons([Vector(p) for p in ov], ot)
+        for o in inner:
+            v = rest[o.name][0]
+            sel = np.arange(len(v))
+            if zr:
+                sel = sel[(v[sel, 2] >= zr[0]) & (v[sel, 2] <= zr[1])]
+            s0 = signed(bvh, v[sel])
+            ok = ~np.isnan(s0) & (np.abs(s0) < COVER)
+            plan.append((label, o, outer, sel[ok], np.sign(s0[ok])))
+    report = {"poses": [], "pairs": [p[0] for p in PAIRS]}
+    fail = False
+    for act in sorted(bpy.data.actions, key=lambda a: a.name):
+        arm.animation_data.action = act
+        f0, f1 = act.frame_range
+        for ph in PHASES:
+            f = f0 + (f1 - f0) * ph
+            bpy.context.scene.frame_set(int(f), subframe=f - int(f))
+            pv = posed_verts(meshes)
+            row = {"clip": act.name, "phase": ph, "pairs": {}}
+            for label, o, outer, idx, side in plan:
+                ov = np.concatenate([pv[x.name][0] for x in outer])
+                ot, off = [], 0
+                for x in outer:
+                    ot += [tuple(i + off for i in t) for t in pv[x.name][1]]
+                    off += len(pv[x.name][0])
+                bvh = BVHTree.FromPolygons([Vector(p) for p in ov], ot)
+                s = signed(bvh, pv[o.name][0][idx])
+                bad = ~np.isnan(s) & (np.sign(s) != side) & (np.abs(s) > POKE)
+                frac = float(bad.sum()) / max(len(idx), 1)
+                names = {g.index: g.name for g in o.vertex_groups}
+                regions = {}
+                for i in idx[bad]:
+                    b = main_bone(o, int(i), names)
+                    regions[b] = regions.get(b, 0) + 1
+                cur = row["pairs"].setdefault(label, {"bad": 0, "covered": 0, "regions": {}})
+                cur["bad"] += int(bad.sum())
+                cur["covered"] += int(len(idx))
+                for k, c in regions.items():
+                    cur["regions"][k] = cur["regions"].get(k, 0) + c
+            for label, cur in row["pairs"].items():
+                cur["frac"] = cur["bad"] / max(cur["covered"], 1)
+                if cur["frac"] > BUDGET:
+                    fail = True
+            report["poses"].append(row)
+            worst = sorted(((c["frac"], l, c) for l, c in row["pairs"].items()), key=lambda t: t[0], reverse=True)[:2]
+            print("POSE %-12s %.1f  " % (act.name, ph) + "  ".join(
+                "%s %.2f%% %s" % (l, fr * 100, sorted(c["regions"].items(), key=lambda kv: -kv[1])[:3]) for fr, l, c in worst if fr > 0))
+    # Totals per pair.
+    print("SUMMARY (worst pose per pair)")
+    for label in report["pairs"]:
+        rows = [(r["pairs"][label]["frac"], r["clip"], r["phase"]) for r in report["poses"] if label in r["pairs"]]
+        if rows:
+            fr, clip, ph = max(rows)
+            print("  %-24s worst %.2f%% (%s @ %.1f)  %s" % (label, fr * 100, clip, ph, "FAIL" if fr > BUDGET else "ok"))
+    os.makedirs(OUT, exist_ok=True)
+    with open(os.path.join(OUT, "deform_report.json"), "w") as fh:
+        json.dump(report, fh, indent=1)
+    print("RESULT", "FAIL" if fail else "PASS")
+    return fail
+
+
+if __name__ == "__main__":
+    failed = run()
+    sys.exit(1 if failed else 0)
