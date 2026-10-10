@@ -235,3 +235,10 @@ func _build_quest_marker() -> void:
 	add_child(_marker)
 	var m := WorldLayout.GARDEN_MEADOW
 	_marker.global_position = _ground(m.x, m.z) + Vector3.UP * 0.8
+
+
+## Dev/playtest shortcut: F10 travels to the Linköping slice.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F10:
+		get_viewport().set_input_as_handled()
+		get_tree().change_scene_to_file("res://scenes/linkoping.tscn")
