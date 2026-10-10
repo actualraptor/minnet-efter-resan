@@ -10,6 +10,9 @@ signal stowed
 const STOW_AFTER := 12.0
 const GROW_TIME := 0.45
 const STAFF_LENGTH := 1.9
+## Ways Freyja draws her staff (clip -> seconds until it materialises in her hand).
+const VARIANTS := {"Summon": 0.45, "SummonFlick": 0.31, "SummonReach": 0.42, "SummonTwirl": 0.3}
+var _last_variant := ""
 
 var player: Node3D
 var loco: LocomotionAnimator
@@ -96,14 +99,17 @@ func touch() -> void:
 
 
 ## Plays the gesture and materialises the staff; awaitable.
-func summon() -> void:
+func summon(variant := "") -> void:
 	if out or busy:
 		return
 	busy = true
 	touch()
+	var options: Array = VARIANTS.keys().filter(func(k): return k != _last_variant)
+	var clip: String = variant if VARIANTS.has(variant) else options.pick_random()
+	_last_variant = clip
 	if loco:
-		loco.summon()
-	await get_tree().create_timer(0.45).timeout
+		loco.summon(clip)
+	await get_tree().create_timer(VARIANTS[clip]).timeout
 	_sparks.global_position = _grip()
 	_sparks.restart()
 	Audio.sfx("spell_gather", -10.0, 0.05)

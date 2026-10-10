@@ -75,7 +75,14 @@ def recolor_cloth(img, white_to, stripes=True):
         rgb[stripe] = np.array([0.93, 0.93, 0.93])
         lum = rgb.mean(axis=2)
         white = white | stripe
-    red = (rgb[..., 0] > 0.45) & (rgb[..., 1] < 0.25) & (rgb[..., 2] < 0.25)
+    red = (rgb[..., 0] > 0.18) & (rgb[..., 0] > rgb[..., 1] * 2.4) & (rgb[..., 0] > rgb[..., 2] * 2.4)
+    # Gem centres are a duller red inside teal rims; a looser test would catch
+    # reddish leather, so only accept it right next to teal gem pixels.
+    teal = (rgb[..., 1] > rgb[..., 0] * 1.5) & (rgb[..., 2] > rgb[..., 0] * 1.2) & (rgb[..., 1] > 0.2)
+    near = teal.copy()
+    for _ in range(8):
+        near = near | np.roll(near, 1, 0) | np.roll(near, -1, 0) | np.roll(near, 1, 1) | np.roll(near, -1, 1)
+    red |= near & (rgb[..., 0] > 0.15) & (rgb[..., 0] > rgb[..., 1] * 1.4) & (rgb[..., 0] > rgb[..., 2] * 1.25)
     rgb[red] = np.stack([rgb[red][:, 0] * 0.25, rgb[red][:, 0] * 0.95, rgb[red][:, 0] * 0.8], axis=1)
     shade = np.clip(lum / 0.92, 0.55, 1.05)
     rgb[white] = white_to[None, :] * shade[white][:, None]
@@ -113,8 +120,16 @@ def decimate(o, ratio):
     m = o.modifiers.new("Dec", "DECIMATE")
     m.ratio = ratio
     m.use_collapse_triangulate = False
+    # Keep the head (face, ears, hair cap) at full detail: decimate only below the neck.
+    if any(v.co.z > 1.38 for v in o.data.vertices):
+        g = o.vertex_groups.new(name="_decimate")
+        g.add([v.index for v in o.data.vertices if v.co.z < 1.36], 1.0, "REPLACE")
+        m.vertex_group = g.name
+        m.vertex_group_factor = 1.0
     bpy.context.view_layer.objects.active = o
     bpy.ops.object.modifier_apply(modifier=m.name)
+    if "_decimate" in o.vertex_groups:
+        o.vertex_groups.remove(o.vertex_groups["_decimate"])
 
 
 def load_and_clean():
@@ -211,8 +226,13 @@ def recolor(objs):
                     bsdf.inputs["Base Color"].default_value = (0.035, 0.025, 0.03, 1)
                     bsdf.inputs["Emission Strength"].default_value = 0.0
                     bsdf.inputs["Roughness"].default_value = 0.85
-            if m.name == "eyelashes_and_stuff":
-                pass
+            if m.name == "M_Frieren_001_Glass" and m.use_nodes:
+                bsdf = m.node_tree.nodes.get("Principled BSDF")
+                if bsdf:
+                    for lk in list(bsdf.inputs["Base Color"].links):
+                        m.node_tree.links.remove(lk)
+                    bsdf.inputs["Base Color"].default_value = (0.08, 0.6, 0.45, 1)
+                    m.diffuse_color = (0.08, 0.6, 0.45, 1)  # workbench previews
 
 
 def rebuild_hair(objs, body_objs):
@@ -243,9 +263,13 @@ def rebuild_hair(objs, body_objs):
         halves.append((side, o))
     bpy.data.objects.remove(tails, do_unlink=True)
     copies = []
-    # (source side, x offset, y-rotation degrees, length scale)
-    layout = [(-1, -0.08, 7, 1.32), (1, 0.08, -7, 1.32), (-1, -0.03, 3, 1.42), (1, 0.03, -3, 1.4), (-1, 0.0, 0, 1.25)]
-    for k, (side, dx, rot_y, ls) in enumerate(layout):
+    # (source side, x offset, y-rotation degrees, length scale, depth)
+    # The last two are an underlayer just inside the curtain so a parting in
+    # the middle shows more hair rather than the coat.
+    layout = [(-1, -0.08, 7, 1.32, 0.06), (1, 0.08, -7, 1.32, 0.06), (-1, -0.03, 3, 1.42, 0.06),
+              (1, 0.03, -3, 1.4, 0.06), (-1, 0.0, 0, 1.25, 0.06),
+              (1, -0.014, 1, 1.36, 0.045), (-1, 0.014, -1, 1.36, 0.045)]
+    for k, (side, dx, rot_y, ls, depth) in enumerate(layout):
         src = [o for sd, o in halves if sd == side][0]
         o = src.copy()
         o.data = src.data.copy()
@@ -261,7 +285,7 @@ def rebuild_hair(objs, body_objs):
         local = v - root
         local[:, 2] *= ls
         rotated = (np.array(R) @ local.T).T
-        new_root = np.array([dx, 0.06, z_top - 0.02])
+        new_root = np.array([dx, depth, z_top - 0.02])
         o.data.vertices.foreach_set("co", (rotated + new_root).ravel())
         o.data.update()
         copies.append(o)

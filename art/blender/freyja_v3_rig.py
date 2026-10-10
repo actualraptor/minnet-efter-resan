@@ -55,7 +55,12 @@ def surface_points(objs):
 
 
 def wrap_surface(name, pts, z_top, z_bot, a0, a1, offset, mat, rows=8, segs=24, hem_drop=0.0):
-    """Band hugging the outer silhouette of pts (angles in degrees, 270 = front)."""
+    """Band hugging the outer silhouette of pts (angles in degrees, 270 = front).
+    Angles are measured around the torso's own centre: the model origin sits
+    behind her back, and wrapping around it made bands bulge out like a bustle."""
+    band = pts[(pts[:, 2] < max(z_top, z_bot) + 0.03) & (pts[:, 2] > min(z_top, z_bot) - 0.03)]
+    cy = float(np.percentile(band[:, 1], 3) + np.percentile(band[:, 1], 97)) / 2 if len(band) > 10 else 0.0
+    pts = pts - np.array([0.0, cy, 0.0])
     ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0])) % 360
     rad = np.hypot(pts[:, 0], pts[:, 1])
     bm = bmesh.new()
@@ -82,7 +87,7 @@ def wrap_surface(name, pts, z_top, z_bot, a0, a1, offset, mat, rows=8, segs=24, 
             a = (a0 + (a1 - a0) * u) % 360
             drop = hem_drop * (1 - abs(u * 2 - 1)) ** 1.3 * t ** 2
             ar = math.radians(a)
-            row.append(bm.verts.new((math.cos(ar) * (rs[i] + offset), math.sin(ar) * (rs[i] + offset), z - drop)))
+            row.append(bm.verts.new((math.cos(ar) * (rs[i] + offset), cy + math.sin(ar) * (rs[i] + offset), z - drop)))
         grid.append(row)
     for j in range(rows):
         for i in range(segs):
@@ -137,6 +142,8 @@ def accessories(objs, rig):
     parts.append((C.join(bits, "PlumPanels"), ["hips", "thigh.L", "thigh.R"]))
     # Two gathered ruffle tiers hanging straight down just inside the skirt hem.
     near = sp_[np.abs(sp_[:, 2] - (hem_z + 0.03)) < 0.03]
+    pcy = float(np.percentile(near[:, 1], 3) + np.percentile(near[:, 1], 97)) / 2
+    near = near - np.array([0.0, pcy, 0.0])
     ang = np.arctan2(near[:, 1], near[:, 0])
     rad = np.hypot(near[:, 0], near[:, 1])
     tiers = []
@@ -152,7 +159,7 @@ def accessories(objs, rig):
                 r = float(np.percentile(rad[m], 50)) if m.sum() > 3 else float(np.median(rad))
                 r = r - inset + (0.006 * j)  # slight outward fall toward the hem
                 wav = math.sin(a * freq) * (0.006 + 0.004 * j)
-                row.append(bm.verts.new((math.cos(a) * (r + wav), math.sin(a) * (r + wav) * 1.0, z + (math.sin(a * freq) * 0.004 if j == 2 else 0))))
+                row.append(bm.verts.new((math.cos(a) * (r + wav), pcy + math.sin(a) * (r + wav), z + (math.sin(a * freq) * 0.004 if j == 2 else 0))))
             rows.append(row)
         for j in range(2):
             for i in range(segs):
@@ -227,7 +234,14 @@ def build_rig(J, hair_chain):
     return arm
 
 
+def _centre_y(pts, z, band=0.04):
+    m = np.abs(pts[:, 2] - z) < band
+    return float(np.percentile(pts[m, 1], 3) + np.percentile(pts[m, 1], 97)) / 2 if m.sum() > 10 else 0.0
+
+
 def _radius_at(pts, a_deg, z, pct=92, band=0.03, wedge=12):
+    """Outer radius at angle a_deg around the local centre (see _centre_y)."""
+    pts = pts - np.array([0.0, _centre_y(pts, z), 0.0])
     ang = np.degrees(np.arctan2(pts[:, 1], pts[:, 0])) % 360
     m = (np.abs(pts[:, 2] - z) < band) & (np.abs(((ang - a_deg) + 180) % 360 - 180) < wedge)
     if m.sum() < 3:
@@ -272,7 +286,7 @@ def add_dynamic_chains(arm, objs):
             pts = []
             for z in zl:
                 r = _radius_at(skirt, a, z) - 0.012
-                pts.append(Vector((math.cos(math.radians(a)) * r, math.sin(math.radians(a)) * r, z)))
+                pts.append(Vector((math.cos(math.radians(a)) * r, _centre_y(skirt, z) + math.sin(math.radians(a)) * r, z)))
             chains[f"skirt_{k}"] = ("hips", pts)
     # Capelet rim (short, stiff).
     if len(cape):
@@ -281,7 +295,7 @@ def add_dynamic_chains(arm, objs):
             pts = []
             for z in (1.39, 1.32, 1.25):
                 r = _radius_at(cape, a, z) - 0.01
-                pts.append(Vector((math.cos(math.radians(a)) * r, math.sin(math.radians(a)) * r, z)))
+                pts.append(Vector((math.cos(math.radians(a)) * r, _centre_y(cape, z) + math.sin(math.radians(a)) * r, z)))
             chains[f"cape_{k}"] = ("chest", pts)
     bpy.context.view_layer.objects.active = arm
     bpy.ops.object.mode_set(mode="EDIT")
@@ -433,12 +447,47 @@ def _smooth01(e0, e1, x):
     return t * t * (3 - 2 * t)
 
 
+def relax_hands(body_objs, J, curl_deg=48.0, thumb_deg=18.0):
+    """The base mesh has flat, spread T-pose hands. Curl the fingers gently
+    toward the palm (more at the tips) so hands read relaxed and natural."""
+    for sgn in (1, -1):
+        wrist = Vector((J["wrist"][0] * sgn, J["wrist"][1], J["wrist"][2]))
+        tip = Vector((J["hand_tip"][0] * sgn, J["hand_tip"][1], J["hand_tip"][2]))
+        axis_d = (tip - wrist).normalized()
+        hl = (tip - wrist).length
+        P = np.concatenate([np.array([v.co[:] for v in o.data.vertices]) for o in body_objs])
+        rel = P - np.array(wrist[:])
+        along = rel @ np.array(axis_d[:])
+        hand = P[(along > -0.01) & (along < hl + 0.03) & (np.linalg.norm(rel - np.outer(along, axis_d[:]), axis=1) < 0.06)]
+        cov = np.cov((hand - hand.mean(0)).T)
+        w, vecs = np.linalg.eigh(cov)
+        n = Vector(vecs[:, 0])  # smallest variance = palm normal
+        if n.z > 0:
+            n = -n                # palms face down-ish in the A-pose
+        side = axis_d.cross(n).normalized()
+        knuckle = wrist + axis_d * (hl * 0.42)
+        for o in body_objs:
+            for v in o.data.vertices:
+                r = v.co - wrist
+                a = r.dot(axis_d)
+                if a < hl * 0.3 or a > hl + 0.04 or (r - axis_d * a).length > 0.06:
+                    continue
+                t = min(1.0, (a - hl * 0.3) / (hl * 0.75))
+                ang = math.radians(curl_deg) * (t * t * (3 - 2 * t))
+                # rotate about the knuckle line so fingers bend toward the palm
+                piv = knuckle if a > hl * 0.42 else wrist + axis_d * a
+                R = Matrix.Rotation(ang, 3, side)  # side = dir x palm-normal: tips move toward the palm
+                v.co = piv + R @ (v.co - piv)
+        print("HANDS relaxed side", sgn, "normal", tuple(round(c, 2) for c in n))
+
+
 def run(root, mesh_objects, target_h):
     import build_characters as BC
     import lib_character as Lc
     objs = {o.name: o for o in mesh_objects()}
     body = [o for n, o in objs.items() if n.startswith("Body01_defaultMat_0")]
     J = measure_joints(body)
+    relax_hands(body, J)
     Lc.J.update(J)
     spec = dict(BC.SPECS["freyja"])
     spec["height"] = Lc.BASE_H
@@ -598,6 +647,8 @@ def run(root, mesh_objects, target_h):
         gl, gr = o.vertex_groups.new(name="eye.L"), o.vertex_groups.new(name="eye.R")
         gl.add([v.index for v in o.data.vertices if v.co.x > 0], 1.0, "REPLACE")
         gr.add([v.index for v in o.data.vertices if v.co.x <= 0], 1.0, "REPLACE")
+    import freyja_face
+    freyja_face.build(arm, objs, rig)
     # Neutral, Freyja-specific names in the shipped asset.
     renames = {"FrierenIris": "M_Eye_Iris_freyja", "FrierenSclera": "M_Eye_White_freyja", "FrierenBoots": "M_Outfit_Sleeves_freyja",
                "M_Frieren_001_Skirt": "M_Outfit_Skirt_freyja", "M_Frieren_001_Glass": "M_Outfit_Gem_freyja", "M_Frieren_001": "M_Outfit_A_freyja",
@@ -653,8 +704,37 @@ def run(root, mesh_objects, target_h):
                 ad.action_slot = act.slots[0]
         except AttributeError:
             pass
-        bpy.context.scene.frame_set(int(frames * (0.55 if aname == "Cast" else 0.25)))
+        bpy.context.scene.frame_set(int(frames * (0.5 if aname == "Cast" else 0.42 if aname.startswith("Summon") else 0.25)))
         C.render_preview(prev.replace(".png", f"_pose_{aname}.png"), objs_out, views=((30, "q"),),
                          height=target_h * 1.25, look_z=target_h * 0.55, size=(400, 900))
     ad.action = None
+    # Hand close-ups (rest pose and idle).
+    anim.reset()
+    bpy.context.view_layer.update()
+    C.render_preview(os.path.join(root, "art", "previews", "freyja_hand_rest.png"), objs_out, views=((0, "f"), (90, "s")),
+                     height=0.28, look_z=J["wrist"][2] - 0.04, look_x=-J["wrist"][0] - 0.04, size=(800, 400), elevation=10)
+    ad.action = bpy.data.actions.get("Idle")
+    try:
+        ad.action_slot = ad.action.slots[0]
+    except Exception:
+        pass
+    bpy.context.scene.frame_set(30)
+    hb = arm.pose.bones["hand.L"]
+    hp = arm.matrix_world @ hb.head
+    C.render_preview(os.path.join(root, "art", "previews", "freyja_hand_idle.png"), objs_out, views=((20, "f"), (100, "s")),
+                     height=0.3, look_z=hp.z - 0.06, look_x=hp.x, size=(800, 400), elevation=10)
+    ad.action = None
+    anim.reset()
+    # Face key previews (rest pose).
+    keyed = [o for o, _, _ in rig.objects if o.type == "MESH" and o.data.shape_keys]
+    for tag, vals in (("neutral", {}), ("blink", {"blink": 1}), ("half", {"blink": 0.5}), ("squint", {"squint": 1, "mouth_smile": 1}),
+                      ("talk", {"mouth_open": 1}), ("oh", {"mouth_o": 1, "brow_up": 1})):
+        for o in keyed:
+            for kb in o.data.shape_keys.key_blocks[1:]:
+                kb.value = vals.get(kb.name, 0.0)
+        C.render_preview(os.path.join(root, "art", "previews", f"freyja_face_{tag}.png"), objs_out, views=((0, "f"),),
+                         height=0.3, look_z=1.5, size=(420, 420), elevation=2)
+    for o in keyed:
+        for kb in o.data.shape_keys.key_blocks[1:]:
+            kb.value = 0.0
     print("BUILT freyja v3", sum(len(o.data.polygons) for o, _, _ in rig.objects), "faces")

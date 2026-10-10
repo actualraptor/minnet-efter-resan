@@ -11,6 +11,8 @@ uniform float ramp_softness = 0.12;
 uniform float rim_strength = 0.35;
 uniform float emission_strength = 0.0;
 uniform float light_scale = 0.62;
+uniform float shadow_floor = 0.55; // brightness of the shadow tone
+uniform float warmth_cancel = 0.0; // pulls warm light toward neutral (skin)
 uniform float sheen = 0.0; // anime hair highlight band
 // Materialise / dissolve from a point (the hand): visible within dissolve_radius,
 // with a glowing, sparkling edge. A large radius means fully solid.
@@ -54,8 +56,9 @@ void light() {
 	float ramp = smoothstep(-ramp_softness, ramp_softness, ndl);
 	float shadow = smoothstep(0.25, 0.6, ATTENUATION);
 	float lit = ramp * shadow;
-	vec3 tone = mix(shadow_tint * 0.55, vec3(1.0), lit);
-	DIFFUSE_LIGHT += tone * LIGHT_COLOR / PI * light_scale;
+	vec3 tone = mix(shadow_tint * shadow_floor, vec3(1.0), lit);
+	vec3 lc = mix(LIGHT_COLOR, vec3(dot(LIGHT_COLOR, vec3(0.333))), warmth_cancel);
+	DIFFUSE_LIGHT += tone * lc / PI * light_scale;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
 	SPECULAR_LIGHT += rim * rim_strength * lit * LIGHT_COLOR / PI * ALBEDO * light_scale;
 }

@@ -33,6 +33,16 @@ func _ready() -> void:
 	Audio.ambience("fireplace", -40.0, 0.1)
 	Audio.music("meadow_theme", -16.0, 6.0)
 	var args := OS.get_cmdline_user_args()
+	if "--dbg" in args:
+		fade.visible = false
+		title.visible = false
+		# Dev audits: --dbg --face|--spell|--pose|--walk (default: staff walk).
+		var dbg := "staffwalk"
+		for k in ["face", "spell", "pose", "walk"]:
+			if "--" + k in args:
+				dbg = k
+		add_child(load("res://tests/_dbg_%s.gd" % dbg).new())
+		return
 	if Array(args).any(func(a): return a.begins_with("--motion")):
 		fade.visible = false
 		title.visible = false

@@ -51,7 +51,8 @@ def export_glb(path, objects=None, animations=True, anim_mode="NLA_TRACKS"):
         export_skins=True,
         export_all_influences=False,
         export_def_bones=False,
-        export_morph=False,
+        export_morph=True,
+        export_morph_normal=False,
         export_materials="EXPORT",
         export_vertex_color="ACTIVE",
         export_normals=True,
@@ -283,7 +284,7 @@ def vertex_color_fill(ob, rgba_fn):
 # ---------------------------------------------------------------------------
 
 def render_preview(path, targets, views=((0, "front"), (90, "side"), (180, "back"), (35, "three_quarter")),
-                   size=(1600, 900), height=1.7, distance=None, ortho=True, elevation=8.0, look_z=None):
+                   size=(1600, 900), height=1.7, distance=None, ortho=True, elevation=8.0, look_z=None, look_x=0.0):
     scn = bpy.context.scene
     scn.render.engine = "BLENDER_WORKBENCH"
     scn.display.shading.light = "STUDIO"
@@ -315,9 +316,9 @@ def render_preview(path, targets, views=((0, "front"), (90, "side"), (180, "back
         a = math.radians(yaw)
         e = math.radians(elevation)
         # Character faces -Y; "front" camera sits at -Y looking +Y.
-        pos = Vector((math.sin(a) * dist * math.cos(e), -math.cos(a) * dist * math.cos(e), look_z + math.sin(e) * dist))
+        pos = Vector((look_x + math.sin(a) * dist * math.cos(e), -math.cos(a) * dist * math.cos(e), look_z + math.sin(e) * dist))
         cam.location = pos
-        direction = Vector((0, 0, look_z)) - pos
+        direction = Vector((look_x, 0, look_z)) - pos
         cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
         f = path.replace(".png", f"_{label}.png")
         scn.render.filepath = f

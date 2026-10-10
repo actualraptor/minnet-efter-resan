@@ -107,6 +107,104 @@ def mage_summon(a, t, f):
     a.staff_upright(tilt_x=6 - 2 * settle, tilt_y=-4 * settle)
 
 
+def _ease_back(x):
+    """0..1 with a small overshoot, for snappy-but-soft settles."""
+    c1, c3 = 1.4, 2.4
+    return 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2
+
+
+def mage_summon_flick(a, t, f):
+    """Casual: a quick downward-outward wrist flick at her side; the staff is just there."""
+    wind = sp_(t, 0.0, 0.25) * (1 - sp_(t, 0.25, 0.42))
+    flick = sp_(t, 0.25, 0.42)
+    settle = _ease_back(min(1.0, max(0.0, (t - 0.4) / 0.6)))
+    relaxed(a, staff=False)
+    a.rot("upper_arm.R", rx=-3 + 8 * wind - 22 * flick * 0.6 - 15 * settle, ry=-40 + 6 * wind + 18 * flick * 0.4 + 14 * settle)
+    a.rot("forearm.R", rx=-10 - 35 * wind + 10 * flick * (1 - settle) - 28 * settle)
+    a.rot("hand.R", rx=30 * wind - 25 * flick * (1 - settle), rz=15 * wind)
+    a.rot("head", rz=-4 * wind, rx=-2 * flick)
+    a.staff_upright(tilt_x=6 - 2 * settle, tilt_y=-4 * settle)
+
+
+def mage_summon_reach(a, t, f):
+    """Reaches up into the air above her and draws the staff down out of nothing."""
+    up = sp_(t, 0.0, 0.4)
+    down = sp_(t, 0.5, 0.95)
+    relaxed(a, staff=False)
+    lift = up * (1 - down)
+    a.rot("upper_arm.R", rx=-3 - 165 * lift - 15 * down, ry=-40 + 12 * lift + 14 * down)
+    a.rot("forearm.R", rx=-10 - 10 * lift - 28 * down)
+    a.rot("hand.R", rx=-20 * lift)
+    a.rot("upper_arm.L", rx=-3 - 10 * lift, ry=40 - 8 * lift)
+    a.rot("spine", rx=-4 * lift)
+    a.rot("chest", rx=-4 * lift, rz=-5 * lift)
+    a.rot("head", rx=-16 * lift, rz=-6 * lift)
+    a.hips_offset(dz=0.012 * lift * a.rig.s)
+    a.staff_upright(tilt_x=6 - 2 * down, tilt_y=-4 * down)
+
+
+def mage_summon_twirl(a, t, f):
+    """Left palm opens, the staff appears lying across her right hand and she spins it upright."""
+    show = sp_(t, 0.0, 0.3)
+    spin = sp_(t, 0.35, 0.8)
+    settle = sp_(t, 0.75, 1.0)
+    relaxed(a, staff=False)
+    a.rot("upper_arm.L", rx=-3 - 40 * show * (1 - settle), ry=40 - 20 * show * (1 - settle))
+    a.rot("forearm.L", rx=-10 - 50 * show * (1 - settle))
+    a.rot("hand.L", rx=-40 * show * (1 - settle))
+    a.rot("upper_arm.R", rx=-3 - 40 * show - 5 * spin, ry=-40 + 28 * show - 14 * spin + 14 * settle)
+    a.rot("forearm.R", rx=-10 - 50 * show + 22 * spin - 28 * settle * 0.0)
+    a.rot("chest", rz=-6 * show * (1 - settle))
+    a.rot("head", rx=-6 * show * (1 - settle))
+    # Staff lies sideways (90 deg) then twirls upright through a full turn.
+    a.staff_upright(tilt_x=6 * settle, tilt_y=-90 * (1 - spin) - 360 * spin * (1 - settle) * 0.0 - 4 * settle)
+
+
+def mage_cast2(a, t, f):
+    """Field of Flowers: anticipation, staff sweeps up overhead with the free hand
+    opening out, a held gather, then the staff is planted in front with a step
+    while the free hand sweeps outward to spread the wave, and a soft settle."""
+    antic = sp_(t, 0.0, 0.12) * (1 - sp_(t, 0.12, 0.3))
+    rise = sp_(t, 0.1, 0.45) * (1 - sp_(t, 0.6, 0.67))
+    gather = sp_(t, 0.42, 0.6) * (1 - sp_(t, 0.6, 0.66))
+    strike = sp_(t, 0.6, 0.68) * (1 - sp_(t, 0.82, 1.0))
+    breathe = math.sin(t * math.tau * 3) * gather
+    # Arms
+    a.rot("upper_arm.R", rx=-18 + 8 * antic - 120 * rise - 40 * strike, ry=-26 + 18 * rise + 8 * strike)
+    a.rot("forearm.R", rx=-38 - 20 * antic - 6 * rise - 25 * strike)
+    a.rot("upper_arm.L", rx=-4 - 35 * rise - 40 * strike, ry=38 - 55 * rise - 70 * strike + 3 * breathe)
+    a.rot("forearm.L", rx=-12 - 30 * rise + 10 * strike)
+    a.rot("hand.L", rx=-30 * rise - 15 * strike, rz=25 * strike)
+    # Body: rise onto the toes for the gather, then step and dip into the strike.
+    a.rot("spine", rx=4 * antic - 9 * rise + 12 * strike)
+    a.rot("chest", rx=2 * antic - 7 * rise + 6 * strike, rz=6 * strike)
+    a.rot("neck", rx=-4 * rise + 2 * strike)
+    a.rot("head", rx=-14 * rise + 6 * strike, rz=-4 * strike)
+    a.hips_offset(dz=(0.015 * rise - 0.06 * strike - 0.01 * antic) * a.rig.s, dy=-0.03 * strike * a.rig.s)
+    a.rot("thigh.R", rx=-28 * strike)
+    a.rot("shin.R", rx=34 * strike)
+    a.rot("foot.R", rx=-6 * strike)
+    a.rot("thigh.L", rx=10 * strike)
+    a.rot("shin.L", rx=18 * strike)
+    a.rot("foot.L", rx=-14 * strike + 10 * rise)
+    a.staff_upright(tilt_x=4 - 18 * rise + 34 * strike, tilt_y=-4)
+
+
+def mage_talk_free(a, t, f):
+    """Conversational gestures without the staff: small, understated."""
+    p = math.tau * t
+    relaxed(a, staff=False)
+    a.rot("upper_arm.L", rx=-14 + 5 * math.sin(p), ry=32)
+    a.rot("forearm.L", rx=-48 + 10 * math.sin(2 * p))
+    a.rot("hand.L", rz=8 * math.sin(2 * p))
+    a.rot("upper_arm.R", rx=-6 + 3 * math.sin(p + 1.4), ry=-38)
+    a.rot("forearm.R", rx=-22 + 6 * math.sin(2 * p + 1.0))
+    a.rot("head", rx=-2 + 2.5 * math.sin(2 * p), ry=3 * math.sin(p), rz=2 * math.sin(p + 0.7))
+    a.rot("spine", rx=1.0 * math.sin(p))
+    a.rot("hips", rz=1.2 * math.sin(p))
+    a.staff_upright(tilt_x=5, tilt_y=-4)
+
+
 def mage_idle(a, t, f):
     p = math.tau * t
     b = math.sin(p)
@@ -172,26 +270,36 @@ def mage_run(a, t, f):
 
 
 def mage_jump(a, t, f):
+    """Free-armed take-off: knees tuck, both arms lift and open for balance
+    (the summoned staff, when out, simply rides along in the right hand)."""
     tuck = sp_(t, 0.0, 0.45)
-    relaxed(a, spread=20 * tuck)
+    relaxed(a, staff=False)
     a.rot("thigh.L", rx=-45 * tuck)
     a.rot("shin.L", rx=70 * tuck)
     a.rot("thigh.R", rx=-18 * tuck)
     a.rot("shin.R", rx=45 * tuck)
-    a.rot("upper_arm.L", rx=-25 * tuck, ry=38 - 22 * tuck)
+    a.rot("upper_arm.L", rx=-4 - 30 * tuck, ry=40 - 24 * tuck)
+    a.rot("forearm.L", rx=-12 - 30 * tuck)
+    a.rot("upper_arm.R", rx=-4 - 22 * tuck, ry=-40 + 26 * tuck)
+    a.rot("forearm.R", rx=-12 - 34 * tuck)
     a.rot("spine", rx=4 * tuck)
+    a.rot("head", rx=-4 * tuck)
     hair(a, 4 + 14 * tuck, 10 * tuck, 8 * tuck)
-    a.staff_upright(tilt_x=12, tilt_y=-6)
+    a.staff_upright(tilt_x=12, tilt_y=-6)  # wrist only: keeps a summoned staff clear of the legs
 
 
 def mage_fall(a, t, f):
+    """Free-armed fall: arms out and fluttering a little, legs reaching for ground."""
     p = math.tau * t
-    relaxed(a, spread=24)
+    relaxed(a, staff=False)
     a.rot("thigh.L", rx=-18 + 5 * math.sin(p))
     a.rot("thigh.R", rx=-6 - 5 * math.sin(p))
     a.rot("shin.L", rx=32)
     a.rot("shin.R", rx=22)
-    a.rot("upper_arm.L", rx=-10, ry=14 + 5 * math.sin(p))
+    a.rot("upper_arm.L", rx=-14 + 3 * math.sin(p), ry=22 + 4 * math.sin(p))
+    a.rot("upper_arm.R", rx=-12 - 3 * math.sin(p), ry=-24 - 4 * math.sin(p + 0.7))
+    a.rot("forearm.L", rx=-24)
+    a.rot("forearm.R", rx=-26)
     hair(a, 24 + 5 * math.sin(p), 14 + 4 * math.sin(p + 1), 10 + 4 * math.sin(p + 2))
     a.staff_upright(tilt_x=14, tilt_y=-6)
 
@@ -328,9 +436,9 @@ def child_hop(a, t, f):
 
 
 ANIMS = {
-    "mage": [("Idle", 120, mage_idle_free, True), ("IdleStaff", 90, mage_idle, True), ("Summon", 27, mage_summon, False), ("Walk", 24, mage_walk, True), ("Run", 18, mage_run, True),
-             ("Jump", 14, mage_jump, False), ("Fall", 20, mage_fall, True), ("Cast", 48, mage_cast, False),
-             ("Talk", 60, mage_talk, True)],
+    "mage": [("Idle", 120, mage_idle_free, True), ("IdleStaff", 90, mage_idle, True), ("Summon", 27, mage_summon, False), ("SummonFlick", 22, mage_summon_flick, False), ("SummonReach", 30, mage_summon_reach, False), ("SummonTwirl", 30, mage_summon_twirl, False), ("Walk", 24, mage_walk, True), ("Run", 18, mage_run, True),
+             ("Jump", 14, mage_jump, False), ("Fall", 20, mage_fall, True), ("Cast", 48, mage_cast2, False),
+             ("Talk", 72, mage_talk_free, True)],
     "elder": [("Idle", 120, elder_idle, True), ("Talk", 72, elder_talk, True),
               ],
     "child": [("Idle", 80, child_idle, True), ("Talk", 48, child_talk, True), ("Hop", 16, child_hop, True)],

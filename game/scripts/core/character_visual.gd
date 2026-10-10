@@ -4,7 +4,7 @@ extends RefCounted
 ## toon shader and configures looping animations.
 
 const TOON := preload("res://shaders/toon_character.gdshader")
-const LOOPING := ["Idle", "Walk", "Run", "Fall", "Talk", "Sit", "Knit", "Wave"]
+const LOOPING := ["Idle", "Walk", "Run", "Fall", "Talk", "Sit", "Knit", "Wave", "IdleStaff", "WalkStaff", "RunStaff", "Hop"]
 
 
 static func find_animation_player(root: Node) -> AnimationPlayer:
@@ -63,9 +63,14 @@ static func convert_material(src: Material) -> Material:
 		m.set_shader_parameter("use_texture", true)
 	if lname.contains("crystal") or lname.contains("glow"):
 		m.set_shader_parameter("emission_strength", 0.9)
-	if lname.contains("skin"):
-		m.set_shader_parameter("shadow_tint", Color(0.85, 0.55, 0.55))
 	m.set_shader_parameter("ramp_softness", 0.22)
+	if lname.contains("skin"):
+		# Anime skin: soft, pale shadows; don't let golden light turn it orange.
+		m.set_shader_parameter("shadow_tint", Color(1.0, 0.86, 0.86))
+		m.set_shader_parameter("shadow_floor", 0.86)
+		m.set_shader_parameter("warmth_cancel", 0.55)
+		m.set_shader_parameter("light_scale", 0.55)
+		m.set_shader_parameter("ramp_softness", 0.3)
 	if lname.contains("hair"):
 		# Silver hair needs visible form: darker base, lavender shadows, soft ramp.
 		m.set_shader_parameter("albedo", b.albedo_color.darkened(0.1))

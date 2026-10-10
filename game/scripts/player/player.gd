@@ -38,6 +38,10 @@ var secondary: SpringBoneSimulator3D
 var _fade := 0.0
 var loco: LocomotionAnimator
 var staff: StaffSummon
+var _look_mod: LookAtModifier3D
+var _look_point: Node3D
+var _look_node: Node3D = null
+var _look_offset := Vector3.ZERO
 var _talking := false
 var _lean := 0.0
 var _prev_yaw := 0.0
@@ -58,6 +62,7 @@ func _ready() -> void:
 	add_child(face)
 	face.setup(model, "freyja")
 	secondary = CharacterPhysics.setup(model)
+	_setup_look_at()
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
 		loco.setup(_anim, "freyja")
@@ -72,11 +77,72 @@ func _ready() -> void:
 		caster.equip(0)
 
 
+func _setup_look_at() -> void:
+	var skel: Skeleton3D = null
+	for sk in model.find_children("*", "Skeleton3D", true, false):
+		skel = sk
+		break
+	if skel == null or skel.find_bone("head") < 0:
+		return
+	_look_point = Node3D.new()
+	_look_point.name = "LookPoint"
+	_look_point.top_level = true
+	add_child(_look_point)
+	_look_mod = LookAtModifier3D.new()
+	_look_mod.name = "HeadLook"
+	skel.add_child(_look_mod)
+	skel.move_child(_look_mod, 0)  # before secondary motion
+	_look_mod.bone_name = "head"
+	_look_mod.forward_axis = SkeletonModifier3D.BONE_AXIS_PLUS_Z
+	_look_mod.primary_rotation_axis = Vector3.AXIS_Y
+	_look_mod.use_secondary_rotation = true
+	_look_mod.target_node = _look_mod.get_path_to(_look_point)
+	_look_mod.duration = 0.45
+	_look_mod.transition_type = Tween.TRANS_SINE
+	_look_mod.ease_type = Tween.EASE_IN_OUT
+	_look_mod.use_angle_limitation = true
+	_look_mod.symmetry_limitation = true
+	_look_mod.primary_limit_angle = deg_to_rad(110.0)
+	_look_mod.primary_damp_threshold = 0.6
+	_look_mod.secondary_limit_angle = deg_to_rad(50.0)
+	_look_mod.secondary_damp_threshold = 0.6
+	_look_mod.influence = 0.8
+	if face:
+		face.look_at_node = _look_point
+
+
+## Look at a node (e.g. a speaker) with an offset; null returns to automatic.
+func set_look_target(node: Node3D, offset := Vector3.ZERO) -> void:
+	_look_node = node
+	_look_offset = offset
+
+
+func _update_look(delta: float) -> void:
+	if _look_point == null:
+		return
+	var eye := global_position + Vector3(0, 1.52, 0)
+	var fwd := model.global_basis.z
+	var want := eye + fwd * 4.0
+	if is_instance_valid(_look_node):
+		want = _look_node.global_position + _look_offset
+	else:
+		var cam := get_viewport().get_camera_3d()
+		if cam:
+			var to := cam.global_position - eye
+			var flat := Vector3(to.x, 0, to.z).normalized()
+			if flat.dot(fwd) > 0.25 and to.length() < 9.0 and velocity.length() < 3.0:
+				want = cam.global_position
+	# Ease the target itself too, so glances are smooth rather than snapping.
+	_look_point.global_position = _look_point.global_position.lerp(want, 1.0 - exp(-6.0 * delta))
+
+
 ## 0 = fully visible, 1 = invisible. Used by the camera in tight interiors.
 func set_model_fade(amount: float) -> void:
-	if absf(amount - _fade) < 0.01:
+	if amount == _fade:
 		return
-	_fade = lerpf(_fade, amount, 0.25)
+	# Snap the last bit: any transparency > 0 moves her into the alpha pass, where
+	# eyes and layered clothing sort incorrectly, so "visible" must be exactly 0.
+	_fade = amount if absf(amount - _fade) < 0.02 else lerpf(_fade, amount, 0.25)
 	for m in _meshes:
 		m.transparency = _fade
 
@@ -191,6 +257,7 @@ func _physics_process(delta: float) -> void:
 	_update_footsteps(delta, hv.length())
 	_update_animation(hv.length())
 	_update_focus()
+	_update_look(delta)
 	RenderingServer.global_shader_parameter_set("player_position", global_position)
 
 

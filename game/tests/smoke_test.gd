@@ -87,11 +87,23 @@ func _run() -> void:
 	check("player standing on terrain", player.is_on_floor(), "y=%.2f ground=%.2f" % [player.global_position.y, terrain.height_at(player.global_position.x, player.global_position.z)])
 	check("player model has animations", CharacterVisual.find_animation_player(player.model) != null and CharacterVisual.find_animation_player(player.model).has_animation(&"Cast"))
 	check("staff tip attachment found", player.model.find_child("StaffTip", true, false) != null)
+	var ap := CharacterVisual.find_animation_player(player.model)
+	var nonloop := []
+	for clip in ["Idle", "Walk", "Run", "IdleStaff", "WalkStaff", "RunStaff"]:
+		if ap.has_animation(clip) and ap.get_animation(clip).loop_mode != Animation.LOOP_LINEAR:
+			nonloop.append(clip)
+	check("locomotion clips loop", nonloop.is_empty(), str(nonloop))
 	check("staff starts stowed", player.staff != null and not player.staff.out)
 	await player.staff.summon()
 	check("staff summoned from thin air", player.staff.out)
 	check("hair/cloth spring bones active", player.secondary != null and player.secondary.setting_count >= 20, "%d chains" % (player.secondary.setting_count if player.secondary else 0))
-	check("face expressions ready", player.face != null and player.face.is_ready(), "eye bones: %d, face materials: %d" % [player.face._eye_bones.size(), player.face._materials.size()])
+	# Camera fade must return to exactly 0: any transparency puts her in the alpha
+	# pass, where her eyes sort in front of her face.
+	for i in 30:
+		player.set_model_fade(0.6 if i < 10 else 0.0)
+	check("model fade returns to fully opaque", player._fade == 0.0, "fade %f" % player._fade)
+	check("head look-at modifier active", player._look_mod != null and player._look_mod.active)
+	check("face rig ready (blend shapes + eye bones)", player.face != null and player.face.blend_shape_count() >= 6 and player.face._iris_bones.size() == 2, "shapes %d, iris %d" % [player.face.blend_shape_count(), player.face._iris_bones.size()])
 
 	# Intro monologue
 	var t0 := await _talk_monologue()

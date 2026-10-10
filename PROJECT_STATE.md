@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-10-09_
+_Last updated: 2026-10-10_
 
 ## Current milestone
 **001: A Cottage, a Mage, and a Memory.** Status: **Review / testing.** The systems are implemented and pass the automated smoke test. It still needs a human playtest, feel tuning and an art pass against the official character sheet.
@@ -11,7 +11,7 @@ _Last updated: 2026-10-09_
 | Meadow terrain (220 m generated, ~108 m playable diameter), heightmap collision, soft play boundary | Done | smoke test, screenshots |
 | Wind grass (chunked MultiMesh, visibility ranges), wildflower drifts, tree ring, mountains, sky, butterflies, pollen, chimney smoke | Done | screenshots |
 | Cottage exterior and interior with collision, working door, indoor volume (camera, footsteps, ambience, spell rule) | Done | smoke test (indoor detection), screenshots |
-| Freyja: rigged GLB with 7 animations (Idle/Walk/Run/Jump/Fall/Cast/Talk), toon shading, staff tip attachment | Done | smoke test, Blender pose previews, screenshots |
+| Freyja v3: CC-BY anime base heavily modified; CMU mocap walk/run (free and staff sets, stride matched); spring-bone hair, skirt and capelet; face rig (blinks, lids, mouth, brows, iris saccades, expressions); head look-at (camera, speaker); staff summoned from thin air (4 random gestures, dissolve shader) | Done | smoke test, Blender previews, runtime contact sheets |
 | Edda and Pippa: rigged GLBs with idle and talk (Pippa also has Hop) | Done | screenshots |
 | Third-person controller and spring-arm camera | Done | screenshots. **Not yet hand-playtested for feel.** |
 | Spell framework and Field of Flowers (gather, wave, bloom, persistence, caps, indoor refusal) | Done | smoke test: 902 flowers on first cast, 2,472 after 5 casts within caps, none inside the cottage |
@@ -22,7 +22,8 @@ _Last updated: 2026-10-09_
 | Audio: ambience, SFX, music (original) | Done | files generated; levels checked with ffmpeg. **Not yet judged by ear in play.** |
 
 ## Partially complete / known issues
-- **Characters (v2, 2026-10-09):** rebuilt toward the owner's vision frames (`art/reference/`, local only). Freyja has layered skirt panels, a corset, puffed sleeves, long braided hair with a flower and ribbon, and a gem-loop staff. Edda and Pippa got matching redesigns. Still scripted geometry: static decal faces, mitten hands, rigid cloth.
+- **Freyja (v3, 2026-10-10):** clothing bands, petticoat and skirt/capelet spring rings are wrapped around the torso centre (no back "bustle"); the back hair has an underlayer; character meshes skip auto-LOD. Open: side plum-panel trims stand slightly off the skirt; Jump/Fall are still hand-keyed (now free-armed); the cast is hand-keyed rather than mocap.
+- **Edda and Pippa** are still v2 scripted geometry (decal faces, mitten hands, rigid cloth).
 - **Indoor camera:** in tight spots Freyja now fades out as the camera closes in. It still needs a feel check by hand (#10).
 - **Edda's shawl** reads as a large plum shape from the front.
 - **The interior** has improved but is still warmer and plainer than the reference art.
@@ -46,7 +47,8 @@ See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from sc
 
 ## Tests actually run (2026-10-09, Windows 11, RTX 5070 Ti, Godot 4.7.2)
 - `godot --headless --path game --import`: no script errors.
-- `godot --headless --path game -- --smoke-test`: **PASS, 34/34 checks.**
+- `godot --headless --path game -- --smoke-test`: **PASS, 41/41 checks** (2026-10-10).
+- Dev audits (`godot --path game -- --dbg --face|--spell|--pose|--walk --out=<dir>`): face/look-at stills and contact sheets of summon variants, cast, walk/run/stop from side, back and front; inspected.
 - `godot --path game -- --tour`: 9 runtime screenshots captured at 1080p and inspected (used on the site, labelled in-game).
 - GitHub Actions on Linux: import plus smoke test PASS.
 - Blender 4.5.14 builds of all assets: success. Pose previews inspected.
@@ -65,5 +67,6 @@ See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from sc
 5. Milestone 002 planning: the village to the south and the next small quests.
 
 ## Change log (short)
+- 2026-10-10: Freyja: head look-at, fixed a camera-fade bug that left her semi-transparent (eyes drew through her face), fixed back-of-waist clipping (bands wrapped around the wrong centre), back-hair underlayer, gem recolour, relaxed hand curl, free-armed jump/fall, playtest build.
 - 2026-10-09: Vision pass, characters: Freyja v2, Edda v2, Pippa v2. Golden-hour light, volumetric haze, cumulus sky, leaf-card trees, denser wildflowers.
 - 2026-10-09: Milestone 001 slice built: world, cottage, characters, spell, dialogue, quest, memory, audio, tests, docs, site.

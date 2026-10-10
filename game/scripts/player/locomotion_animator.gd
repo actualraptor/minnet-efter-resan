@@ -68,13 +68,14 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	bt.connect_node("cast", 0, "state")
 	bt.connect_node("cast", 1, "CastClip")
 	var summon_clip := AnimationNodeAnimation.new()
+	_summon_clip = summon_clip
 	summon_clip.animation = "Summon"
 	bt.add_node("SummonClip", summon_clip, Vector2(600, 300))
 	var sshot := AnimationNodeOneShot.new()
 	sshot.fadein_time = 0.12
 	sshot.fadeout_time = 0.25
 	sshot.filter_enabled = true
-	for bone in ["upper_arm.R", "forearm.R", "hand.R", "upper_arm.L", "forearm.L", "chest", "neck", "head"]:
+	for bone in ["upper_arm.R", "forearm.R", "hand.R", "upper_arm.L", "forearm.L", "hand.L", "spine", "chest", "neck", "head"]:
 		sshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), bone]), true)
 	bt.add_node("summon", sshot, Vector2(800, 0))
 	bt.connect_node("summon", 0, "cast")
@@ -132,7 +133,11 @@ func set_staff(on: bool) -> void:
 	_staff_target = 1.0 if on else 0.0
 
 
-func summon() -> void:
+var _summon_clip: AnimationNodeAnimation
+
+
+func summon(clip: String = "Summon") -> void:
+	_summon_clip.animation = clip
 	tree.set("parameters/summon/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 

@@ -84,6 +84,8 @@ func _on_line(line: Dictionary, _info: Dictionary) -> void:
 		f.talk(0.25 + String(line.get("text", "")).length() / 48.0)
 	if _player and speaker != _player and _player.face:
 		_player.face.stop_talking()
+	if _npc and _player:
+		_player.set_look_target(_npc, Vector3(0, _npc.head_height, 0))
 	if _npc and _player and speaker_id != "narrator":
 		var speaking: Node3D = _npc if speaker == _npc else _player
 		var listening: Node3D = _player if speaking == _npc else _npc
@@ -140,6 +142,7 @@ func _restore() -> void:
 	if _prev_cam:
 		_prev_cam.current = true
 	if _player:
+		_player.set_look_target(null)
 		if _player.face:
 			_player.face.stop_talking()
 			_player.face.set_expression("neutral")
