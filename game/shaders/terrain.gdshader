@@ -14,6 +14,11 @@ uniform vec3 hill_tint : source_color = vec3(0.42, 0.58, 0.36);
 uniform vec3 dirt_light : source_color = vec3(0.70, 0.58, 0.42);
 uniform vec3 dirt_dark : source_color = vec3(0.50, 0.39, 0.28);
 uniform vec3 wave_color : source_color = vec3(0.85, 1.0, 0.55);
+// Towns: cobbled streets (vertex alpha = 1 - cobble) and wet river banks.
+uniform vec3 cobble_light : source_color = vec3(0.66, 0.62, 0.56);
+uniform vec3 cobble_dark : source_color = vec3(0.42, 0.40, 0.38);
+uniform vec3 mud : source_color = vec3(0.40, 0.33, 0.25);
+uniform float water_level = -1000.0;
 uniform sampler2D patch_noise : filter_linear_mipmap, repeat_enable;
 uniform sampler2D detail_noise : filter_linear_mipmap, repeat_enable;
 
@@ -43,6 +48,25 @@ void fragment() {
 	// Ragged path edge so it never looks like a vector stroke.
 	float edge = smoothstep(0.35, 0.65, path + (detail - 0.5) * 0.45);
 	vec3 col = mix(grass, dirt, edge);
+
+	// Cobbles: running-bond stones with a tone per stone and dark joints.
+	float cob = 1.0 - vcol.a;
+	if (cob > 0.01) {
+		vec2 q = p * vec2(2.3, 3.4);
+		float row = floor(q.y);
+		q.x += mod(row, 2.0) * 0.5 + row * 0.173;
+		vec2 cell = floor(q);
+		vec2 f = fract(q);
+		float tone = texture(detail_noise, (cell + 0.5) * 0.0731).r;
+		vec3 stone = mix(cobble_dark, cobble_light, smoothstep(0.2, 0.8, tone));
+		stone *= 0.92 + 0.16 * texture(detail_noise, p * 2.9).r;
+		float joint = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y) * 1.4);
+		stone = mix(cobble_dark * 0.5, stone, smoothstep(0.03, 0.13, joint));
+		col = mix(col, stone, smoothstep(0.3, 0.62, cob + (detail - 0.5) * 0.3));
+	}
+	// River banks go to wet mud near the waterline.
+	float wet = 1.0 - smoothstep(water_level + 0.02, water_level + 0.55, world_pos.y);
+	col = mix(col, mud * (0.8 + detail * 0.4), wet * 0.9);
 
 	// Field of Flowers wave: a bright band at the travelling radius and a faint
 	// fading glow inside it. It is computed in world space, so it hugs terrain.

@@ -79,6 +79,8 @@ var _aim_marker: Node3D
 ## Dev/preview: aim here instead of at the camera crosshair (Vector3.INF = off).
 var aim_point_override := Vector3.INF
 var _cast_move := 0.0
+## Soft world boundary (metres from the origin); scenes set their own.
+var play_radius := WorldLayout.PLAY_RADIUS
 var _cast_gen := 0
 var _lift := 0.0               # current levitation height (m)
 var _lift_goal := 0.0
@@ -607,7 +609,7 @@ func _physics_process(delta: float) -> void:
 
 func _apply_soft_boundary() -> void:
 	var flat := Vector2(global_position.x, global_position.z)
-	var over := flat.length() - WorldLayout.PLAY_RADIUS
+	var over := flat.length() - play_radius
 	if over > 0.0:
 		var push := -flat.normalized() * over * 6.0
 		velocity.x += push.x

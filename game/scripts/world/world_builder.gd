@@ -440,6 +440,10 @@ func _ambient_life() -> void:
 		bf.draw_pass_1 = plane
 		add_child(bf)
 		bf.global_position = center + Vector3(0, terrain.height_at(center.x, center.z) + 1.0, 0)
+	_pollen_motes()
+
+
+func _pollen_motes() -> void:
 	# Pollen motes catching the light around the player.
 	_pollen = GPUParticles3D.new()
 	_pollen.amount = 70

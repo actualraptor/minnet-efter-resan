@@ -1,0 +1,44 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/town/linkoping.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/world/town/town_terrain.gd" id="2_terrain"]
+[ext_resource type="Script" path="res://scripts/world/town/town_builder.gd" id="3_world"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="4_player"]
+[ext_resource type="Script" path="res://scripts/player/camera_rig.gd" id="5_cam"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="6_hud"]
+
+[node name="Linkoping" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Terrain" type="StaticBody3D" parent="."]
+script = ExtResource("2_terrain")
+
+[node name="World" type="Node3D" parent="."]
+script = ExtResource("3_world")
+
+[node name="Player" parent="." instance=ExtResource("4_player")]
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("5_cam")
+target_path = NodePath("../Player")
+
+[node name="Pitch" type="Node3D" parent="CameraRig"]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig/Pitch"]
+spring_length = 4.3
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch/SpringArm3D"]
+current = true
+fov = 62.0
+far = 1200.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Hud" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("6_hud")
+player_path = NodePath("../../Player")

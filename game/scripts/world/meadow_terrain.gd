@@ -6,6 +6,10 @@ extends StaticBody3D
 static var instance: MeadowTerrain
 
 @export var material: ShaderMaterial
+## Half-extent and grid step of the generated ground (metres). Subclasses
+## (TownTerrain) set these before _ready runs.
+var half := WorldLayout.TERRAIN_HALF
+var step := WorldLayout.TERRAIN_STEP
 
 var _n: int
 var _heights := PackedFloat32Array()
@@ -55,25 +59,36 @@ func _raw_height(x: float, z: float) -> float:
 
 
 func _build_heights() -> void:
-	_n = int(WorldLayout.TERRAIN_HALF * 2.0 / WorldLayout.TERRAIN_STEP) + 1
+	_n = int(half * 2.0 / step) + 1
 	_heights.resize(_n * _n)
 	_pad_height = _raw_height(WorldLayout.COTTAGE_POS.x, WorldLayout.COTTAGE_POS.z)
-	var c := WorldLayout.COTTAGE_POS
-	var hx := WorldLayout.COTTAGE_HALF.x
-	var hz := WorldLayout.COTTAGE_HALF.y
 	for iz in _n:
 		for ix in _n:
-			var x := -WorldLayout.TERRAIN_HALF + ix * WorldLayout.TERRAIN_STEP
-			var z := -WorldLayout.TERRAIN_HALF + iz * WorldLayout.TERRAIN_STEP
-			var h := _raw_height(x, z)
-			# Flatten a pad for the cottage with a soft shoulder.
-			var dx := maxf(absf(x - c.x) - hx, 0.0)
-			var dz := maxf(absf(z - c.z) - hz, 0.0)
-			var pad := 1.0 - smoothstep(0.0, 5.0, sqrt(dx * dx + dz * dz))
-			h = lerpf(h, _pad_height, pad)
-			# Paths are slightly worn into the ground.
-			h -= WorldLayout.path_amount(x, z) * 0.07
-			_heights[iz * _n + ix] = h
+			var x := -half + ix * step
+			var z := -half + iz * step
+			_heights[iz * _n + ix] = _final_height(x, z)
+
+
+## Ground height at a grid point. The meadow flattens a pad for the cottage and
+## wears the paths; towns override this.
+func _final_height(x: float, z: float) -> float:
+	var c := WorldLayout.COTTAGE_POS
+	var h := _raw_height(x, z)
+	# Flatten a pad for the cottage with a soft shoulder.
+	var dx := maxf(absf(x - c.x) - WorldLayout.COTTAGE_HALF.x, 0.0)
+	var dz := maxf(absf(z - c.z) - WorldLayout.COTTAGE_HALF.y, 0.0)
+	var pad := 1.0 - smoothstep(0.0, 5.0, sqrt(dx * dx + dz * dz))
+	h = lerpf(h, _pad_height, pad)
+	# Paths are slightly worn into the ground.
+	h -= WorldLayout.path_amount(x, z) * 0.07
+	return h
+
+
+## Vertex colour read by the terrain shader: r = dirt path, g = variation,
+## b = hill tint, a = 1 - cobbles (1 means none).
+func _vertex_color(x: float, z: float, vary: FastNoiseLite) -> Color:
+	var r := Vector2(x, z).length()
+	return Color(WorldLayout.path_amount(x, z), vary.get_noise_2d(x, z) * 0.5 + 0.5, smoothstep(44.0, 90.0, r), 1.0)
 
 
 func pad_height() -> float:
@@ -86,8 +101,8 @@ func _grid(ix: int, iz: int) -> float:
 
 ## Bilinear height consistent with the rendered mesh and collision.
 func height_at(x: float, z: float) -> float:
-	var fx := (x + WorldLayout.TERRAIN_HALF) / WorldLayout.TERRAIN_STEP
-	var fz := (z + WorldLayout.TERRAIN_HALF) / WorldLayout.TERRAIN_STEP
+	var fx := (x + half) / step
+	var fz := (z + half) / step
 	var ix := int(floor(fx))
 	var iz := int(floor(fz))
 	var tx := fx - ix
@@ -103,7 +118,7 @@ func height_at(x: float, z: float) -> float:
 
 
 func normal_at(x: float, z: float) -> Vector3:
-	var e := WorldLayout.TERRAIN_STEP
+	var e := step
 	var hl := height_at(x - e, z)
 	var hr := height_at(x + e, z)
 	var hd := height_at(x, z - e)
@@ -126,14 +141,13 @@ func _build_mesh() -> void:
 	vary.frequency = 0.045
 	for iz in _n:
 		for ix in _n:
-			var x := -WorldLayout.TERRAIN_HALF + ix * WorldLayout.TERRAIN_STEP
-			var z := -WorldLayout.TERRAIN_HALF + iz * WorldLayout.TERRAIN_STEP
+			var x := -half + ix * step
+			var z := -half + iz * step
 			var i := iz * _n + ix
 			verts[i] = Vector3(x, _heights[i], z)
-			var e := WorldLayout.TERRAIN_STEP
+			var e := step
 			normals[i] = Vector3(_grid(ix - 1, iz) - _grid(ix + 1, iz), 2.0 * e, _grid(ix, iz - 1) - _grid(ix, iz + 1)).normalized()
-			var r := Vector2(x, z).length()
-			colors[i] = Color(WorldLayout.path_amount(x, z), vary.get_noise_2d(x, z) * 0.5 + 0.5, smoothstep(44.0, 90.0, r), 1.0)
+			colors[i] = _vertex_color(x, z, vary)
 			uvs[i] = Vector2(x, z)
 	for iz in _n - 1:
 		for ix in _n - 1:
@@ -167,10 +181,10 @@ func _build_collision() -> void:
 	var scaled := PackedFloat32Array()
 	scaled.resize(_heights.size())
 	for i in _heights.size():
-		scaled[i] = _heights[i] / WorldLayout.TERRAIN_STEP
+		scaled[i] = _heights[i] / step
 	shape.map_data = scaled
 	var cs := CollisionShape3D.new()
 	cs.name = "TerrainCollision"
 	cs.shape = shape
-	cs.scale = Vector3.ONE * WorldLayout.TERRAIN_STEP
+	cs.scale = Vector3.ONE * step
 	add_child(cs)
