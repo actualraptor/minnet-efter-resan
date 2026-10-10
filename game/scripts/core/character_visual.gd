@@ -33,6 +33,43 @@ const UAL_CLIPS := {
 }
 
 
+## Clips mirrored left<->right so the gesture is done by the staff hand (right).
+const MIRRORED := ["Cast"]
+
+
+## Mirror a humanoid clip across the sagittal plane: swap Left/Right bone tracks
+## and reflect rotations (x, -y, -z, w) and positions (-x). Valid for skeletons
+## whose rest bones are axis-aligned (Godot's humanoid-normalized VRM rest).
+static func _mirror(a: Animation) -> Animation:
+	var out := Animation.new()
+	out.length = a.length
+	for t in a.get_track_count():
+		var ty := a.track_get_type(t)
+		var path := String(a.track_get_path(t))
+		var sub := path.get_slice(":", 1) if path.contains(":") else ""
+		var swapped := sub
+		if sub.begins_with("Left"):
+			swapped = "Right" + sub.substr(4)
+		elif sub.begins_with("Right"):
+			swapped = "Left" + sub.substr(5)
+		var np := NodePath(path.get_slice(":", 0) + ":" + swapped) if sub != "" else NodePath(path)
+		var ot := out.add_track(ty)
+		out.track_set_path(ot, np)
+		for k in a.track_get_key_count(t):
+			var time := a.track_get_key_time(t, k)
+			var v = a.track_get_key_value(t, k)
+			match ty:
+				Animation.TYPE_ROTATION_3D:
+					var q: Quaternion = v
+					out.rotation_track_insert_key(ot, time, Quaternion(q.x, -q.y, -q.z, q.w))
+				Animation.TYPE_POSITION_3D:
+					var p: Vector3 = v
+					out.position_track_insert_key(ot, time, Vector3(-p.x, p.y, p.z))
+				_:
+					out.track_insert_key(ot, time, v)
+	return out
+
+
 ## Replace clips with the shared humanoid library where the skeleton supports it.
 static func use_humanoid_library(root: Node) -> bool:
 	var anim := find_animation_player(root)
@@ -56,6 +93,8 @@ static func use_humanoid_library(root: Node) -> bool:
 			continue
 		if game_name == "Run":
 			_soften_posture(c, sk, 0.45)
+		if game_name in MIRRORED:
+			c = _mirror(c)
 		if lib.has_animation(game_name):
 			lib.remove_animation(game_name)
 		lib.add_animation(game_name, c)

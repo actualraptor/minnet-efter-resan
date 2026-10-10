@@ -16,6 +16,8 @@ extends SkeletonModifier3D
 @export var collision_mask := 1
 
 var body: CharacterBody3D
+## True while the character deliberately floats (levitation spell).
+var suspended := false
 var _legs: Array = []                  # [[thigh, shin, foot], ...]
 var _hips := -1
 var _plant_ref: Array[float] = [0.1, 0.1]
@@ -47,7 +49,7 @@ func _process_modification_with_delta(delta: float) -> void:
 	var sk := get_skeleton()
 	if sk == null or body == null or _legs.size() != 2:
 		return
-	var want_w := 1.0 if body.is_on_floor() else 0.0
+	var want_w := 1.0 if (body.is_on_floor() and not suspended) else 0.0
 	_weight = move_toward(_weight, want_w, delta * (6.0 if want_w > _weight else 10.0))
 	if _weight <= 0.001:
 		_pelvis = 0.0

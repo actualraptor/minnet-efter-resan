@@ -364,7 +364,7 @@ def reweight(obj, fn):
             vg.add([v.index], w / tot, "REPLACE")
 
 
-def add_cape_springs(arm, cape, angles=(240, 270, 300, 60, 90, 120), follow=0.75):
+def add_cape_springs(arm, cape, angles=(250, 270, 290, 70, 90, 110), follow=0.95):
     """Spring chains on the capelet's front and back hems (cape_<k>_<n>, driven
     by CharacterPhysics). The sides already ride the upper arms. Each chain runs
     from 40% down the cape to the hem, just inside it; the lower cape blends
@@ -388,7 +388,7 @@ def add_cape_springs(arm, cape, angles=(240, 270, 300, 60, 90, 120), follow=0.75
         if len(win) < 4:
             continue
         hem = min(win, key=lambda p: p.z)
-        mid_z = top - 0.4 * (top - hem.z)
+        mid_z = top - 0.2 * (top - hem.z)
         mid = min(win, key=lambda p: abs(p.z - mid_z))
         inward = Vector((cx - hem.x, cy - hem.y, 0)).normalized() * 0.01
         chains[f"cape_{k}"] = ("UpperChest", [mid + inward, mid.lerp(hem, 0.5) + inward, hem + inward])
@@ -400,8 +400,8 @@ def add_cape_springs(arm, cape, angles=(240, 270, 300, 60, 90, 120), follow=0.75
 
     def _cape_mix_inner(p, ws):
         a = math.atan2(p.y - cy, p.x - cx)
-        fb = abs(math.sin(a)) ** 2                     # front/back only
-        f = follow * fb * T.smoothstep(0.3, 0.85, (top - p.z) / max(top - lo, 1e-6))
+        fb = abs(math.sin(a)) ** 3.0                   # true front/back only; sides ride the arms
+        f = follow * fb * T.smoothstep(0.1, 0.6, (top - p.z) / max(top - lo, 1e-6))
         if f <= 0.01:
             return ws
         near = sorted(cang, key=lambda n: abs((a - cang[n] + math.pi) % math.tau - math.pi))[:2]

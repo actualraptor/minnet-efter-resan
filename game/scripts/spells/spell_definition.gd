@@ -22,6 +22,9 @@ enum Category { WHIMSICAL, ENVIRONMENTAL, UTILITY, EXPLORATION, DEFENSIVE, OFFEN
 @export var max_range := 12.0
 @export var allowed_indoors := false
 @export var cast_animation: StringName = &"Cast"
+## Metres the caster floats off the ground while casting (0 = stays grounded).
+## The effect still originates at ground level.
+@export var levitate_height := 0.0
 @export var gather_color := Color(0.8, 1.0, 0.55)
 @export var effect_scene: PackedScene
 @export var cast_sound := "spell_gather"

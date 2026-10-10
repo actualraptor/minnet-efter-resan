@@ -41,6 +41,10 @@ var staff: StaffSummon
 var _look_mod: LookAtModifier3D
 var grounder: FootGrounder
 var hands: HandPoser
+var _lift := 0.0               # current levitation height (m)
+var _lift_goal := 0.0
+var _lift_t := 0.0
+var _lift_motes: GPUParticles3D
 var _look_point: Node3D
 var _look_node: Node3D = null
 var _look_offset := Vector3.ZERO
@@ -64,6 +68,7 @@ func _ready() -> void:
 	face.name = "Face"
 	add_child(face)
 	face.setup(model, "freyja")
+	_build_lift_motes()
 	secondary = CharacterPhysics.setup(model)
 	_setup_look_at()
 	_setup_grounding()
@@ -236,6 +241,72 @@ func end_cast() -> void:
 	_casting = false
 
 
+## Float `height` metres above the ground (0 = settle back down). The body keeps
+## its ground position (spell effects, collision); only the visual model rises.
+func set_levitation(height: float) -> void:
+	_lift_goal = height
+	if grounder:
+		grounder.suspended = height > 0.0 or _lift > 0.02
+	if _lift_motes:
+		_lift_motes.emitting = height > 0.0
+
+
+func is_casting() -> bool:
+	return _casting
+
+
+func hover_height() -> float:
+	return _lift
+
+
+func _update_levitation(delta: float) -> void:
+	if _lift <= 0.001 and _lift_goal <= 0.0:
+		if grounder and grounder.suspended:
+			grounder.suspended = false
+		return
+	_lift_t += delta
+	# Critically-damped rise (slow start, soft stop) and a slightly slower fall.
+	var rate := 3.4 if _lift_goal > _lift else 2.6
+	_lift = lerpf(_lift, _lift_goal, 1.0 - exp(-rate * delta))
+	var fade := clampf(_lift / maxf(_lift_goal, 0.001), 0.0, 1.0) if _lift_goal > 0.0 else clampf(_lift / 0.75, 0.0, 1.0)
+	var bob := sin(_lift_t * 2.3) * 0.035 * fade
+	model.position.y = _lift + bob
+	if _lift_motes:
+		_lift_motes.global_position = global_position + Vector3(0, 0.05, 0)
+	# A slow lean as if drifting, strongest at the top.
+	model.rotation.x = deg_to_rad(-5.0) * fade * sin(_lift_t * 1.1 + 1.0) * 0.6
+	if _lift <= 0.002 and _lift_goal <= 0.0:
+		_lift = 0.0
+		model.position.y = 0.0
+		model.rotation.x = 0.0
+
+
+func _build_lift_motes() -> void:
+	_lift_motes = GPUParticles3D.new()
+	_lift_motes.name = "LiftMotes"
+	_lift_motes.amount = 48
+	_lift_motes.lifetime = 1.4
+	_lift_motes.emitting = false
+	_lift_motes.local_coords = false
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	pm.emission_ring_axis = Vector3.UP
+	pm.emission_ring_radius = 0.45
+	pm.emission_ring_inner_radius = 0.2
+	pm.emission_ring_height = 0.05
+	pm.direction = Vector3.UP
+	pm.spread = 25.0
+	pm.initial_velocity_min = 0.2
+	pm.initial_velocity_max = 0.7
+	pm.gravity = Vector3(0, 0.15, 0)
+	pm.scale_min = 0.5
+	pm.scale_max = 1.0
+	pm.color = Color(0.85, 1.0, 0.6)
+	_lift_motes.process_material = pm
+	_lift_motes.draw_pass_1 = SpellCaster._mote_mesh(0.07)
+	add_child(_lift_motes)
+
+
 # --- Movement -------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
@@ -297,6 +368,7 @@ func _physics_process(delta: float) -> void:
 	_update_animation(hv.length())
 	_update_focus()
 	_update_look(delta)
+	_update_levitation(delta)
 	RenderingServer.global_shader_parameter_set("player_position", global_position)
 
 
@@ -417,10 +489,7 @@ func _cast_with_staff() -> void:
 	var reason := caster.try_cast()
 	if reason == "" and staff:
 		staff.touch()
-	if reason == "" and hands:
-		# Free hand opens through the gather and strike, then relaxes.
-		hands.set_pose("L", "open")
-		get_tree().create_timer(1.7).timeout.connect(func(): if hands: hands.set_pose("L", "relaxed"))
+	# (The staff hand keeps its grip; the free hand stays relaxed.)
 	elif reason != "" and reason != "busy":
 		GameState.toast.emit(reason)
 

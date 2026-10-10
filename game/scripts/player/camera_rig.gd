@@ -66,7 +66,7 @@ func _process(delta: float) -> void:
 	# Zoomed in, the camera pivots on her face instead of her shoulders.
 	var close_t := clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0)
 	var h := lerpf(1.47, height if not target.is_indoors() else height - 0.1, close_t)
-	var goal := target.global_position + Vector3.UP * h
+	var goal := target.global_position + Vector3.UP * (h + target.hover_height() * 0.85)
 	global_position = global_position.lerp(goal, 1.0 - exp(-follow_speed * delta))
 	_zoom_smooth = lerpf(_zoom_smooth, zoom, 1.0 - exp(-10.0 * delta))
 	var want_len := (indoor_length if target.is_indoors() else outdoor_length) * _zoom_smooth

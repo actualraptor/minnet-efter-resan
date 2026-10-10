@@ -90,6 +90,8 @@ func _cast(spell: SpellDefinition) -> void:
 	mana_changed.emit(mana, max_mana)
 	_cooldowns[spell.id] = GameState.game_time() + spell.cooldown + spell.cast_time
 	body.begin_cast(spell.cast_animation, spell.cast_time + spell.recovery_time)
+	if spell.levitate_height > 0.0 and body.has_method("set_levitation"):
+		body.set_levitation(spell.levitate_height)
 	cast_started.emit(spell)
 	Audio.sfx(spell.cast_sound, -4.0, 0.03)
 	_set_gather(true, spell.gather_color)
@@ -116,6 +118,10 @@ func _cast(spell: SpellDefinition) -> void:
 	await get_tree().create_timer(spell.recovery_time, false).timeout
 	casting = false
 	body.end_cast()
+	if body.has_method("set_levitation"):
+		# Hang in the air a beat after the flowers have bloomed, then settle.
+		await get_tree().create_timer(0.6, false).timeout
+		body.set_levitation(0.0)
 
 
 func _build_gather_vfx() -> void:

@@ -18,6 +18,7 @@ radius = 10.5
 max_range = 0.0
 allowed_indoors = false
 cast_animation = &"Cast"
+levitate_height = 0.75
 gather_color = Color(0.82, 1, 0.55, 1)
 effect_scene = ExtResource("2_fx")
 cast_sound = "spell_gather"

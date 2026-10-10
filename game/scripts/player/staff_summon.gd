@@ -25,6 +25,8 @@ var _last_used := 0.0
 var _radius := 0.0
 var _sparks: GPUParticles3D
 var _grip_bone := -1
+var _hold_offset := Basis.IDENTITY   # staff basis in hand space, learned while idle
+var _cast_w := 0.0
 var _tip_bones: Array[int] = []   # curled fingertip knuckles: far side of the fist
 ## A staff exported as a free prop (no skin): held at the hand every frame,
 ## upright with a slight forward lean, so it reads right in any arm pose.
@@ -99,7 +101,20 @@ func _place_prop() -> void:
 		for b in _tip_bones:
 			c += _skel.get_bone_global_pose(b).origin
 		o = o.lerp(_skel.global_transform * (c / _tip_bones.size()), 0.5)
-	_prop.global_transform = Transform3D(lean * fb, o)
+	var upright := lean * fb
+	var hand := (_skel.global_transform.basis * _skel.get_bone_global_pose(_hand_bone).basis).orthonormalized()
+	var casting: bool = player.has_method("is_casting") and player.is_casting()
+	if not casting and _cast_w < 0.01:
+		# While holding it upright, remember how the staff sits in the hand.
+		_hold_offset = hand.inverse() * upright
+	_cast_w = move_toward(_cast_w, 1.0 if casting else 0.0, get_process_delta_time() * (7.0 if casting else 3.5))
+	var b := upright
+	if _cast_w > 0.0:
+		# Casting: the staff is gripped rigidly, so it sweeps up and points with
+		# the arm instead of staying plumb.
+		var held := (Basis(fb.x.normalized(), deg_to_rad(-25.0)) * hand * _hold_offset).orthonormalized()   # tip a little high
+		b = Basis(upright.get_rotation_quaternion().slerp(held.get_rotation_quaternion(), smoothstep(0.0, 1.0, _cast_w)))
+	_prop.global_transform = Transform3D(b, o)
 
 
 func _grip() -> Vector3:
