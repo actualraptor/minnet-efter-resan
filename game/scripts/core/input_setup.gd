@@ -15,6 +15,12 @@ const KEYS := {
 	"journal": [KEY_J, KEY_TAB],
 	"cast_alt": [KEY_F],
 	"summon": [KEY_Q],
+	"spell_1": [KEY_1],
+	"spell_2": [KEY_2],
+	"spell_3": [KEY_3],
+	"fly": [KEY_H],
+	"descend": [KEY_CTRL, KEY_C],
+	"interrupt": [KEY_X],
 	"advance": [KEY_SPACE, KEY_ENTER, KEY_E],
 	"quick_save": [KEY_F5],
 	"quick_load": [KEY_F9],
@@ -33,6 +39,8 @@ const JOY_BUTTONS := {
 	"cast": JOY_BUTTON_RIGHT_SHOULDER,
 	"pause": JOY_BUTTON_START,
 	"run": JOY_BUTTON_LEFT_STICK,
+	"fly": JOY_BUTTON_Y,
+	"descend": JOY_BUTTON_LEFT_SHOULDER,
 }
 
 

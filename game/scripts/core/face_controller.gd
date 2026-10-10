@@ -14,6 +14,10 @@ const EXPRESSIONS := {
 	"surprised": {"brow_up": 1.0, "mouth_o": 0.7, "wide": 1.0},
 	"thoughtful": {"squint": 0.25, "brow_up": -0.0},
 	"sad": {"squint": 0.35, "mouth_smile": -0.0, "brow_up": 0.15},
+	# Casting faces (VRoid shapes, kept subtle: she is calm, not theatrical).
+	"focused": {"Fcl_BRW_Angry": 0.32, "Fcl_EYE_Angry": 0.14, "squint": 0.05},
+	"serene": {"squint": 0.4, "Fcl_BRW_Fun": 0.45, "mouth_smile": 0.35},
+	"alert": {"Fcl_BRW_Angry": 0.22, "Fcl_EYE_Surprised": 0.22, "brow_up": 0.1},
 	# Legacy names used by older data.
 	"blink": {"blink": 1.0},
 	"talk": {},

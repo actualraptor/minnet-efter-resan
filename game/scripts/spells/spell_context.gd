@@ -8,3 +8,6 @@ var origin: Vector3
 var target: Vector3
 var direction: Vector3
 var cast_seed: int
+## Where the spell leaves the staff (its head) and the direction it points.
+var muzzle: Vector3
+var aim: Vector3

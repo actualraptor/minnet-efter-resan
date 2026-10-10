@@ -23,6 +23,9 @@ var equipped := 0
 var casting := false
 var _cooldowns: Dictionary = {}
 var _cast_count := 0
+var _cast_id := 0
+var _charge_fx: Node3D
+var _sustain_fx: Node
 var _gather: GPUParticles3D
 var _gather_light: OmniLight3D
 
@@ -81,47 +84,131 @@ func _validate(spell: SpellDefinition) -> String:
 		return "The mana hasn't settled yet."
 	if mana < spell.mana_cost:
 		return "Not enough mana. Patience."
+	if body.has_method("can_afford_cast") and not body.can_afford_cast(spell):
+		return "Too winded to cast up here."
 	return ""
 
 
 func _cast(spell: SpellDefinition) -> void:
 	casting = true
+	_cast_id += 1
+	var my_id := _cast_id
 	mana -= spell.mana_cost
 	mana_changed.emit(mana, max_mana)
+	if body.has_method("pay_cast_cost"):
+		body.pay_cast_cost(spell)   # extra stamina when casting from the air
 	_cooldowns[spell.id] = GameState.game_time() + spell.cooldown + spell.cast_time
-	body.begin_cast(spell.cast_animation, spell.cast_time + spell.recovery_time)
-	if spell.levitate_height > 0.0 and body.has_method("set_levitation"):
-		body.set_levitation(spell.levitate_height)
+	var staff_cast: bool = spell.staff_pose != &"" and body.has_method("begin_staff_cast")
+	var cast_time := spell.cast_time
+	if staff_cast:
+		# A chained cast starts partway into the pose, so its wind-up is shorter.
+		cast_time = body.begin_staff_cast(spell)
+	else:
+		body.begin_cast(spell.cast_animation, spell.cast_time + spell.recovery_time)
+		if spell.levitate_height > 0.0 and body.has_method("set_levitation"):
+			body.set_levitation(spell.levitate_height)
+	if spell.expression != &"" and body.get("face") != null:
+		body.face.set_expression(String(spell.expression), spell.cast_time + spell.recovery_time + 0.4)
 	cast_started.emit(spell)
 	Audio.sfx(spell.cast_sound, -4.0, 0.03)
-	_set_gather(true, spell.gather_color)
-	await get_tree().create_timer(spell.cast_time, false).timeout
+	_set_gather(spell.gather_particles, spell.gather_color)
+	if spell.charge_script != "":
+		_charge_fx = _make_fx(spell.charge_script)
+		if _charge_fx:
+			body.get_parent().add_child(_charge_fx)
+			_charge_fx.call("begin", body, spell, cast_time)
+	await get_tree().create_timer(cast_time, false).timeout
+	if my_id != _cast_id:
+		return
 	_set_gather(false, spell.gather_color)
 	var ctx := SpellContext.new()
 	ctx.spell = spell
 	ctx.caster = body
-	ctx.origin = body.global_position
+	# Effects start on the ground beneath the caster, even when she is airborne.
+	ctx.origin = body.ground_point() if body.has_method("ground_point") else body.global_position
 	var fwd: Vector3 = body.facing_basis().z
 	ctx.direction = fwd
+	ctx.muzzle = body.staff_tip()
+	ctx.aim = body.staff_direction() if body.has_method("staff_direction") else fwd
 	ctx.target = ctx.origin + fwd * (0.0 if spell.targeting == SpellDefinition.Targeting.SELF_AREA else spell.max_range)
 	_cast_count += 1
 	ctx.cast_seed = hash([spell.id, _cast_count, Time.get_ticks_usec()])
-	if spell.effect_scene:
-		var fx: Node = spell.effect_scene.instantiate()
+	if _charge_fx and is_instance_valid(_charge_fx):
+		_charge_fx.call("finish")
+		_charge_fx = null
+	var fx: Node = null
+	if spell.effect_script != "":
+		fx = _make_fx(spell.effect_script)
+		if fx:
+			body.get_parent().add_child(fx)
+	elif spell.effect_scene:
+		fx = spell.effect_scene.instantiate()
 		body.get_parent().add_child(fx)
+	if fx:
 		if fx is Node3D:
 			(fx as Node3D).global_position = ctx.origin
 		fx.call("start", ctx)
 	Audio.sfx(spell.release_sound, -2.0, 0.02)
 	cast_released.emit(spell, ctx)
 	GameState.spell_cast.emit(String(spell.id), ctx.origin, ctx.target)
-	await get_tree().create_timer(spell.recovery_time, false).timeout
-	casting = false
+	# Sustained spells (barriers) hold until the cast button is let go.
+	if spell.sustained:
+		_sustain_fx = fx
+		var held := 0.0
+		while my_id == _cast_id and held < 60.0 and (Input.is_action_pressed("cast") or Input.is_action_pressed("cast_alt")):
+			await get_tree().process_frame
+			held += get_process_delta_time()
+		if _sustain_fx and is_instance_valid(_sustain_fx) and _sustain_fx.has_method("release"):
+			_sustain_fx.call("release")
+		_sustain_fx = null
+		if staff_cast and body.has_method("end_staff_hold"):
+			body.end_staff_hold()
+	if my_id != _cast_id:
+		return
+	# Chaining: the caster may start the next cast before the recovery tail ends.
+	var rec := spell.recovery_time
+	if spell.chain_after >= 0.0 and not spell.sustained:
+		await get_tree().create_timer(minf(spell.chain_after, rec), false).timeout
+		if my_id != _cast_id:
+			return
+		casting = false
+		await get_tree().create_timer(maxf(rec - spell.chain_after, 0.0), false).timeout
+		if my_id != _cast_id:
+			return
+	else:
+		await get_tree().create_timer(rec, false).timeout
+		if my_id != _cast_id:
+			return
+		casting = false
 	body.end_cast()
-	if body.has_method("set_levitation"):
+	if body.has_method("set_levitation") and spell.levitate_height > 0.0:
 		# Hang in the air a beat after the flowers have bloomed, then settle.
 		await get_tree().create_timer(0.6, false).timeout
 		body.set_levitation(0.0)
+
+
+## An incoming hit on a held barrier (world point of impact).
+func barrier_hit(point: Vector3) -> void:
+	if _sustain_fx and is_instance_valid(_sustain_fx) and _sustain_fx.has_method("hit"):
+		_sustain_fx.call("hit", point)
+
+
+## Cancels the current cast: visuals stop, the caster is free again.
+func interrupt() -> void:
+	_cast_id += 1
+	casting = false
+	_set_gather(false, Color.WHITE)
+	if _charge_fx and is_instance_valid(_charge_fx):
+		_charge_fx.call("finish")
+	_charge_fx = null
+	if _sustain_fx and is_instance_valid(_sustain_fx) and _sustain_fx.has_method("release"):
+		_sustain_fx.call("release")
+	_sustain_fx = null
+
+
+func _make_fx(path: String) -> Node3D:
+	var scr := load(path) as GDScript
+	return scr.new() as Node3D if scr else null
 
 
 func _build_gather_vfx() -> void:

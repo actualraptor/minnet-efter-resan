@@ -8,6 +8,8 @@ extends Control
 var _player: Player
 var _spell_name: Label
 var _mana_bar: ProgressBar
+var _stamina_bar: ProgressBar
+var _stamina_fade := 0.0
 var _prompt: PanelContainer
 var _prompt_label: Label
 var _quest_box: VBoxContainer
@@ -31,6 +33,7 @@ func _ready() -> void:
 	if _player:
 		_player.focus_changed.connect(_on_focus)
 		_player.caster.mana_changed.connect(_on_mana)
+		_player.stamina_changed.connect(_on_stamina)
 		_player.caster.equipped_changed.connect(_on_spell)
 		_on_spell(_player.caster.current_spell())
 	GameState.quest_changed.connect(_on_quest)
@@ -92,6 +95,22 @@ func _build() -> void:
 	_mana_bar.add_theme_stylebox_override("background", bg)
 	_mana_bar.add_theme_stylebox_override("fill", fill)
 	sv.add_child(_mana_bar)
+	# Flight stamina: only shown while it matters.
+	_stamina_bar = ProgressBar.new()
+	_stamina_bar.custom_minimum_size = Vector2(230, 6)
+	_stamina_bar.show_percentage = false
+	_stamina_bar.max_value = 100.0
+	_stamina_bar.value = 100.0
+	var sbg := StyleBoxFlat.new()
+	sbg.bg_color = Color(1, 1, 1, 0.12)
+	sbg.set_corner_radius_all(3)
+	var sfill := StyleBoxFlat.new()
+	sfill.bg_color = Color("#9fd8e8")
+	sfill.set_corner_radius_all(3)
+	_stamina_bar.add_theme_stylebox_override("background", sbg)
+	_stamina_bar.add_theme_stylebox_override("fill", sfill)
+	_stamina_bar.modulate.a = 0.0
+	sv.add_child(_stamina_bar)
 
 	# Interaction prompt (centre, lower third)
 	_prompt = PanelContainer.new()
@@ -185,6 +204,19 @@ func _on_focus(target: Node) -> void:
 func _on_mana(mana: float, max_mana: float) -> void:
 	_mana_bar.max_value = max_mana
 	_mana_bar.value = mana
+
+
+func _on_stamina(stamina: float, max_stamina: float) -> void:
+	_stamina_bar.max_value = max_stamina
+	_stamina_bar.value = stamina
+	# Visible while flying or recovering; fades once full again on the ground.
+	var want := 1.0 if (_player.flying or stamina < max_stamina - 0.5) else 0.0
+	_stamina_fade = lerpf(_stamina_fade, want, 0.25 if want > _stamina_fade else 0.06)
+	_stamina_bar.modulate.a = _stamina_fade
+	# Warm to amber when nearly spent.
+	var low := stamina < max_stamina * 0.25
+	var fill := _stamina_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	fill.bg_color = Color("#f2b36b") if low else Color("#9fd8e8")
 
 
 func _on_spell(spell: SpellDefinition) -> void:

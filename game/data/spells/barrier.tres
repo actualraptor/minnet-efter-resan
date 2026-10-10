@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SpellDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/spells/spell_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"spell_barrier"
+display_name = "Defensive Barrier"
+description = "A circle, then a wall of still light. Held for as long as she needs it, put away as soon as she doesn't."
+category = 4
+targeting = 0
+mana_cost = 12.0
+cooldown = 0.4
+cast_time = 0.35
+recovery_time = 0.6
+radius = 2.0
+max_range = 0.0
+allowed_indoors = true
+cast_animation = &"Cast"
+staff_pose = &"barrier"
+sustained = true
+move_scale = 0.0
+interruptible = true
+expression = &"alert"
+effect_script = "res://scripts/spells/barrier_effect.gd"
+gather_particles = false
+gather_color = Color(0.62, 0.86, 1, 1)
+cast_sound = "spell_gather"
+release_sound = "spell_release"

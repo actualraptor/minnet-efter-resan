@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Versions are prototype milestones.
 
+## [Unreleased]
+### Added
+- Staff performance overhaul: a staff-authority rig (`StaffRig`, authored `StaffPoseClip`s) with two-handed analytic IK (`StaffGrip`) in the VRoid hand frame, so both fists sit on the shaft with fingers wrapped; torso posture, aim yaw/elevation, regrip blending, hand release for open-palm gestures.
+- **Zoltraak** (fast aimed beam, chained casts), **Defensive Barrier** (circle to dome, held, hit ripple + reactive nudge) and a re-authored **Field of Flowers** (petal circle, circular staff arc, bloom with free hand). Spell data gained staff pose, aim, sustain, chaining, movement scale, expression, charge/effect scripts and flight stamina cost.
+- Free flight with a stamina bar: climb/descend/boost, casting from the air (extra stamina), gentle exhausted descent. Hover legs (`HoverPose`) and a flight lean.
+- Casting faces (focused, serene, alert) from the VRoid shapes.
+- Dev animation preview scene (`scenes/animation_preview.tscn`): orbit camera, spell/flight/face triggers, pause and playback speed, grip diagnostics.
+
 ## [0.1.0-prototype] - 2026-10-09: Milestone 001 "A Cottage, a Mage, and a Memory"
 ### Added
 - Godot 4.7 project: procedural meadow terrain with heightmap collision, chunked wind grass, wildflower drifts, tree ring, distant mountains, painterly sky, golden-hour lighting with SDFGI, butterflies, pollen and chimney smoke.

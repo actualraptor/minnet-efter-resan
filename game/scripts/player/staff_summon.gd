@@ -27,6 +27,7 @@ var _sparks: GPUParticles3D
 var _grip_bone := -1
 var _hold_offset := Basis.IDENTITY   # staff basis in hand space, learned while idle
 var _cast_w := 0.0
+var _carry_local := Transform3D.IDENTITY   # carried staff in hand space, learned while idle
 var _tip_bones: Array[int] = []   # curled fingertip knuckles: far side of the fist
 ## A staff exported as a free prop (no skin): held at the hand every frame,
 ## upright with a slight forward lean, so it reads right in any arm pose.
@@ -103,17 +104,34 @@ func _place_prop() -> void:
 		o = o.lerp(_skel.global_transform * (c / _tip_bones.size()), 0.5)
 	var upright := lean * fb
 	var hand := (_skel.global_transform.basis * _skel.get_bone_global_pose(_hand_bone).basis).orthonormalized()
-	var casting: bool = player.has_method("is_casting") and player.is_casting()
-	if not casting and _cast_w < 0.01:
+	var hand_xf := Transform3D(hand, _skel.global_transform * _skel.get_bone_global_pose(_hand_bone).origin)
+	# A staff performance (StaffRig) owns the staff transform while it runs; the
+	# carried pose below is only its starting/ending point.
+	var rig = player.get("staff_rig")
+	var rig_on: bool = rig != null and (rig.playing or rig.is_active())
+	var casting: bool = player.has_method("is_casting") and player.is_casting() and not rig_on
+	if not casting and not rig_on and _cast_w < 0.01:
 		# While holding it upright, remember how the staff sits in the hand.
 		_hold_offset = hand.inverse() * upright
+		_carry_local = hand_xf.affine_inverse() * Transform3D(upright, o)
 	_cast_w = move_toward(_cast_w, 1.0 if casting else 0.0, get_process_delta_time() * (7.0 if casting else 3.5))
 	var b := upright
 	if _cast_w > 0.0:
-		# Casting: the staff is gripped rigidly, so it sweeps up and points with
-		# the arm instead of staying plumb.
+		# Library gesture casting: the staff is gripped rigidly, so it sweeps up and
+		# points with the arm instead of staying plumb.
 		var held := (Basis(fb.x.normalized(), deg_to_rad(-25.0)) * hand * _hold_offset).orthonormalized()   # tip a little high
 		b = Basis(upright.get_rotation_quaternion().slerp(held.get_rotation_quaternion(), smoothstep(0.0, 1.0, _cast_w)))
+	if rig:
+		if rig_on:
+			var carried := hand_xf * _carry_local
+			rig.carry_global = carried
+			if not rig.state.is_empty():
+				_prop.global_transform = rig.staff_global
+				return
+			b = carried.basis
+			o = carried.origin
+		else:
+			rig.carry_global = Transform3D(b, o)
 	_prop.global_transform = Transform3D(b, o)
 
 

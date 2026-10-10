@@ -30,7 +30,11 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 | Advance dialogue | Space / E / Enter / click | A |
 | Choose | 1–3 or click | — |
 | Summon / stow staff | Q | — |
-| Cast equipped spell (summons the staff if needed) | Left mouse or F | RB |
+| Cast equipped spell (summons the staff if needed; hold for the barrier) | Left mouse or F | RB |
+| Select spell: Field of Flowers / Zoltraak / Barrier | 1 / 2 / 3 | — |
+| Cancel a cast | X | — |
+| Fly (toggle; also double-tap Space in the air) | H | Y |
+| Climb / descend while flying (Shift = faster) | Space / Ctrl | A / LB |
 | Journal / pause | J or Tab / Esc | Start |
 | Quick save / load | F5 / F9 | — |
 

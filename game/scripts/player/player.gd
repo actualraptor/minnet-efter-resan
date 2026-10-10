@@ -4,6 +4,13 @@ extends CharacterBody3D
 ## interaction focus, and the caster interface used by SpellCaster.
 
 signal focus_changed(target: Node)
+signal stamina_changed(stamina: float, max_stamina: float)
+signal flight_changed(flying: bool)
+
+const MIN_TAKEOFF_STAMINA := 12.0
+const EXHAUSTED_RECOVER := 35.0
+const EXHAUSTED_FALL_SPEED := 3.0
+const FLY_CEILING := 60.0
 
 @export var walk_speed := 1.45
 @export var run_speed := 4.3
@@ -15,6 +22,14 @@ signal focus_changed(target: Node)
 @export var gravity := 15.0
 @export var turn_speed := 11.0
 @export var interact_range := 2.6
+@export_group("Flight")
+@export var fly_speed := 4.2
+@export var fly_boost_speed := 8.0
+@export var fly_climb_speed := 3.4
+@export var fly_acceleration := 4.5
+@export var fly_deceleration := 3.5
+@export var max_stamina := 100.0
+@export var stamina_regen := 20.0
 
 @onready var model: Node3D = $Model
 @onready var caster: SpellCaster = $SpellCaster
@@ -41,6 +56,30 @@ var staff: StaffSummon
 var _look_mod: LookAtModifier3D
 var grounder: FootGrounder
 var hands: HandPoser
+var staff_rig: StaffRig
+var staff_grip: StaffGrip
+var hover_pose: HoverPose
+var hover_idle := false               # dev: visual-only hover (gameplay stays grounded)
+var flying := false
+var stamina := 100.0
+var _exhausted := false
+var _exhausted_fall := false
+var _fly_t := 0.0
+var _fly_blend := 0.0
+var _stamina_rest := 0.0
+var _stamina_emit := 0.0
+var _last_jump_press := -10.0
+var _flight_hint_shown := false
+var _lift_spell := 0.0
+var _lift_idle_goal := 0.0
+var _aim_active := false
+var _aim_yaw := 0.0
+var _aim_offset := 0.0
+var _aim_marker: Node3D
+## Dev/preview: aim here instead of at the camera crosshair (Vector3.INF = off).
+var aim_point_override := Vector3.INF
+var _cast_move := 0.0
+var _cast_gen := 0
 var _lift := 0.0               # current levitation height (m)
 var _lift_goal := 0.0
 var _lift_t := 0.0
@@ -72,6 +111,7 @@ func _ready() -> void:
 	secondary = CharacterPhysics.setup(model)
 	_setup_look_at()
 	_setup_grounding()
+	_setup_staff_rig()
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
 		loco.setup(_anim, "freyja_ual" if humanoid else "freyja")
@@ -84,8 +124,139 @@ func _ready() -> void:
 			staff.queue_free()
 			staff = null
 	if caster.spells.is_empty():
-		caster.spells.append(load("res://data/spells/field_of_flowers.tres") as SpellDefinition)
+		for sp in ["field_of_flowers", "zoltraak", "barrier"]:
+			var path := "res://data/spells/%s.tres" % sp
+			if ResourceLoader.exists(path):
+				caster.spells.append(load(path) as SpellDefinition)
 		caster.equip(0)
+
+
+## Staff performance rig (humanoid skeletons only): authored staff transform,
+## two-handed IK and hover legs. Modifier order: grounder, hands, grip/hover,
+## then look-at, so the torso posture is in place before the head turns.
+func _setup_staff_rig() -> void:
+	var skels := model.find_children("*", "Skeleton3D", true, false)
+	if skels.is_empty():
+		return
+	var skel: Skeleton3D = skels[0]
+	if skel.find_bone("RightUpperArm") < 0 or skel.find_bone("LeftUpperLeg") < 0:
+		return
+	var rig := StaffRig.new()
+	rig.name = "StaffRig"
+	add_child(rig)
+	rig.setup(skel, model)
+	var grip := StaffGrip.new()
+	grip.name = "StaffGrip"
+	skel.add_child(grip)
+	if not grip.setup(rig):
+		grip.queue_free()
+		rig.queue_free()
+		return
+	var hv := HoverPose.new()
+	hv.name = "HoverPose"
+	skel.add_child(hv)
+	if not hv.setup():
+		hv.queue_free()
+		hv = null
+	# Hover legs sit after the foot grounder/hand poser, the arm solver after both.
+	if hv:
+		skel.move_child(hv, 2)
+	skel.move_child(grip, 3 if hv else 2)
+	staff_rig = rig
+	staff_grip = grip
+	hover_pose = hv
+	_aim_marker = Node3D.new()
+	_aim_marker.name = "AimPoint"
+	_aim_marker.top_level = true
+	add_child(_aim_marker)
+
+
+## Begin a staff spell: the rig takes over the staff and both arms for the
+## duration. Falls back to the library gesture when there is no rig or clip.
+## Returns the seconds until the release moment.
+func begin_staff_cast(spell: SpellDefinition) -> float:
+	var clip := StaffPoses.get_clip(spell.staff_pose)
+	if staff_rig == null or clip == null:
+		begin_cast(spell.cast_animation, spell.cast_time + spell.recovery_time)
+		if spell.levitate_height > 0.0:
+			set_levitation(spell.levitate_height)
+		return spell.cast_time
+	_casting = true
+	_cast_gen += 1
+	_cast_move = spell.move_scale
+	var wind_up := staff_rig.play(clip, spell.cast_time, spell.recovery_time, spell.sustained)
+	if spell.levitate_height > 0.0:
+		set_levitation(spell.levitate_height)
+	_aim_active = spell.aim or clip.aims
+	_aim_offset = deg_to_rad(clip.aim_yaw_deg)
+	if _aim_active:
+		_update_aim()
+		set_look_target(_aim_marker)
+	if staff:
+		staff.touch()
+	return wind_up
+
+
+## Sustained spells (barrier): let go and play the recovery.
+func end_staff_hold() -> void:
+	if staff_rig:
+		staff_rig.release_hold()
+
+
+## Cancels whatever is being cast; the rig eases out and control returns.
+func interrupt_cast() -> void:
+	if not _casting:
+		return
+	if staff_rig:
+		staff_rig.cancel()
+	_aim_active = false
+	_casting = false
+	_cast_gen += 1
+	set_look_target(null)
+	set_levitation(0.0)
+	caster.interrupt()
+
+
+## The barrier took a hit coming from `from_dir` (world, pointing at her): the
+## staff hand is shoved back a little and the shoulders rock.
+func barrier_impact(from_dir: Vector3) -> void:
+	if staff_rig == null:
+		return
+	var local := model.global_basis.inverse() * (-from_dir)
+	staff_rig.kick(Vector3(local.x, 0.0, local.z).normalized() * 0.5)
+
+
+## World direction the staff head points (the spell's aim).
+func staff_direction() -> Vector3:
+	if staff_rig and staff_rig.is_active():
+		return staff_rig.shaft_up
+	return model.global_basis.z
+
+
+## The point under the camera crosshair (ray up to 40 m) and the yaw toward it.
+func _update_aim() -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null or _aim_marker == null:
+		return
+	var from := cam.global_position
+	var dir := -cam.global_basis.z
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * 40.0, 1, [get_rid()])
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	var p: Vector3 = hit.position if not hit.is_empty() else from + dir * 40.0
+	if aim_point_override.is_finite():
+		p = aim_point_override
+	# Measure from the staff head so the beam, not her chest, hits the point.
+	var from_pt := staff_tip() if staff_rig and staff_rig.is_active() else global_position + Vector3(0.0, 1.3, 0.0)
+	var flat := Vector3(p.x - from_pt.x, 0.0, p.z - from_pt.z)
+	if flat.length() < 1.5:
+		# Too close to read as a direction: aim where the camera faces.
+		var f := Vector3(dir.x, 0.0, dir.z).normalized()
+		p = from_pt + f * 6.0 + Vector3(0.0, dir.y * 6.0, 0.0)
+		flat = f * 6.0
+	_aim_marker.global_position = p
+	_aim_yaw = atan2(flat.x, flat.z)
+	if staff_rig:
+		staff_rig.aim_elevation = atan2(p.y - from_pt.y, flat.length())
 
 
 func _setup_look_at() -> void:
@@ -206,7 +377,7 @@ func has_control() -> bool:
 # --- Caster interface -----------------------------------------------------------
 
 func can_start_cast() -> bool:
-	return has_control() and is_on_floor() and not _casting
+	return has_control() and (is_on_floor() or flying) and not _casting
 
 
 func is_indoors() -> bool:
@@ -239,16 +410,31 @@ func begin_cast(anim: StringName, _duration: float) -> void:
 
 func end_cast() -> void:
 	_casting = false
+	if _aim_active:
+		_aim_active = false
+		set_look_target(null)
 
 
 ## Float `height` metres above the ground (0 = settle back down). The body keeps
 ## its ground position (spell effects, collision); only the visual model rises.
 func set_levitation(height: float) -> void:
-	_lift_goal = height
+	_lift_spell = height
+	_refresh_lift_goal()
+
+
+## Toggle the idle hover (visual only: collision and movement stay grounded).
+func set_hover(on: bool) -> void:
+	hover_idle = on
+	_lift_idle_goal = 0.38 if on else 0.0
+	_refresh_lift_goal()
+
+
+func _refresh_lift_goal() -> void:
+	_lift_goal = maxf(0.0 if flying else _lift_spell, _lift_idle_goal)
 	if grounder:
-		grounder.suspended = height > 0.0 or _lift > 0.02
+		grounder.suspended = flying or _lift_goal > 0.0 or _lift > 0.02
 	if _lift_motes:
-		_lift_motes.emitting = height > 0.0
+		_lift_motes.emitting = flying or _lift_spell > 0.0
 
 
 func is_casting() -> bool:
@@ -259,9 +445,18 @@ func hover_height() -> float:
 	return _lift
 
 
+## Hover legs follow how far she has risen; the leg trail follows her velocity
+## in the model's frame.
+func _update_hover_pose() -> void:
+	if hover_pose == null:
+		return
+	hover_pose.amount = maxf(smoothstep(0.0, 1.0, clampf(_lift / 0.25, 0.0, 1.0)), smoothstep(0.0, 1.0, _fly_blend))
+	hover_pose.velocity = model.global_basis.inverse() * Vector3(velocity.x, 0.0, velocity.z)
+
+
 func _update_levitation(delta: float) -> void:
 	if _lift <= 0.001 and _lift_goal <= 0.0:
-		if grounder and grounder.suspended:
+		if grounder and grounder.suspended and not flying:
 			grounder.suspended = false
 		return
 	_lift_t += delta
@@ -311,32 +506,59 @@ func _build_lift_motes() -> void:
 
 func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
-	if not on_floor:
+	if flying:
+		pass   # no gravity while flying
+	elif not on_floor:
 		velocity.y -= gravity * delta
+		if _exhausted_fall:
+			velocity.y = maxf(velocity.y, -EXHAUSTED_FALL_SPEED)   # drifts down, doesn't plummet
 		_coyote -= delta
 	else:
 		_coyote = 0.12
+		_exhausted_fall = false
 	_jump_buffer -= delta
 
 	var input := Vector2.ZERO
 	var running := false
-	if has_control() and not _casting:
+	var climb := 0.0
+	if has_control() and (not _casting or _cast_move > 0.0):
 		input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-		running = Input.is_action_pressed("run")
-		if Input.is_action_just_pressed("jump"):
+		running = Input.is_action_pressed("run") and not _casting
+		if _casting:
+			input *= _cast_move
+		if Input.is_action_just_pressed("jump") and not _casting and not flying:
 			_jump_buffer = 0.13
+	if has_control() and flying and not (_casting and _cast_move <= 0.0):
+		climb = Input.get_action_strength("jump") - Input.get_action_strength("descend")
+	# Double-tap jump in the air: take off.
+	if has_control() and not flying and not on_floor and Input.is_action_just_pressed("jump"):
+		var now := Time.get_ticks_msec() / 1000.0
+		if now - _last_jump_press < 0.3:
+			start_flight()
+		_last_jump_press = now
+	elif has_control() and Input.is_action_just_pressed("jump"):
+		_last_jump_press = Time.get_ticks_msec() / 1000.0
 
 	var yaw := camera_rig.yaw if camera_rig else 0.0
 	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
-	var target_speed := (run_speed if running else walk_speed) * minf(input.length(), 1.0)
+	var move_speed := run_speed if running else walk_speed
+	var accel_up := acceleration
+	var accel_down := deceleration
+	if flying:
+		move_speed = fly_boost_speed if running else fly_speed
+		accel_up = fly_acceleration
+		accel_down = fly_deceleration
+	var target_speed := move_speed * minf(input.length(), 1.0)
 	var target := dir.normalized() * target_speed if dir.length() > 0.01 else Vector3.ZERO
 	var cur := Vector3(velocity.x, 0.0, velocity.z)
-	var accel := (acceleration if target.length() >= cur.length() else deceleration) if on_floor else air_acceleration
+	var accel := (accel_up if target.length() >= cur.length() else accel_down) if (on_floor or flying) else air_acceleration
 	var hv := cur.move_toward(target, accel * delta)
 	velocity.x = hv.x
 	velocity.z = hv.z
+	if flying:
+		_fly_step(delta, on_floor, climb, hv.length(), running)
 
-	if _jump_buffer > 0.0 and _coyote > 0.0:
+	if _jump_buffer > 0.0 and _coyote > 0.0 and not flying:
 		velocity.y = jump_velocity
 		_jump_buffer = 0.0
 		_coyote = 0.0
@@ -345,7 +567,12 @@ func _physics_process(delta: float) -> void:
 	_apply_soft_boundary()
 	move_and_slide()
 
-	if dir.length() > 0.05:
+	if _aim_active:
+		# Aiming: the body turns so the staff (offset by the pose's shaft yaw)
+		# points at the crosshair, whatever direction she is drifting.
+		_update_aim()
+		model.rotation.y = lerp_angle(model.rotation.y, _aim_yaw - _aim_offset, 1.0 - exp(-13.0 * delta))
+	elif dir.length() > 0.05:
 		var want := atan2(dir.x, dir.z)
 		# Turn slower at speed, like a person carrying momentum.
 		var ts := turn_speed * lerpf(1.0, 0.55, clampf(hv.length() / run_speed, 0.0, 1.0))
@@ -355,20 +582,26 @@ func _physics_process(delta: float) -> void:
 	_prev_yaw = model.rotation.y
 	var accel_fwd := (hv.length() - _prev_speed) / maxf(delta, 1e-4)
 	_prev_speed = hv.length()
-	var bank := clampf(-yaw_rate * hv.length() * 0.035, -0.18, 0.18) if on_floor else 0.0
+	var bank := clampf(-yaw_rate * hv.length() * 0.035, -0.18, 0.18) if (on_floor or flying) else 0.0
 	_lean = lerpf(_lean, bank, 1.0 - exp(-6.0 * delta))
 	var pitch := clampf(accel_fwd * 0.012, -0.06, 0.08) if on_floor else 0.0
+	if flying:
+		# Lean into the flight: forward with speed, back a touch when braking.
+		pitch = deg_to_rad(17.0) * clampf(hv.length() / fly_speed, 0.0, 1.5) + clampf(accel_fwd * 0.01, -0.08, 0.05)
 	model.rotation.z = _lean
 	model.rotation.x = lerpf(model.rotation.x, pitch, 1.0 - exp(-5.0 * delta))
 
-	if on_floor and not _was_on_floor and velocity.y <= 0.0:
+	if on_floor and not _was_on_floor and velocity.y <= 0.0 and not flying:
 		_footstep(-6.0)
 	_was_on_floor = on_floor
 	_update_footsteps(delta, hv.length())
 	_update_animation(hv.length())
 	_update_focus()
 	_update_look(delta)
+	_update_flight_visual(delta)
 	_update_levitation(delta)
+	_update_hover_pose()
+	_update_stamina(delta, on_floor)
 	RenderingServer.global_shader_parameter_set("player_position", global_position)
 
 
@@ -381,8 +614,128 @@ func _apply_soft_boundary() -> void:
 		velocity.z += push.y
 
 
+# --- Flight ---------------------------------------------------------------------
+# Free flight costs stamina: a little to hover, more to move, climb or boost, and
+# casting from the air costs extra on top. Stamina refills on the ground.
+
+func start_flight() -> bool:
+	if flying or not has_control():
+		return false
+	if is_indoors():
+		GameState.toast.emit("Not indoors. The ceiling has opinions.")
+		return false
+	if _exhausted and stamina < EXHAUSTED_RECOVER:
+		GameState.toast.emit("Out of breath. Give it a moment.")
+		return false
+	if stamina < MIN_TAKEOFF_STAMINA:
+		GameState.toast.emit("Too tired to fly.")
+		return false
+	flying = true
+	_exhausted = false
+	_exhausted_fall = false
+	_fly_t = 0.0
+	velocity.y = maxf(velocity.y, 2.4)
+	_refresh_lift_goal()
+	flight_changed.emit(true)
+	if not _flight_hint_shown:
+		_flight_hint_shown = true
+		GameState.toast.emit("Space climbs, Ctrl descends, Shift is faster. H lands.")
+	return true
+
+
+func stop_flight(exhausted := false) -> void:
+	if not flying:
+		return
+	flying = false
+	if exhausted:
+		_exhausted = true
+		_exhausted_fall = true
+		GameState.toast.emit("Out of breath. She drifts down.")
+	_stamina_rest = 0.6
+	_refresh_lift_goal()
+	flight_changed.emit(false)
+
+
+func toggle_flight() -> void:
+	if flying:
+		stop_flight()
+	else:
+		start_flight()
+
+
+## Stamina a spell costs to cast while airborne (0 on the ground).
+func cast_stamina_cost(spell: SpellDefinition) -> float:
+	if not flying:
+		return 0.0
+	return spell.flight_stamina_cost if spell.flight_stamina_cost >= 0.0 else spell.mana_cost * 0.6
+
+
+func can_afford_cast(spell: SpellDefinition) -> bool:
+	return not flying or stamina >= cast_stamina_cost(spell)
+
+
+func pay_cast_cost(spell: SpellDefinition) -> void:
+	var c := cast_stamina_cost(spell)
+	if c > 0.0:
+		stamina = maxf(stamina - c, 0.0)
+		stamina_changed.emit(stamina, max_stamina)
+
+
+## The ground beneath her (spell effects originate there, even from the air).
+func ground_point() -> Vector3:
+	if not flying and is_on_floor():
+		return global_position
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 0.5, 0), global_position + Vector3(0, -300, 0), 1, [get_rid()])
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return hit.position if not hit.is_empty() else global_position
+
+
+func _fly_step(delta: float, on_floor: bool, climb: float, speed: float, boosting: bool) -> void:
+	_fly_t += delta
+	var vy_goal := climb * fly_climb_speed
+	if global_position.y > FLY_CEILING and vy_goal > 0.0:
+		vy_goal = 0.0
+	velocity.y = move_toward(velocity.y, vy_goal, 10.0 * delta)
+	# Land by flying down into the ground (or tapping descend on it).
+	if on_floor and climb <= 0.0 and _fly_t > 0.5 and velocity.y <= 0.01:
+		stop_flight()
+		return
+	# Stamina: hovering is cheap, moving, climbing and boosting cost more, and
+	# everything doubles while she is casting.
+	var rate := 2.5 + 3.5 * clampf(speed / fly_speed, 0.0, 2.0)
+	if climb > 0.0:
+		rate += 5.0 * climb
+	if boosting and speed > 0.5:
+		rate += 5.0
+	if _casting:
+		rate *= 2.0
+	stamina = maxf(stamina - rate * delta, 0.0)
+	if stamina <= 0.0:
+		stop_flight(true)
+
+
+func _update_stamina(delta: float, on_floor: bool) -> void:
+	if not flying and on_floor and stamina < max_stamina:
+		_stamina_rest = maxf(_stamina_rest - delta, 0.0)
+		if _stamina_rest <= 0.0:
+			stamina = minf(stamina + stamina_regen * delta, max_stamina)
+			if _exhausted and stamina >= EXHAUSTED_RECOVER:
+				_exhausted = false
+	_stamina_emit -= delta
+	if _stamina_emit <= 0.0:
+		_stamina_emit = 0.1
+		stamina_changed.emit(stamina, max_stamina)
+
+
+## Feet off the ground, relaxed legs, a slow bob and a drift in the model's tilt.
+func _update_flight_visual(delta: float) -> void:
+	_fly_blend = move_toward(_fly_blend, 1.0 if flying else 0.0, delta * 4.0)
+	var bob := sin(Time.get_ticks_msec() / 1000.0 * 1.9) * 0.04 * _fly_blend
+	model.position.y = _lift + bob
+
+
 func _update_footsteps(delta: float, speed: float) -> void:
-	if not is_on_floor() or speed < 0.4:
+	if flying or not is_on_floor() or speed < 0.4:
 		_step_accum = 0.0
 		return
 	_step_accum += speed * delta
@@ -400,7 +753,11 @@ func _update_animation(speed: float) -> void:
 	if _anim == null:
 		return
 	if loco:
-		loco.update(get_physics_process_delta_time(), speed, walk_speed, run_speed, is_on_floor(), velocity.y, _talking)
+		if flying:
+			# Airborne but not "falling": the idle pose, with the hover legs on top.
+			loco.update(get_physics_process_delta_time(), 0.0, walk_speed, run_speed, true, 0.0, _talking)
+		else:
+			loco.update(get_physics_process_delta_time(), speed, walk_speed, run_speed, is_on_floor(), velocity.y, _talking)
 		return
 	if _casting:
 		return
@@ -469,6 +826,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
 		get_viewport().set_input_as_handled()
 		_cast_with_staff()
+	elif event.is_action_pressed("spell_1") or event.is_action_pressed("spell_2") or event.is_action_pressed("spell_3"):
+		if not caster.casting:
+			caster.equip(0 if event.is_action_pressed("spell_1") else (1 if event.is_action_pressed("spell_2") else 2))
+	elif event.is_action_pressed("fly"):
+		toggle_flight()
+	elif event.is_action_pressed("interrupt"):
+		interrupt_cast()
 	elif event.is_action_pressed("summon") and staff:
 		get_viewport().set_input_as_handled()
 		if staff.out:

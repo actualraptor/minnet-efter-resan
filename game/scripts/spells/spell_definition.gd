@@ -25,6 +25,30 @@ enum Category { WHIMSICAL, ENVIRONMENTAL, UTILITY, EXPLORATION, DEFENSIVE, OFFEN
 ## Metres the caster floats off the ground while casting (0 = stays grounded).
 ## The effect still originates at ground level.
 @export var levitate_height := 0.0
+## Extra stamina the cast costs while flying (-1 = 60% of the mana cost).
+@export var flight_stamina_cost := -1.0
+
+@export_group("Staff performance")
+## Authored staff clip (StaffPoses). Empty = legacy library animation only.
+@export var staff_pose: StringName = &""
+## The body turns so the staff points at the aim point.
+@export var aim := false
+## Holds at the pose's sustain point while the cast button stays down.
+@export var sustained := false
+## Seconds after the release before the next cast may start (cancels the
+## recovery tail so repeated casts chain without returning to idle).
+@export var chain_after := -1.0
+## Movement allowed while casting (0 = rooted, 1 = free).
+@export_range(0.0, 1.0) var move_scale := 0.0
+@export var interruptible := false
+## Facial expression during the cast (FaceController name), held for the whole cast.
+@export var expression: StringName = &""
+## Scripts with `static func create() -> Node3D`-style classes: charge visual
+## (runs from the cast start until release) and the release effect.
+@export_file("*.gd") var charge_script := ""
+@export_file("*.gd") var effect_script := ""
+## Motes drawn toward the staff head while casting.
+@export var gather_particles := true
 @export var gather_color := Color(0.8, 1.0, 0.55)
 @export var effect_scene: PackedScene
 @export var cast_sound := "spell_gather"
