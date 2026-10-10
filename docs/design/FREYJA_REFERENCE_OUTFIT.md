@@ -139,6 +139,32 @@ scrolls and leaves painted at the centre front and back; the main belt has a
 double-frame buckle on a leather keeper. Still below the sheet: ruffle hems read as a uniform wave, embroidery is
 simpler, and raised-arm poses are untested (milestone 2).
 
+## Deep detail pass (2026-10-10, Claude)
+
+- Embroidery is painted with a small vector painter (`Ink`) in aspect-corrected
+  units, so strokes stay round on stretched UVs: a fleur-de-lis on every sage
+  panel point with leafy vines along both hems and curls above; stars and a
+  small fleur running down every plum gore; a vine-and-leaf band around the
+  capelet hem with curled sprigs, plus the centre spire/scroll filigree.
+- Ruffles: three tiers gathered together (same fold phase, so they nest instead
+  of interleaving), 480 segments, shallow rounded folds, and an eyelet-lace band
+  (two staggered eyelet rows, scalloped edge) tiled 12x around the hem.
+- Sleeves: gathered into the cuff band (the puff narrows into it, then a small
+  frill); pleats radiate from the shoulder seam and the cuff. The shoulder seam
+  is narrower and lower so no puff rises above the capelet at the back. Each
+  cuff band sits on the gathered sleeve and has a small brass buckle.
+- Corset: front lacing, eight pairs of brass eyelets with crossed dark laces.
+- Neck: the collar now starts under the capelet neckline and the bodice stops
+  below it (no white band between collar and cape).
+- Charm cluster (sheet: CHARMS): ring on the lower belt at the front right hip,
+  three chains hanging plumb, a coin with a star, a gold clover and a green leaf
+  with a gold vein, resting outside the sage panels. Replaces the side swags.
+- Capelet neckline edge smoothed.
+
+Counts: 86 meshes, ~206k triangles (finer ruffles); performance reduction is a
+later gate. Clipping check: 0 posed sleeve vertices outside the capelet; smoke
+test 42/42.
+
 ## Rebuild and inspect
 
 ```powershell

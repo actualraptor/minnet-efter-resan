@@ -91,6 +91,16 @@ func _ready() -> void:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(out.path_join("detail_%s.png" % ("front" if angle == 0.0 else "back")))
+	# Skirt, hem and ruffles close-up (front three-quarter) and the sleeve cuff.
+	for shot in [["skirt", Vector3(0, 0.62, 0), 0.5, 0.95], ["cuff", Vector3(0.36, 1.0, 0), 0.25, 0.45]]:
+		var target: Vector3 = shot[1]
+		camera.size = shot[3]
+		camera.position = target + Vector3(sin(shot[2]) * 4, 0.04, cos(shot[2]) * 4)
+		camera.look_at(target)
+		for frame in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(out.path_join("detail_%s.png" % shot[0]))
 	get_tree().quit()
 
 func _set_view(angle: float) -> void:

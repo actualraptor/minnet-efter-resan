@@ -3,11 +3,11 @@
   "body_source": "art\\source\\vroid\\freyja.glb",
   "simulation_enabled": false,
   "visual_acceptance": "pending_owner_review",
-  "mesh_count": 51,
+  "mesh_count": 86,
   "repaired_unweighted_vertices": 78,
   "geometry_checks": "finite positions, UVs, 1-4 normalized skin influences per vertex",
-  "vertices": 76313,
-  "triangles": 151840,
+  "vertices": 103769,
+  "triangles": 206352,
   "meshes": [
     {
       "name": "Tights",
@@ -67,23 +67,23 @@
     },
     {
       "name": "CreamRuffle01",
-      "vertices": 4246
+      "vertices": 12506
     },
     {
       "name": "CreamRuffle02",
-      "vertices": 4246
+      "vertices": 12506
     },
     {
       "name": "CreamRuffle03",
-      "vertices": 4246
+      "vertices": 12506
     },
     {
       "name": "LeftGatheredSleeve",
-      "vertices": 3250
+      "vertices": 4290
     },
     {
       "name": "RightGatheredSleeve",
-      "vertices": 3250
+      "vertices": 4290
     },
     {
       "name": "CapeFrontBrooch",
@@ -106,12 +106,20 @@
       "vertices": 390
     },
     {
+      "name": "LeftCuffBuckle",
+      "vertices": 56
+    },
+    {
       "name": "RightRuffledCuff",
       "vertices": 1170
     },
     {
       "name": "RightLeatherCuffBand",
       "vertices": 390
+    },
+    {
+      "name": "RightCuffBuckle",
+      "vertices": 56
     },
     {
       "name": "LeatherBelt1",
@@ -146,6 +154,126 @@
       "vertices": 168
     },
     {
+      "name": "CorsetEyelet0_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet0_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet1_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet1_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet2_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet2_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet3_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet3_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet4_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet4_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet5_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet5_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet6_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet6_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet7_R",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetEyelet7_L",
+      "vertices": 34
+    },
+    {
+      "name": "CorsetLace0_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace0_1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace1_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace1_1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace2_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace2_1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace3_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace3_1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace4_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace4_1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace5_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace5_1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace6_-1",
+      "vertices": 16
+    },
+    {
+      "name": "CorsetLace6_1",
+      "vertices": 16
+    },
+    {
       "name": "CorsetTopSeam",
       "vertices": 1032
     },
@@ -174,36 +302,48 @@
       "vertices": 56
     },
     {
-      "name": "GoldSwag1",
-      "vertices": 264
+      "name": "CharmRing",
+      "vertices": 200
     },
     {
-      "name": "Medallion0_8",
+      "name": "CharmChain0",
+      "vertices": 96
+    },
+    {
+      "name": "CharmCoin",
+      "vertices": 48
+    },
+    {
+      "name": "CharmCoinStar",
+      "vertices": 10
+    },
+    {
+      "name": "CharmChain1",
+      "vertices": 104
+    },
+    {
+      "name": "CharmClover0",
+      "vertices": 32
+    },
+    {
+      "name": "CharmClover1",
+      "vertices": 32
+    },
+    {
+      "name": "CharmClover2",
+      "vertices": 32
+    },
+    {
+      "name": "CharmChain2",
+      "vertices": 104
+    },
+    {
+      "name": "CharmLeaf",
       "vertices": 86
     },
     {
-      "name": "Medallion0_16",
-      "vertices": 86
-    },
-    {
-      "name": "Medallion0_24",
-      "vertices": 86
-    },
-    {
-      "name": "GoldSwag2",
-      "vertices": 264
-    },
-    {
-      "name": "Medallion1_8",
-      "vertices": 86
-    },
-    {
-      "name": "Medallion1_16",
-      "vertices": 86
-    },
-    {
-      "name": "Medallion1_24",
-      "vertices": 86
+      "name": "CharmLeafVein",
+      "vertices": 16
     },
     {
       "name": "PlumPanelOrnament0",

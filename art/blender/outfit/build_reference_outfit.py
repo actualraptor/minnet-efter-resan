@@ -62,43 +62,16 @@ def thickness(ob, amount=0.0015):
     bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
-def textile(name, color, embroidered=False, repeats=1, centres=(), aspect=5.0):
+def textile(name, color, embroidered=False, repeats=1, centres=(), aspect=5.0, style=None, laced=False):
     base, gold = B._hex(color), B._hex("#cba75f")
     def paint(u, v):
         weave = np.sin(u * math.tau * 155) * np.sin(v * math.tau * 190)
         rgb = np.ones(u.shape + (3,)) * base
         rgb *= (0.985 + 0.015 * weave)[..., None]
         if embroidered:
-            # Symmetrical botanical embroidery, laid in UV space along the hem.
-            ink = np.zeros(u.shape, dtype=bool)
-            motif_u = (u*repeats)%1
-            def stroke(x0, y0, x1, y1, width=0.0018):
-                dx, dy = x1 - x0, y1 - y0
-                t = np.clip(((motif_u-x0)*dx + (v-y0)*dy) / max(dx*dx+dy*dy, 1e-9), 0, 1)
-                ink[:] |= (motif_u-x0-t*dx)**2 + (v-y0-t*dy)**2 < width**2
-            def curve(points):
-                for first,second in zip(points,points[1:]):
-                    stroke(*first,*second)
-            for center in (0.22, 0.5, 0.78):
-                stroke(center, 0.89, center, 0.71)
-                for y in (0.79, 0.84):
-                    for sign in (-1, 1):
-                        stroke(center, y, center + sign*0.04, y-0.04)
-                        stroke(center + sign*0.04, y-0.04, center+sign*0.015, y-0.045)
-                for sign in (-1, 1):
-                    stroke(center, 0.71, center + sign*0.022, 0.742)
-                    stroke(center + sign*0.022, 0.742, center, 0.765)
-                for sign in (-1,1):
-                    # Curling tendrils and outlined leaves, with narrow stems.
-                    curve([(center+sign*(0.012+0.06*t),0.87-0.045*math.sin(t*math.pi)) for t in np.linspace(0,1,18)])
-                    for level in (0.775,0.835):
-                        curve([(center+sign*0.05*math.sin(t*math.pi),level-0.05*t) for t in np.linspace(0,1,20)])
-                        curve([(center+sign*0.028*math.sin(t*math.pi),level-0.05*t) for t in np.linspace(0,1,20)])
-            # Fine double borders and a repeated scallop vine along the hem.
-            ink |= (np.abs(v-(0.935+0.009*np.cos(motif_u*math.tau*8)))<0.0015)
-            ink |= (np.abs(v-0.955)<0.0015)
-            ink |= (np.abs(v - 0.92) < 0.003) | (np.abs(u - 0.037) < 0.003) | (np.abs(u - 0.963) < 0.003)
-            rgb[ink] = gold
+            rgb[embroider(style or "panel", u, v)] = gold
+        if laced:
+            rgb[lace(u, v)] = base*0.8
         if centres:
             fil = np.zeros(u.shape, dtype=bool)
             for c in centres:
@@ -148,6 +121,120 @@ def textile(name, color, embroidered=False, repeats=1, centres=(), aspect=5.0):
     mat.node_tree.links.new(normal.outputs["Color"],mapping.inputs["Color"])
     mat.node_tree.links.new(mapping.outputs["Normal"],bsdf.inputs["Normal"])
     return mat
+
+
+class Ink:
+    """Vector-ish embroidery painter on a UV image, in aspect-corrected units:
+    X = (u - 0.5) * aspect across a motif tile, Y = v (0 = top/waist/neck,
+    1 = hem). Strokes and filled leaves are round regardless of UV stretch."""
+
+    def __init__(self, X, Y):
+        self.X, self.Y = X, Y
+        self.mask = np.zeros(X.shape, dtype=bool)
+
+    def seg(self, x0, y0, x1, y1, w=0.004):
+        dx, dy = x1-x0, y1-y0
+        t = np.clip(((self.X-x0)*dx+(self.Y-y0)*dy)/max(dx*dx+dy*dy, 1e-12), 0, 1)
+        self.mask |= (self.X-x0-t*dx)**2+(self.Y-y0-t*dy)**2 < w*w
+
+    def path(self, pts, w=0.004):
+        for a, b in zip(pts, pts[1:]):
+            self.seg(*a, *b, w)
+
+    def leaf(self, cx, cy, ang, length, width):
+        """Filled almond leaf from (cx, cy) pointing along ang (radians)."""
+        ca, sa = math.cos(ang), math.sin(ang)
+        lx = (self.X-cx)*ca+(self.Y-cy)*sa
+        ly = -(self.X-cx)*sa+(self.Y-cy)*ca
+        t = np.clip(lx/length, 0, 1)
+        self.mask |= (lx > 0) & (lx < length) & (np.abs(ly) < width*np.sin(np.pi*t)**0.8)
+
+    def curl(self, cx, cy, r0, sign, start=0.0, turns=0.8, w=0.0035):
+        pts = []
+        for k in range(28):
+            t = k/27
+            a = start+sign*t*turns*math.tau
+            r = r0*(1-0.75*t)
+            pts.append((cx+r*math.cos(a), cy+r*math.sin(a)))
+        self.path(pts, w)
+
+    def star(self, cx, cy, size):
+        for k in range(4):
+            self.leaf(cx, cy, k*math.pi/2, size, size*0.28)
+
+    def fleur(self, cx, cy, size, down=True):
+        """Fleur-de-lis: central petal, two curling side petals, a band and a drop."""
+        d = 1 if down else -1
+        self.leaf(cx, cy-d*0.35*size, math.pi/2*d, 1.25*size, 0.32*size)
+        for sg in (-1, 1):
+            self.leaf(cx, cy-d*0.1*size, math.atan2(d*0.55, sg*1.0), 0.85*size, 0.22*size)
+            self.curl(cx+sg*0.62*size, cy+d*0.32*size, 0.18*size, -sg*d, start=math.pi/2*(1-sg), turns=0.75, w=0.12*size)
+        self.seg(cx-0.42*size, cy-d*0.05*size, cx+0.42*size, cy-d*0.05*size, 0.07*size)
+        self.leaf(cx, cy-d*0.12*size, -math.pi/2*d, 0.4*size, 0.12*size)
+
+    def vine(self, x0, x1, y, amp=0.012, leaves=6, w=0.0028, size=0.03):
+        n = 40
+        pts = [(x0+(x1-x0)*k/n, y+amp*math.sin(k/n*math.pi*leaves)) for k in range(n+1)]
+        self.path(pts, w)
+        for k in range(leaves):
+            t = (k+0.5)/leaves
+            x = x0+(x1-x0)*t
+            yy = y+amp*math.sin(t*math.pi*leaves)
+            up = -1 if k % 2 == 0 else 1
+            self.leaf(x, yy, math.atan2(up*0.8, 1 if x1 > x0 else -1), size, size*0.33)
+
+
+def embroider(style, u, v):
+    """Gold motif masks per garment style (see Ink)."""
+    if style == "panel":         # sage skirt panel, point at the hem centre
+        ink = Ink((u-0.5)*0.75, v)
+        ink.fleur(0.0, 0.84, 0.085)
+        for sg in (-1, 1):
+            ink.vine(sg*0.08, sg*0.34, 0.915, amp=0.012, leaves=5, w=0.0035, size=0.04)
+            ink.curl(sg*0.2, 0.78, 0.022, sg, start=math.pi, turns=0.85)
+            ink.leaf(sg*0.2, 0.78, -math.pi/2, 0.035, 0.009)
+        ink.path([(-0.37, 0.955), (0.37, 0.955)], 0.0022)
+        ink.path([(-0.37, 0.972), (0.37, 0.972)], 0.0016)
+        ink.mask |= (np.abs(u-0.037) < 0.0028) | (np.abs(u-0.963) < 0.0028)
+        return ink.mask
+    if style == "gore":          # narrow plum gore
+        ink = Ink((u-0.5)*0.2, v)
+        for y in (0.28, 0.44, 0.6):
+            ink.star(0.0, y, 0.022)
+        ink.fleur(0.0, 0.83, 0.04)
+        ink.mask |= (np.abs(u-0.07) < 0.012) | (np.abs(u-0.93) < 0.012)
+        return ink.mask
+    if style == "cape":          # capelet hem band, 4 repeats around
+        mu = (u*4) % 1
+        ink = Ink((mu-0.5)*1.6, v)
+        ink.vine(-0.8, 0.8, 0.9, amp=0.014, leaves=9, size=0.035)
+        for sg in (-1, 1):
+            ink.curl(sg*0.32, 0.78, 0.04, sg, start=math.pi*(0.5+0.5*sg), turns=0.8, w=0.0045)
+        ink.path([(0.0, 0.83), (0.0, 0.66)], 0.004)
+        for y, l in ((0.79, 0.06), (0.72, 0.05)):
+            for sg in (-1, 1):
+                ink.leaf(0.0, y, math.atan2(-0.8, sg), l, l*0.3)
+        ink.leaf(0.0, 0.66, -math.pi/2, 0.04, 0.011)
+        ink.mask |= np.abs(v-0.955) < 0.0022
+        return ink.mask
+    return np.zeros(u.shape, dtype=bool)
+
+
+def lace(u, v, aspect=1.3):
+    """Eyelet lace band near a ruffle hem. X, Y in units of the ruffle height
+    (~13 cm): eyelets ~1.5 cm apart in two staggered rows, scalloped edge."""
+    X, Y = u*aspect, v
+    m = np.zeros(u.shape, dtype=bool)
+    sp = 1.3/11            # whole number of eyelets per tile (seamless)
+    for row, off in ((0.7, 0.0), (0.82, 0.5)):
+        gx = ((X/sp+off) % 1-0.5)*sp
+        d = np.sqrt(gx**2+(Y-row)**2)
+        m |= (d > 0.024) & (d < 0.034)
+        m |= d < 0.011
+    scallop = 0.955-0.03*np.abs(np.sin(np.pi*X/sp))
+    m |= np.abs(Y-scallop) < 0.006
+    m |= np.abs(Y-0.62) < 0.005
+    return m
 
 
 def leather_material(name,color):
@@ -213,10 +300,11 @@ def main():
     garments = B.build(body)
     arm = B.rig(body, garments)
     materials = B.mats()
-    sage = textile("M_Outfit_EmbroideredSage", "#849277", True)
-    cape_sage = textile("M_Outfit_CapeBotanical", "#849277", True, repeats=4, centres=(0.75, 0.25))
-    plum = textile("M_Outfit_EmbroideredPlum", "#59455e", True)
+    sage = textile("M_Outfit_EmbroideredSage", "#849277", True, style="panel")
+    cape_sage = textile("M_Outfit_CapeBotanical", "#849277", True, style="cape", centres=(0.75, 0.25))
+    plum = textile("M_Outfit_EmbroideredPlum", "#59455e", True, style="gore")
     cream = textile("M_Outfit_WovenCream", "#eee5d7")
+    cream_lace = textile("M_Outfit_EyeletLace", "#eee5d7", laced=True)
     gold = materials["gold"]
     leather = leather_material("M_Outfit_GrainedLeather","#513829")
     materials["leather_dark"] = leather_material("M_Outfit_DarkLeather","#3f2b22")
@@ -290,24 +378,27 @@ def main():
         start = 0.8
         end = 1.06+0.045*layer
         outset = 0.007-0.0025*layer
-        folds = 30+4*layer
-        for j in range(11):
-            t = j/10
+        folds = 48              # tiers are gathered together: same folds, nested
+        for j in range(13):
+            t = j/12
             row = []
-            for i in range(193):
-                a = math.tau*i/192
+            for i in range(481):
+                a = math.tau*i/480
                 tt = start+(end-start)*t
                 p = skirt_point(a,tt,outset)
-                # Gathered folds open toward the hem (rounded crests, soft troughs).
-                wave = math.sin(a*folds+0.7*layer)
+                # Gathered folds: rounded crests, narrow troughs, opening toward the hem.
+                wave = math.sin(a*folds)
+                crest = 0.5+0.5*wave
                 below = T.smoothstep(0.95, 1.08, tt)    # free of the panels
-                fold = (0.0015+0.013*below)*(0.55+0.45*wave)
-                p += Vector((p.x-ctr.x,p.y-ctr.y,0)).normalized()*(fold+0.018*below**2)
-                p.z += below*0.004*wave
+                fold = (0.001+0.0055*below)*crest
+                p += Vector((p.x-ctr.x,p.y-ctr.y,0)).normalized()*(fold+0.016*below**2)
                 row.append(p)
             grid.append(row)
-        ob = mesh(f"CreamRuffle{layer+1:02d}",grid,[cream])
-        thickness(ob,0.001)
+        ob = mesh(f"CreamRuffle{layer+1:02d}",grid,[cream_lace])
+        # Tile the lace 12x around the hem so eyelets get real texture resolution.
+        for d in ob.data.uv_layers.active.data:
+            d.uv = (d.uv[0]*12.0, d.uv[1])
+        thickness(ob,0.0006)
         extra[ob.name] = ob
         hanging.append(ob)
 
@@ -323,22 +414,33 @@ def main():
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(abs(v.co.x)>shoulder_x for v in f.verts)], context="FACES")
     bm.to_mesh(blouse.data)
     bm.free()
+    CUFF = {}
     for side in ("Left", "Right"):
         shoulder = body.joint(side+"UpperArm")
         wrist = body.joint(side+"Hand")
         axis = (wrist-shoulder).normalized()
         e1 = axis.cross(Vector((0,0,1))).normalized()
         e2 = axis.cross(e1).normalized()
+        L = (wrist-shoulder).length
+        t_band = (1-0.06/L)/0.94           # where the leather cuff band sits
+        def sleeve_r(t):
+            r = 0.031*(1-t)+0.03*t+0.056*math.sin(math.pi*t**0.78)**0.9
+            # Gathered into the cuff band, then a small puff below it.
+            return r*(1-0.5*math.exp(-((t-t_band)/0.035)**2))
+        CUFF[side] = sleeve_r(t_band)
         grid = []
-        for j in range(25):
-            t = j/24
-            center = shoulder.lerp(wrist,t*0.94)
+        for j in range(33):
+            t = j/32
+            center = shoulder.lerp(wrist,t*0.94)-Vector((0,0,0.012*(1-T.smoothstep(0.0,0.25,t))))
             ring = []
             for i in range(65):
                 a = math.tau*i/64
-                r = 0.038*(1-t)+0.03*t+0.056*math.sin(math.pi*t**0.78)**0.9
-                r += 0.006*math.sin(a*9+1.2*t)*math.sin(math.pi*t)
-                r += 0.004*math.sin(t*math.tau*5+a*2)*math.sin(math.pi*t)**2
+                r = sleeve_r(t)
+                # Gathers: pleats radiate from the shoulder seam and the cuff,
+                # strongest right at the gathers, softer over the balloon.
+                gather = 0.35+0.65*(math.exp(-(t/0.12)**2)+math.exp(-((t-t_band)/0.08)**2))
+                r += 0.0065*math.sin(a*11+0.8*t)*gather*min(1.0, r/0.03)
+                r += 0.003*math.sin(t*math.tau*4+a*3)*math.sin(math.pi*t)**2
                 ring.append(center+(e1*math.cos(a)+e2*math.sin(a))*r)
             grid.append(ring)
         ob = mesh(side+"GatheredSleeve",grid,[cream])
@@ -402,6 +504,13 @@ def main():
     cr = T.drop_cloth(body, nc, cape_len, segs=128, rows=20, clearance=0.014, r0=0.06, z_cap=neck.z+0.01, flare=0.1)
     cr = T.push_out(body, cr, nc, 0.012, rows_from=1, reach=0.08)
     cr = T.convexify(cr, nc, rows_from=4)
+    for _ in range(8):
+        for j in (0, 1, 2):
+            ring = cr[j]
+            n = len(ring)
+            w = 1.0 if j == 0 else (0.6 if j == 1 else 0.3)
+            sm = [(ring[i-1]+ring[i]*2+ring[(i+1) % n])/4 for i in range(n)]
+            cr[j] = [ring[i].lerp(sm[i], w) for i in range(n)]
     body.layers = saved
     body._remesh = rest_shell
     body._below = {}
@@ -427,7 +536,7 @@ def main():
         t = j/6
         grid.append([Vector((nc.x + (0.058+0.004*t*math.sin(math.tau*i/96*24))*math.cos(math.tau*i/96),
                              nc.y + (0.053+0.004*t*math.sin(math.tau*i/96*24))*math.sin(math.tau*i/96),
-                             nc.z+0.009+0.04*t)) for i in range(97)])
+                             nc.z-0.012+0.061*t)) for i in range(97)])
     ob = mesh("RuffledCollar",grid,[cream])
     thickness(ob)
     extra[ob.name] = ob
@@ -454,11 +563,19 @@ def main():
         extra[ob.name] = ob
         rigid[ob.name] = side+"LowerArm"
         band_grid = []
+        band_r = CUFF[side]+0.0045
         for j in range(3):
-            center = wrist-axis*(0.06+(j/2-0.5)*0.012)
-            band_grid.append([center+(e1*math.cos(math.tau*i/64)+e2*math.sin(math.tau*i/64))*0.039 for i in range(65)])
+            center = wrist-axis*(0.06+(j/2-0.5)*0.014)
+            band_grid.append([center+(e1*math.cos(math.tau*i/64)+e2*math.sin(math.tau*i/64))*band_r for i in range(65)])
         ob = mesh(side+"LeatherCuffBand",band_grid,[leather])
         thickness(ob,0.0018)
+        extra[ob.name] = ob
+        rigid[ob.name] = side+"LowerArm"
+        # Small brass buckle on the front of each cuff band.
+        front = Vector((0,-1,0))-axis*Vector((0,-1,0)).dot(axis)
+        front.normalize()
+        bpos = wrist-axis*0.06+front*(band_r+0.003)
+        ob = buckle(side+"CuffBuckle",bpos,gold,(0.016,0.012))
         extra[ob.name] = ob
         rigid[ob.name] = side+"LowerArm"
 
@@ -537,6 +654,27 @@ def main():
         T.transfer_weights(body,ob)
         R.restrict(ob,["Hips","Spine","Chest","UpperChest"])
         extra[ob.name] = ob
+    # Front lacing: brass eyelets either side of the centre seam, crossed laces.
+    lz0, lz1 = corset_low+0.012, corset_high-0.012
+    n_eye = 8
+    pts_lace = []
+    for k in range(n_eye):
+        z = lz0+(lz1-lz0)*k/(n_eye-1)
+        for sg in (-1, 1):
+            q = torso_point(-math.pi/2+sg*0.085, z, 0.003)
+            ob = C.ellipsoid(f"CorsetEyelet{k}_{'L' if sg>0 else 'R'}", q, (0.0028, 0.0015, 0.0028), gold, segs=8, rings=5)
+            T.transfer_weights(body, ob)
+            R.restrict(ob, ["Hips","Spine","Chest","UpperChest"])
+            extra[ob.name] = ob
+    for k in range(n_eye-1):
+        za = lz0+(lz1-lz0)*k/(n_eye-1)
+        zb = lz0+(lz1-lz0)*(k+1)/(n_eye-1)
+        for sg in (-1, 1):
+            pts_lace = [torso_point(-math.pi/2+sg*0.085, za, 0.0045), torso_point(-math.pi/2-sg*0.085, zb, 0.0045)]
+            ob = pipe(f"CorsetLace{k}_{sg}", pts_lace, 0.0011, materials["leather_dark"])
+            T.transfer_weights(body, ob)
+            R.restrict(ob, ["Hips","Spine","Chest","UpperChest"])
+            extra[ob.name] = ob
     for label,z in (("Top",corset_high-0.005),("Bottom",corset_low+0.005)):
         ob = pipe("Corset"+label+"Seam",[torso_point(math.tau*i/128,z,0.0025) for i in range(129)],0.0007,thread)
         T.transfer_weights(body,ob)
@@ -606,19 +744,64 @@ def main():
     ob = buckle("PouchBuckle",p+Vector((0,-0.038,0.009)),gold,(0.023,0.02))
     extra[ob.name] = ob
     rigid[ob.name] = "Hips"
-    # Two restrained accessory swags. In stage 1 they share skirt skinning.
-    for k, center in enumerate((math.radians(195),math.radians(345))):
+    # Charm cluster hanging from the lower belt at her right front hip (sheet:
+    # CHARMS / ACCESSORIES): a ring, then a coin, a clover and a green leaf on
+    # short chains. Chains follow the skirt surface so nothing sinks into it.
+    leaf_mat = C.mat("M_Outfit_CharmLeaf", "#6f8f5a", rough=0.6)
+    hang_a = math.radians(238)     # front right, in view from the front
+    ring_c = torso_point(hang_a, belt_low-0.006, 0.02)
+    ob = pipe("CharmRing", [ring_c+Vector((math.cos(t)*0.009, 0, math.sin(t)*0.009)) for t in np.linspace(0, math.tau, 25)], 0.0016, gold)
+    extra[ob.name] = ob
+    hanging.append(ob)
+    for k, (da, drop, kind) in enumerate(((-0.06, 0.1, "coin"), (0.0, 0.135, "clover"), (0.06, 0.115, "leaf"))):
+        a = hang_a+da
         pts = []
-        for i in range(33):
-            u = i/32
-            q = skirt_point(center+(u-0.5)*0.6,0.15+0.16*math.sin(math.pi*u),0.025)
-            pts.append(q)
-        ob = pipe(f"GoldSwag{k+1}",pts,0.0016,gold)
+        for i in range(13):
+            f = i/12
+            q = skirt_point(a, 0.0, 0.0)
+            z = ring_c.z-0.006-drop*f
+            tt = max(0.0, (top-z)/length)
+            q = skirt_point(a, tt, 0.026)       # outside the sage panels (12 mm + cloth)
+            # Chains hang plumb from the ring and only rest on the skirt as it flares.
+            hang = Vector((ring_c.x, ring_c.y, z))+Vector((math.cos(a), math.sin(a), 0))*0.0
+            pr = Vector((hang.x-ctr.x, hang.y-ctr.y, 0)).length
+            qr = Vector((q.x-ctr.x, q.y-ctr.y, 0)).length
+            pts.append(q if qr > pr else Vector((ctr.x, ctr.y, z))+Vector((q.x-ctr.x, q.y-ctr.y, 0)).normalized()*pr)
+        ob = pipe(f"CharmChain{k}", pts, 0.0011, gold)
         extra[ob.name] = ob
         hanging.append(ob)
-        for j in (8,16,24):
-            q = pts[j]-Vector((0,0,0.014))
-            ob = C.ellipsoid(f"Medallion{k}_{j}",q,(0.009,0.003,0.012),gold,segs=12,rings=8)
+        out = Vector((pts[-1].x-ctr.x, pts[-1].y-ctr.y, 0)).normalized()
+        def on_skirt(dz, off=0.032):
+            """Point dz below the chain end, resting just outside the skirt."""
+            z = pts[-1].z-dz
+            return skirt_point(a, max(0.0, (top-z)/length), off)+Vector((0,0,0))
+        end = pts[-1]
+        if kind == "coin":
+            c = on_skirt(0.02)
+            ob = C.cylinder("CharmCoin", c-out*0.002, c+out*0.002, 0.018, material=gold, segs=24)
+            extra[ob.name] = ob
+            hanging.append(ob)
+            ob = ornament("CharmCoinStar", c+out*0.0025, 0.02, 0.02, gold)
+            extra[ob.name] = ob
+            hanging.append(ob)
+        elif kind == "clover":
+            for j in range(3):
+                ang = math.pi/2+j*math.tau/3
+                side = out.cross(Vector((0,0,1))).normalized()
+                c = on_skirt(0.017)+side*math.cos(ang)*0.011+Vector((0,0,math.sin(ang)*0.011))
+                ob = C.cylinder(f"CharmClover{j}", c-out*0.002, c+out*0.002, 0.01, material=gold, segs=16)
+                extra[ob.name] = ob
+                hanging.append(ob)
+        else:
+            c = on_skirt(0.03, 0.036)
+            ob = C.ellipsoid("CharmLeaf", c, (0.014, 0.004, 0.03), leaf_mat, segs=12, rings=8)
+            # Face the leaf outward: rotate the mesh about its own centre.
+            rot = Matrix.Rotation(math.atan2(out.y, out.x)+math.pi/2, 4, "Z")
+            ob.data.transform(Matrix.Translation(c)@rot@Matrix.Translation(-c))
+            ob.data.update()
+            extra[ob.name] = ob
+            hanging.append(ob)
+            ob = pipe("CharmLeafVein", [c+Vector((0,0,0.026))+out*0.0042, c-Vector((0,0,0.026))+out*0.0042], 0.0011, gold)
             extra[ob.name] = ob
             hanging.append(ob)
     # Central gold ornaments sit on the actual plum panels.
@@ -657,7 +840,7 @@ def main():
     bodice_grid = []
     for j in range(25):
         t = j/24
-        z = top-0.035+(neck.z+0.008-(top-0.035))*t
+        z = top-0.035+(nc.z-0.002-(top-0.035))*t     # ends under the cape and collar
         center = Vector((ctr.x,ctr.y,z))
         radii = []
         for i in range(128):
