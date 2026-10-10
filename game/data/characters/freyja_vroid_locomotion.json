@@ -1,6 +1,5 @@
 {
  "natural_speed": {
-  "Idle": 0.0,
   "Walk": 1.296,
   "Run": 3.147,
   "Jump": 0.0,

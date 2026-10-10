@@ -19,6 +19,42 @@ static func find_animation_player(root: Node) -> AnimationPlayer:
 	return null
 
 
+## Quaternius Universal Animation Library (CC0), retargeted by Godot's humanoid
+## import (both skeletons map to SkeletonProfileHumanoid as %GeneralSkeleton):
+## game clip name -> library clip.
+const UAL_CLIPS := {
+	"Idle": "Idle", "Walk": "Walk_Formal", "Run": "Jog_Fwd", "Jump": "Jump_Start",
+	"Fall": "Jump", "Land": "Jump_Land", "Talk": "Idle_Talking", "Cast": "Spell_Simple_Shoot",
+}
+
+
+## Replace clips with the shared humanoid library where the skeleton supports it.
+static func use_humanoid_library(root: Node) -> bool:
+	var anim := find_animation_player(root)
+	var sk: Skeleton3D = null
+	for s in root.find_children("*", "Skeleton3D", true, false):
+		sk = s
+		break
+	if anim == null or sk == null or sk.name != &"GeneralSkeleton":
+		return false
+	var src_scene := load("res://assets/animations/ual/ual1.glb") as PackedScene
+	if src_scene == null:
+		return false
+	var src := src_scene.instantiate()
+	var src_lib := (src.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer).get_animation_library("")
+	var lib := anim.get_animation_library("")
+	for game_name in UAL_CLIPS:
+		var a := src_lib.get_animation(UAL_CLIPS[game_name])
+		if a == null:
+			continue
+		var c := a.duplicate() as Animation
+		if lib.has_animation(game_name):
+			lib.remove_animation(game_name)
+		lib.add_animation(game_name, c)
+	src.free()
+	return true
+
+
 static func prepare(root: Node) -> void:
 	if root == null:
 		return

@@ -251,7 +251,7 @@ def grip_align(prox):
     return Bm @ A.inverted()
 
 
-GESTURES = ("Cast", "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "Talk", "IdleStaff")
+GESTURES = ("Idle", "Cast", "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "Talk", "IdleStaff")
 
 
 def bake_gestures(prox):
@@ -309,10 +309,106 @@ def bake_gestures(prox):
     return made
 
 
+def remove_hidden(obj, covering, reach, keep_material=None, margin=1):
+    """Delete faces of `obj` that an opaque outer layer fully hides (every
+    vertex has the outer layer within `reach` along its normal). Hidden faces
+    can only ever show up as clipping. `margin` rings of hidden faces next to
+    visible ones are kept, so no gap opens at a garment's edge."""
+    bm = bmesh.new()
+    for o in covering:
+        tmp = o.data.copy()
+        tmp.transform(o.matrix_world)
+        bm.from_mesh(tmp)
+        bpy.data.meshes.remove(tmp)
+    bvh = BVHTree.FromBMesh(bm)
+    bm.free()
+    b2 = bmesh.new()
+    b2.from_mesh(obj.data)
+    b2.normal_update()
+    mats = [m.name.upper() if m else "" for m in obj.data.materials]
+    mw = obj.matrix_world
+    hidden = {}
+    for v in b2.verts:
+        p = mw @ v.co
+        n = (mw.to_3x3() @ v.normal).normalized()
+        hidden[v.index] = bvh.ray_cast(p, n, reach)[0] is not None
+    cand = {f for f in b2.faces if all(hidden[v.index] for v in f.verts)
+            and (keep_material is None or keep_material(mats[f.material_index]))}
+    for _ in range(margin):
+        edge = {f for f in cand if any(g not in cand for e in f.edges for g in e.link_faces)}
+        cand -= edge
+    bmesh.ops.delete(b2, geom=list(cand), context="FACES")
+    b2.to_mesh(obj.data)
+    b2.free()
+    print("HIDDEN removed", obj.name, len(cand), "faces under", [o.name for o in covering])
+
+
+def reweight(obj, fn):
+    """fn(world_pos, {bone: w}) -> {bone: w}; result is normalised."""
+    names = {gr.index: gr.name for gr in obj.vertex_groups}
+    mw = obj.matrix_world
+    for v in obj.data.vertices:
+        ws = {names[gr.group]: gr.weight for gr in v.groups if gr.weight > 1e-5}
+        new = fn(mw @ v.co, dict(ws))
+        tot = sum(w for w in new.values() if w > 1e-5)
+        if tot <= 1e-6:
+            continue
+        for gr in list(v.groups):
+            obj.vertex_groups[gr.group].remove([v.index])
+        for b, w in sorted(new.items(), key=lambda kv: -kv[1])[:4]:
+            if w <= 1e-5:
+                continue
+            vg = obj.vertex_groups.get(b) or obj.vertex_groups.new(name=b)
+            vg.add([v.index], w / tot, "REPLACE")
+
+
 def main():
     built = REF.build_outfit()
     body, arm, output = built["body"], built["arm"], built["output"]
     remove_covered(body, built["covering"])
+    # Layer-by-layer: anything fully inside an opaque outer layer is removed.
+    g, ex = built["garments"], built["extra"]
+    sleeves = [ex["LeftGatheredSleeve"], ex["RightGatheredSleeve"]]
+    is_body_skin = lambda m: m.split(" (")[0].endswith("_SKIN") and "BODY" in m
+    for o in body.meshes:
+        remove_hidden(o, sleeves, 0.1, is_body_skin, margin=0)  # balloon sleeves: up to ~9 cm off the arm
+    remove_hidden(g["Blouse"], [g["Corset"]] + [o for n, o in ex.items() if n.startswith("LeatherBelt")], 0.05)
+    remove_hidden(g["Tights"], [g["Boots"]], 0.03)
+    # Blouse inside the corset moves exactly like the corset: copy the nearest
+    # corset vertex's weights, easing back to its own over 4 cm above the top.
+    from mathutils.kdtree import KDTree
+    cor = g["Corset"]
+    cn = {gr.index: gr.name for gr in cor.vertex_groups}
+    kd = KDTree(len(cor.data.vertices))
+    for v in cor.data.vertices:
+        kd.insert(cor.matrix_world @ v.co, v.index)
+    kd.balance()
+    cw = [{cn[gr.group]: gr.weight for gr in v.groups} for v in cor.data.vertices]
+    c_top = max((cor.matrix_world @ v.co).z for v in cor.data.vertices)
+
+    def blouse_fn(p, ws):
+        k = T.smoothstep(c_top + 0.04, c_top, p.z)
+        if k <= 0:
+            return ws
+        _, idx, _ = kd.find(p)
+        out = {b_: w * (1 - k) for b_, w in ws.items()}
+        for b_, w in cw[idx].items():
+            out[b_] = out.get(b_, 0.0) + k * w
+        return out
+    reweight(g["Blouse"], blouse_fn)
+    # Capelet sides ride up with the upper arms a little, so a lifted arm lifts
+    # the cape instead of pushing the sleeve puff through it.
+    sh_x = abs(J(arm, "LeftUpperArm").x)
+
+    def cape_fn(p, ws):
+        k = 0.4 * T.smoothstep(sh_x - 0.05, sh_x + 0.06, abs(p.x))
+        if k <= 0:
+            return ws
+        side = "LeftUpperArm" if p.x > 0 else "RightUpperArm"
+        out = {b: w * (1 - k) for b, w in ws.items()}
+        out[side] = out.get(side, 0.0) + k
+        return out
+    reweight(g["Capelet"], cape_fn)
     # Hair chains -> hairB_<chain>_<n> for the game's spring bones.
     for b in list(arm.data.bones):
         m = re.match(r"J_Sec_Hair(\d+)_(\d+)$", b.name)
@@ -327,8 +423,10 @@ def main():
     # Motion.
     prox = make_proxy(arm)
     mocap = os.path.join(ROOT, "art", "source", "mocap")
-    clips = [("Idle", "16_05.bvh", {"segment": "stand", "lean": 3.0, "calm_head": 0.5}),
-             ("Walk", "07_01.bvh", {"lean": 4.0}),
+    # Idle is the hand-keyed breathing/weight-shift loop (see GESTURES): the
+    # mocap "standing" before the jump already starts the crouch and, looped,
+    # pumps the hips back and forth.
+    clips = [("Walk", "07_01.bvh", {"lean": 4.0}),
              ("Run", "09_02.bvh", {"lean": 9.0}),
              ("Jump", "16_05.bvh", {"segment": "jump", "lean": 6.0, "calm_head": 0.7}),
              ("Fall", "16_05.bvh", {"segment": "fall", "lean": 4.0, "calm_head": 0.7}),

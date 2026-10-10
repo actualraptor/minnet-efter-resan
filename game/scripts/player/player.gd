@@ -56,6 +56,7 @@ func _ready() -> void:
 	collision_mask = 1 | 4
 	_anim = CharacterVisual.find_animation_player(model)
 	_staff_tip = model.find_child("StaffTip", true, false) as Node3D
+	var humanoid := CharacterVisual.use_humanoid_library(model)
 	CharacterVisual.prepare(model)
 	for n in model.find_children("*", "GeometryInstance3D", true, false):
 		_meshes.append(n)
@@ -68,7 +69,9 @@ func _ready() -> void:
 	_setup_grounding()
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
-		loco.setup(_anim, "freyja")
+		loco.setup(_anim, "freyja_ual" if humanoid else "freyja")
+		if humanoid:
+			run_speed = 3.4   # the library's jog; a calm mage doesn't sprint
 		staff = StaffSummon.new()
 		staff.name = "Staff"
 		add_child(staff)

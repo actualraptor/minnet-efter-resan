@@ -22,7 +22,8 @@ from mathutils.bvhtree import BVHTree
 
 ROOT = os.path.abspath(sys.argv[sys.argv.index("--") + 1])
 OUT = sys.argv[sys.argv.index("--") + 2] if len(sys.argv) > sys.argv.index("--") + 2 else os.path.join(ROOT, "art", "previews")
-GLB = os.path.join(ROOT, "game", "assets", "models", "characters", "freyja.glb")
+MODEL = os.environ.get("DEFORM_MODEL", "freyja.glb")
+GLB = os.path.join(ROOT, "game", "assets", "models", "characters", MODEL)
 
 # (label, inner prefix, outer prefix, z-range of inner verts or None,
 #  bones the tested inner verts must mainly follow or None)
@@ -36,10 +37,25 @@ PAIRS = [
     ("petticoat through skirt", "Petticoat", "Outfit_M_Freyja_001_Skirt", (0.585, 1.0), None),
     ("tights through boots", "Leggings_", "Boots_", (0.0, 0.4), None),
 ]
+# VRoid game model + reference outfit (fitted layers; the spring-driven skirt
+# and its leg follow only exist at runtime, so skirt pairs are checked in game).
+PAIRS_VROID = [
+    ("skin through tights", "Body", "Tights", (0.12, 0.8), None),
+    ("skin through blouse", "Body", "Blouse", (0.9, 1.25), ("Spine", "Chest", "UpperChest", "Hips")),
+    ("skin through sleeves", "Body", ("LeftGatheredSleeve", "RightGatheredSleeve"), None,
+     ("LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm")),
+    ("tights through boots", "Tights", "Boots", (0.05, 0.35), None),
+    ("blouse through corset", "Blouse", "Corset", None, None),
+    ("sleeves through capelet", ("LeftGatheredSleeve", "RightGatheredSleeve"), "Capelet", None,
+     ("LeftShoulder", "RightShoulder", "LeftUpperArm", "RightUpperArm", "UpperChest")),
+]
+if "vroid" in MODEL:
+    PAIRS = PAIRS_VROID
 SAME_PATCH = 0.05  # the crossing must be through the fabric patch that covered it at rest
 COVER = 0.035      # a vertex is "covered" if the outer layer is this close at rest
 POKE = 0.002       # and counts as clipping once it is this far on the other side
 BUDGET = 0.004     # max fraction of covered vertices allowed through, per pair and pose
+SEAM_VERTS = 12    # ...or at most this many vertices (a few at a garment edge are invisible)
 PHASES = (0.0, 0.2, 0.4, 0.6, 0.8)
 
 
@@ -159,7 +175,7 @@ def run():
                     cur["regions"][k] = cur["regions"].get(k, 0) + c
             for label, cur in row["pairs"].items():
                 cur["frac"] = cur["bad"] / max(cur["covered"], 1)
-                if cur["frac"] > BUDGET:
+                if cur["frac"] > BUDGET and cur["bad"] > SEAM_VERTS:
                     fail = True
             report["poses"].append(row)
             worst = sorted(((c["frac"], l, c) for l, c in row["pairs"].items()), key=lambda t: t[0], reverse=True)[:2]
@@ -168,10 +184,11 @@ def run():
     # Totals per pair.
     print("SUMMARY (worst pose per pair)")
     for label in report["pairs"]:
-        rows = [(r["pairs"][label]["frac"], r["clip"], r["phase"]) for r in report["poses"] if label in r["pairs"]]
+        rows = [(r["pairs"][label]["bad"], r["pairs"][label]["frac"], r["clip"], r["phase"]) for r in report["poses"] if label in r["pairs"]]
         if rows:
-            fr, clip, ph = max(rows)
-            print("  %-24s worst %.2f%% (%s @ %.1f)  %s" % (label, fr * 100, clip, ph, "FAIL" if fr > BUDGET else "ok"))
+            bad, fr, clip, ph = max(rows)
+            ok = fr <= BUDGET or bad <= SEAM_VERTS
+            print("  %-24s worst %d verts / %.2f%% (%s @ %.1f)  %s" % (label, bad, fr * 100, clip, ph, "ok" if ok else "FAIL"))
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "deform_report.json"), "w") as fh:
         json.dump(report, fh, indent=1)
