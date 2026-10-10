@@ -62,7 +62,7 @@ def thickness(ob, amount=0.0015):
     bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
-def textile(name, color, embroidered=False, repeats=1):
+def textile(name, color, embroidered=False, repeats=1, centres=(), aspect=5.0):
     base, gold = B._hex(color), B._hex("#cba75f")
     def paint(u, v):
         weave = np.sin(u * math.tau * 155) * np.sin(v * math.tau * 190)
@@ -99,6 +99,34 @@ def textile(name, color, embroidered=False, repeats=1):
             ink |= (np.abs(v-0.955)<0.0015)
             ink |= (np.abs(v - 0.92) < 0.003) | (np.abs(u - 0.037) < 0.003) | (np.abs(u - 0.963) < 0.003)
             rgb[ink] = gold
+        if centres:
+            fil = np.zeros(u.shape, dtype=bool)
+            for c in centres:
+                X = (u-c)*aspect          # ~isotropic with Y on the capelet
+                Y = 1.0-v                 # 0 at the neckline .. 1 at the hem
+                def seg(x0, y0, x1, y1, w=0.006):
+                    dx, dy = x1-x0, y1-y0
+                    t = np.clip(((X-x0)*dx+(Y-y0)*dy)/max(dx*dx+dy*dy, 1e-9), 0, 1)
+                    fil[:] |= (X-x0-t*dx)**2+(Y-y0-t*dy)**2 < w*w
+                def path(pts, w=0.006):
+                    for a_, b_ in zip(pts, pts[1:]):
+                        seg(*a_, *b_, w)
+                # Central spire pointing to the V of the hem, with a diamond bud.
+                path([(0, 0.32), (0, 0.9)], 0.007)
+                path([(0, 0.18), (0.045, 0.25), (0, 0.32), (-0.045, 0.25), (0, 0.18)], 0.006)
+                for sg in (-1, 1):
+                    # Two pairs of scrolls curling out from the spire.
+                    for y0, sc in ((0.45, 1.0), (0.66, 0.75)):
+                        pts = []
+                        for k in range(26):
+                            t = k/25*math.tau*0.85
+                            r = 0.07*sc*(1-0.55*t/math.tau)
+                            pts.append((sg*(0.01+r*(1-math.cos(t))), y0-0.09*sc*math.sin(t)*0.9+0.05*sc*t/math.tau))
+                        path(pts, 0.005)
+                    # Leaves along the hem side of the V.
+                    for y0 in (0.78, 0.88):
+                        path([(0, y0), (sg*0.06, y0+0.05), (sg*0.09, y0+0.03)], 0.005)
+            rgb[fil] = gold
         return rgb
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -186,7 +214,7 @@ def main():
     arm = B.rig(body, garments)
     materials = B.mats()
     sage = textile("M_Outfit_EmbroideredSage", "#849277", True)
-    cape_sage = textile("M_Outfit_CapeBotanical", "#849277", True, repeats=4)
+    cape_sage = textile("M_Outfit_CapeBotanical", "#849277", True, repeats=4, centres=(0.75, 0.25))
     plum = textile("M_Outfit_EmbroideredPlum", "#59455e", True)
     cream = textile("M_Outfit_WovenCream", "#eee5d7")
     gold = materials["gold"]
@@ -368,7 +396,8 @@ def main():
     def cape_len(a):
         rad = math.radians(a)
         side = abs(math.cos(rad))**1.6
-        point = max(0.0, -math.sin(rad))**14*0.055+max(0.0, math.sin(rad))**14*0.035
+        point = max(0.0, -math.sin(rad))**30*0.05+max(0.0, -math.sin(rad))**6*0.015 \
+            + max(0.0, math.sin(rad))**30*0.055
         return fb_len*(1-side)+side_len*side+point
     cr = T.drop_cloth(body, nc, cape_len, segs=128, rows=20, clearance=0.014, r0=0.06, z_cap=neck.z+0.01, flare=0.1)
     cr = T.push_out(body, cr, nc, 0.012, rows_from=1, reach=0.08)
@@ -489,7 +518,14 @@ def main():
         extra[ob.name] = ob
         rigid[ob.name] = "Spine"
         p = torso_point(-math.pi/2,z,0.011)
-        ob = buckle(f"BrassBuckle{k+1}",p,gold)
+        if k == 1:
+            ob = buckle(f"BrassBuckle{k+1}",p,gold,(0.052,0.044))
+            inner = buckle(f"BrassBuckle{k+1}Inner",p+Vector((0,-0.0015,0)),gold,(0.034,0.026))
+            plate = C.box(f"BuckleKeeper{k+1}",p+Vector((0,0.004,0)),(0.03,0.0025,0.025),leather,bevel=0.003)
+            T._select_only([ob,inner,plate],ob)
+            bpy.ops.object.join()
+        else:
+            ob = buckle(f"BrassBuckle{k+1}",p,gold)
         extra[ob.name] = ob
         rigid[ob.name] = "Spine"
     for k in range(4):

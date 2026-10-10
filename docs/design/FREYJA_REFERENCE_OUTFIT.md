@@ -134,8 +134,9 @@ not ornament: a short boxy skirt, a flat disc capelet and a solid white ruffle b
 - Measured: 0 posed sleeve vertices outside the capelet (was 73/94). The bodice
   still rises just above the cape neckline at the front, hidden by the collar.
 
-Still below the sheet: no standing V point/filigree on the cape front, belts
-lack the large ornate buckle, ruffle hems read as a uniform wave, embroidery is
+Detail pass: the capelet has a front V (smaller back V) with a gold spire,
+scrolls and leaves painted at the centre front and back; the main belt has a
+double-frame buckle on a leather keeper. Still below the sheet: ruffle hems read as a uniform wave, embroidery is
 simpler, and raised-arm poses are untested (milestone 2).
 
 ## Rebuild and inspect

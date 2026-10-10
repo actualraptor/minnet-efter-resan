@@ -4,10 +4,10 @@
   "simulation_enabled": false,
   "visual_acceptance": "pending_owner_review",
   "mesh_count": 51,
-  "repaired_unweighted_vertices": 77,
+  "repaired_unweighted_vertices": 78,
   "geometry_checks": "finite positions, UVs, 1-4 normalized skin influences per vertex",
-  "vertices": 76233,
-  "triangles": 151716,
+  "vertices": 76313,
+  "triangles": 151840,
   "meshes": [
     {
       "name": "Tights",
@@ -127,7 +127,7 @@
     },
     {
       "name": "BrassBuckle2",
-      "vertices": 56
+      "vertices": 136
     },
     {
       "name": "CorsetBoningSeam0",
