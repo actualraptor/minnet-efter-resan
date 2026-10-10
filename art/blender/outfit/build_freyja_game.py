@@ -233,6 +233,45 @@ def build_staff(arm):
     return staff, st
 
 
+GESTURES = ("Cast", "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "Talk", "IdleStaff")
+
+
+def bake_gestures(prox):
+    """Freyja's hand-keyed gestures (cast, staff summons, talk) from
+    build_characters, replayed on the stand-in rig (it has the same bone
+    names). That rig rests in a T-pose, the original in an A-pose, so each
+    upper arm gets the A-pose drop added in world space before keying."""
+    import build_characters as BC
+    import lib_character as Lc
+    sh, el = Vector(Lc.J["shoulder"]), Vector(Lc.J["elbow"])
+    drop = math.atan2(sh.z - el.z, el.x - sh.x)
+    corr = {"upper_arm.L": Matrix.Rotation(drop, 3, "Y"), "upper_arm.R": Matrix.Rotation(-drop, 3, "Y")}
+
+    class Shim:
+        arm = prox
+        s = 1.0
+        staff_tip = None
+        grip_align = None
+        spec = {}
+    anim = Lc.Animator(Shim())
+    made = []
+    for name, frames, fn, loop in BC.ANIMS["mage"]:
+        if name not in GESTURES:
+            continue
+
+        def posed(a, t, f, fn=fn):
+            fn(a, t, f)
+            for bn, Rd in corr.items():
+                pb = a.pb[bn]
+                M = pb.bone.matrix_local.to_3x3()
+                world = M @ pb.rotation_quaternion.to_matrix() @ M.inverted()
+                pb.rotation_quaternion = (M.inverted() @ world @ Rd @ M).to_quaternion()
+        anim.action(name, frames, posed, loop)
+        made.append(name)
+    anim.reset()
+    return made
+
+
 def main():
     built = REF.build_outfit()
     body, arm, output = built["body"], built["arm"], built["output"]
@@ -259,16 +298,11 @@ def main():
              ("Land", "16_05.bvh", {"segment": "land", "lean": 6.0, "calm_head": 0.6})]
     speeds = MR.retarget_clips(prox, clips, mocap)
     prox.animation_data_create()
+    gestures = bake_gestures(prox)
     for tr in prox.animation_data.nla_tracks:
         tr.mute = True
     fingers = finger_basis(arm)
-    acts = [transfer(arm, prox, name, fingers) for name, _, _ in clips]
-    # Placeholders so the game's animation tree finds every state it expects.
-    idle = next(a for a in acts if a.name == "Idle")
-    for alias in ("Talk", "Cast", "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "IdleStaff"):
-        c = idle.copy()
-        c.name = alias
-        acts.append(c)
+    acts = [transfer(arm, prox, name, fingers) for name in [c[0] for c in clips] + gestures]
     for a in ("Walk", "Run"):
         c = next(x for x in acts if x.name == a).copy()
         c.name = a + "Staff"
