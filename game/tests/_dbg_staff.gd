@@ -135,6 +135,8 @@ func _ready() -> void:
 				var sn: Dictionary = _snap[side]
 				var hb: Basis = sn.basis
 				print("DBG   %s hand-to-shaft=%.3f midProx-to-shaft=%.3f hand x=%s y=%s z=%s shaft=%s" % [side, sn.dh, sn.dm, hb.x.snapped(Vector3.ONE * 0.01), hb.y.snapped(Vector3.ONE * 0.01), hb.z.snapped(Vector3.ONE * 0.01), r.shaft_up.snapped(Vector3.ONE * 0.01)])
+			var cpos := p.get_viewport().get_camera_3d().global_position - p.global_position
+			print("DBG cam rel=(%.2f %.2f %.2f) rigyaw=%.0f modelfwd=%s" % [cpos.x, cpos.y, cpos.z, rad_to_deg(rig.yaw), p.model.global_basis.z.snapped(Vector3.ONE * 0.01)])
 			print("DBG t=%.2f w=%.2f reachR=%.3f reachL=%.3f butt=(%.2f %.2f %.2f) lift=%.2f yaw=%.0f" % [
 				t, r.weight if r else -1.0, g.reach_error["R"] if g else -1.0, g.reach_error["L"] if g else -1.0,
 				butt_local.x, butt_local.y, butt_local.z, p.hover_height(), rad_to_deg(p.model.rotation.y)])
