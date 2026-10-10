@@ -24,6 +24,10 @@ var _hand_bone := -1
 var _last_used := 0.0
 var _radius := 0.0
 var _sparks: GPUParticles3D
+var _grip_bone := -1
+## A staff exported as a free prop (no skin): held at the hand every frame,
+## upright with a slight forward lean, so it reads right in any arm pose.
+var _prop: Node3D
 
 
 func setup(p: Node3D, model: Node, locomotion: LocomotionAnimator) -> bool:
@@ -39,9 +43,12 @@ func setup(p: Node3D, model: Node, locomotion: LocomotionAnimator) -> bool:
 				var own := (mat as ShaderMaterial).duplicate() as ShaderMaterial
 				m.set_surface_override_material(s, own)
 				_mats.append(own)
+		if m.skin == null and _prop == null:
+			_prop = m
 	for sk in model.find_children("*", "Skeleton3D", true, false):
 		_skel = sk
-		_hand_bone = _skel.find_bone("hand.R")
+		_hand_bone = RigNames.find(_skel, "hand.R")
+		_grip_bone = _skel.find_bone("RightMiddleProximal")
 		break
 	_sparks = GPUParticles3D.new()
 	_sparks.amount = 70
@@ -67,13 +74,28 @@ func setup(p: Node3D, model: Node, locomotion: LocomotionAnimator) -> bool:
 	_sparks.process_material = pm
 	_sparks.draw_pass_1 = SpellCaster._mote_mesh(0.07)
 	add_child(_sparks)
+	if _prop and _skel:
+		_skel.skeleton_updated.connect(_place_prop)
 	_set_radius(0.0)
 	return not _mats.is_empty()
 
 
+func _place_prop() -> void:
+	if _prop == null or _hand_bone < 0:
+		return
+	var m := player.get("model") as Node3D
+	var fb := m.global_basis.orthonormalized() if m else Basis()
+	# Upright in her hand, top leaning a little forward (model +Z is forward).
+	var lean := Basis(fb.x.normalized(), deg_to_rad(8.0))
+	_prop.global_transform = Transform3D(lean * fb, _grip())
+
+
 func _grip() -> Vector3:
 	if _skel and _hand_bone >= 0:
-		return _skel.global_transform * _skel.get_bone_global_pose(_hand_bone).origin
+		var h := _skel.get_bone_global_pose(_hand_bone).origin
+		if _grip_bone >= 0:
+			h = h.lerp(_skel.get_bone_global_pose(_grip_bone).origin, 0.6)
+		return _skel.global_transform * h
 	return player.global_position + Vector3(0, 1.0, 0)
 
 

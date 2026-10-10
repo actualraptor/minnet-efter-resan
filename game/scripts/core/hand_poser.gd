@@ -42,6 +42,9 @@ func setup() -> bool:
 		for ids in fingers + [thumb]:
 			for i in ids:
 				if i < 0:
+					_bones.clear()   # not this rig's finger layout (e.g. VRoid): stay inert
+					_rest.clear()
+					active = false
 					return false
 				_rest[i] = sk.get_bone_rest(i).basis.get_rotation_quaternion()
 	return true

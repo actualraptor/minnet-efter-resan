@@ -29,13 +29,17 @@ func setup(b: CharacterBody3D) -> bool:
 	var sk := get_skeleton()
 	if sk == null:
 		return false
-	_hips = sk.find_bone("hips")
+	_hips = RigNames.find(sk, "hips")
 	_legs.clear()
 	for s in ["L", "R"]:
-		var ids := [sk.find_bone("thigh." + s), sk.find_bone("shin." + s), sk.find_bone("foot." + s)]
+		var ids := [RigNames.find(sk, "thigh." + s), RigNames.find(sk, "shin." + s), RigNames.find(sk, "foot." + s)]
 		if ids.has(-1):
 			return false
 		_legs.append(ids)
+	# The ankle's rest height above the sole differs per rig (0.085 procedural, ~0.1 VRoid).
+	var rest_ankle := sk.get_bone_global_rest(_legs[0][2]).origin.y
+	if rest_ankle > 0.03 and rest_ankle < 0.2:
+		ankle_height = rest_ankle
 	return _hips >= 0
 
 

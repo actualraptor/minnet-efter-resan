@@ -293,7 +293,9 @@ def ornament(name,center,width,height,material,back=False):
     return ob
 
 
-def main():
+def build_outfit():
+    """Build and rig the outfit on the VRoid body; returns everything the
+    exporters need (outfit-only GLB here, combined game model elsewhere)."""
     os.makedirs(DEST, exist_ok=True)
     os.makedirs(SOURCE, exist_ok=True)
     body = T.Body(B.BODY)
@@ -343,8 +345,8 @@ def main():
     # Four broad pointed sage panels, with separate plum gores between them.
     for k in range(4):
         center = math.radians(225 + 90*k)
-        for kind, angle, span, offset, mat in (("SagePanel",center,35,0.012,sage),
-                                            ("PlumPanel",center+math.pi/4,16,0.004,plum)):
+        for kind, angle, span, offset, mat in (("SagePanel",center,35,0.02,sage),
+                                            ("PlumPanel",center+math.pi/4,16,0.013,plum)):
             grid = []
             for j in range(25):
                 t = j/24
@@ -366,7 +368,8 @@ def main():
     # Three individually modelled gathered ruffles, over a continuous cream lining.
     garments["Skirt"].hide_render = True
     garments["Petticoat"].hide_render = True
-    lining_grid = [[skirt_point(math.tau*i/128,j/24,0) for i in range(129)] for j in range(25)]
+    # The lining only backs the panels down to where the ruffles take over.
+    lining_grid = [[skirt_point(math.tau*i/128,0.82*j/24,0.002) for i in range(129)] for j in range(25)]
     lining = mesh("CreamSkirtLining",lining_grid,[cream])
     thickness(lining)
     extra[lining.name] = lining
@@ -377,7 +380,11 @@ def main():
         grid = []
         start = 0.8
         end = 1.06+0.045*layer
-        outset = 0.007-0.0025*layer
+        # Layer order (radius above the skirt envelope): lining 2 mm (ends where
+        # the ruffles start) < ruffles 3/6/9 mm < plum gores 13 mm < sage panels
+        # 20 mm. Gaps stay >= 3 mm so bending (linear-blend skinning shrinks
+        # offsets) never closes them. Ruffles flare only below the gore hems.
+        outset = 0.009-0.003*layer
         folds = 48              # tiers are gathered together: same folds, nested
         for j in range(13):
             t = j/12
@@ -389,7 +396,7 @@ def main():
                 # Gathered folds: rounded crests, narrow troughs, opening toward the hem.
                 wave = math.sin(a*folds)
                 crest = 0.5+0.5*wave
-                below = T.smoothstep(0.95, 1.08, tt)    # free of the panels
+                below = T.smoothstep(1.04, 1.12, tt)    # free of the panels and gores
                 fold = (0.001+0.0055*below)*crest
                 p += Vector((p.x-ctr.x,p.y-ctr.y,0)).normalized()*(fold+0.016*below**2)
                 row.append(p)
@@ -812,8 +819,21 @@ def main():
         extra[ob.name] = ob
         hanging.append(ob)
 
+    # Skirt spring chains along the real skirt length (the base envelope's chains
+    # end ~15 cm above this hem): 20 chains x 6 segments just inside the lining,
+    # dense enough that the leg colliders catch a lifted knee (collision is
+    # tested at the joints).
+    T._select_only([arm])
+    bpy.ops.object.mode_set(mode="EDIT")
+    for eb in [b for b in arm.data.edit_bones if b.name.startswith("skirt_")]:
+        arm.data.edit_bones.remove(eb)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    N_SKIRT = 20
+    R.add_chains(arm, {f"skirt_{k}": ("Hips", [skirt_point(math.tau*k/N_SKIRT, t, -0.006)
+                                               for t in (0.08, 0.26, 0.44, 0.62, 0.8, 0.96, 1.08)])
+                       for k in range(N_SKIRT)})
     for ob in hanging:
-        R.weight_hanging(ob,arm,ctr,top,hem,"skirt",16)
+        R.weight_hanging(ob,arm,ctr,top,hem,"skirt",N_SKIRT)
         T.limit_and_normalise(ob,4)
     for name,bone in rigid.items():
         R.rigid(extra[name],bone)
@@ -892,8 +912,15 @@ def main():
             assert 1<=len(v.groups)<=4,(ob.name,v.index,"invalid influence count")
             assert abs(sum(g.weight for g in v.groups)-1)<0.001,(ob.name,v.index,"weights not normalized")
             assert all(math.isfinite(c) for c in v.co),(ob.name,v.index,"nonfinite position")
-    R.body_mask(body,[garments[n] for n in ("Blouse","Corset","Boots","Tights")]+
-                [extra[s+"GatheredSleeve"] for s in ("Left","Right")],os.path.join(DEST,"bodymask.png"))
+    covering = [garments[n] for n in ("Blouse","Corset","Boots","Tights")]+[extra[s+"GatheredSleeve"] for s in ("Left","Right")]
+    return {"body": body, "arm": arm, "output": output, "garments": garments, "extra": extra,
+            "covering": covering, "unweighted": unweighted}
+
+
+def main():
+    built = build_outfit()
+    body, arm, output, covering, unweighted = built["body"], built["arm"], built["output"], built["covering"], built["unweighted"]
+    R.body_mask(body, covering, os.path.join(DEST,"bodymask.png"))
     for ob in body.meshes:
         ob.hide_render = True
     for ob in bpy.data.objects:

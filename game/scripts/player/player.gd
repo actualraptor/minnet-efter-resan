@@ -85,7 +85,7 @@ func _setup_look_at() -> void:
 	for sk in model.find_children("*", "Skeleton3D", true, false):
 		skel = sk
 		break
-	if skel == null or skel.find_bone("head") < 0:
+	if skel == null or RigNames.find(skel, "head") < 0:
 		return
 	_look_point = Node3D.new()
 	_look_point.name = "LookPoint"
@@ -93,8 +93,8 @@ func _setup_look_at() -> void:
 	add_child(_look_point)
 	# The turn is shared by neck and head (a head-only twist folds the jaw into
 	# the collar). Limit angles are full ranges: neck +-22 deg, head +-32 deg.
-	var neck_mod := _make_look_mod(skel, "neck", 44.0, 30.0, 0.6) if skel.find_bone("neck") >= 0 else null
-	_look_mod = _make_look_mod(skel, "head", 64.0, 36.0, 0.75)
+	var neck_mod := _make_look_mod(skel, RigNames.resolve(skel, "neck"), 44.0, 30.0, 0.6) if RigNames.find(skel, "neck") >= 0 else null
+	_look_mod = _make_look_mod(skel, RigNames.resolve(skel, "head"), 64.0, 36.0, 0.75)
 	if neck_mod:
 		skel.move_child(neck_mod, 0)
 		skel.move_child(_look_mod, 1)

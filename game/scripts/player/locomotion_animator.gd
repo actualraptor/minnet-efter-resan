@@ -67,7 +67,7 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	lshot.fadeout_time = 0.2
 	lshot.filter_enabled = true
 	for bone in ["hips", "spine", "chest", "thigh.L", "shin.L", "foot.L", "thigh.R", "shin.R", "foot.R"]:
-		lshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), bone]), true)
+		lshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), _bone(anim_player, bone)]), true)
 	bt.add_node("land", lshot, Vector2(500, 0))
 	bt.connect_node("land", 0, "state")
 	bt.connect_node("land", 1, "LandClip")
@@ -90,7 +90,7 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	sshot.fadeout_time = 0.25
 	sshot.filter_enabled = true
 	for bone in ["upper_arm.R", "forearm.R", "hand.R", "upper_arm.L", "forearm.L", "hand.L", "spine", "chest", "neck", "head"]:
-		sshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), bone]), true)
+		sshot.set_filter_path(NodePath("%s:%s" % [_skeleton_path(anim_player), _bone(anim_player, bone)]), true)
 	bt.add_node("summon", sshot, Vector2(800, 0))
 	bt.connect_node("summon", 0, "cast")
 	bt.connect_node("summon", 1, "SummonClip")
@@ -142,6 +142,13 @@ var _staff := 0.0
 var _staff_target := 0.0
 var _air := 0.0
 var _has_land := false
+
+
+static func _bone(anim_player: AnimationPlayer, legacy: String) -> String:
+	var root := anim_player.get_node(anim_player.root_node)
+	for sk in root.find_children("*", "Skeleton3D", true, false):
+		return RigNames.resolve(sk, legacy)
+	return legacy
 
 
 static func _skeleton_path(anim_player: AnimationPlayer) -> String:

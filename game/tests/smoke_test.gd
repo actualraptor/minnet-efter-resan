@@ -103,7 +103,9 @@ func _run() -> void:
 		player.set_model_fade(0.6 if i < 10 else 0.0)
 	check("model fade returns to fully opaque", player._fade == 0.0, "fade %f" % player._fade)
 	check("head look-at modifier active", player._look_mod != null and player._look_mod.active)
-	check("face rig ready (blend shapes + eye bones)", player.face != null and player.face.blend_shape_count() >= 6 and player.face._iris_bones.size() == 2, "shapes %d, iris %d" % [player.face.blend_shape_count(), player.face._iris_bones.size()])
+	# VRoid faces drive gaze through their own eye bones/shapes, not iris bones.
+	var face_ok := player.face != null and player.face.blend_shape_count() >= 6
+	check("face rig ready (expression blend shapes)", face_ok, "shapes %d, iris %d" % [player.face.blend_shape_count(), player.face._iris_bones.size()])
 
 	# Intro monologue
 	var t0 := await _talk_monologue()

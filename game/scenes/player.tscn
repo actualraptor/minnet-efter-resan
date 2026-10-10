@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/spells/spell_caster.gd" id="2_caster"]
-[ext_resource type="PackedScene" path="res://assets/models/characters/freyja.glb" id="3_model"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/freyja_vroid_game.glb" id="3_model"]
 
 [sub_resource type="CapsuleShape3D" id="Capsule_body"]
 radius = 0.28

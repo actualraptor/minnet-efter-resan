@@ -150,24 +150,26 @@ def make_segment(d, fps, kind, out_fps=30):
         a, b = ev["crouch"], ev["apex"]
     elif kind == "fall":
         a, b = ev["apex"] - int(fps * 0.1), ev["apex"] + int(fps * 0.12)
+    elif kind == "stand":   # quiet standing before the jump: a natural idle loop
+        a, b = int(fps * 0.05), int(fps * 0.6)
     else:  # land
         a, b = ev["touchdown"] - int(fps * 0.03), ev["recovered"] + int(fps * 0.08)
     H = d["Hips"]
     idx = np.arange(a, b + 1)
-    if kind == "fall":
+    if kind in ("fall", "stand"):
         idx = np.concatenate([idx, idx[-2:0:-1]])  # ping-pong: loops seamlessly
     n_out = max(6, int(round(len(idx) / fps * out_fps)))
-    src_t = np.linspace(0, len(idx) - 1, n_out + (1 if kind != "fall" else 0))
+    src_t = np.linspace(0, len(idx) - 1, n_out + (1 if kind not in ("fall", "stand") else 0))
     cyc = {}
     for k, v in d.items():
         seg = v[idx].copy()
         seg[:, :2] -= H[idx][:, :2]  # in place (the controller moves her)
         cyc[k] = np.stack([np.interp(src_t, np.arange(len(seg)), seg[:, i]) for i in range(3)], axis=1)
-    if kind == "fall":
+    if kind in ("fall", "stand"):
         for k in cyc:
             cyc[k] = np.concatenate([cyc[k], cyc[k][:1]])
     hip = np.minimum(0.0, cyc["Hips"][:, 2] - ev["stand"])
-    if kind == "fall":
+    if kind in ("fall", "stand"):
         hip[:] = 0.0
     print("JUMP EVENTS", {k: (round(v / fps, 2) if k != "stand" else round(v, 3)) for k, v in ev.items()}, kind, "frames", len(hip) - 1)
     return cyc, len(hip) - 1, hip

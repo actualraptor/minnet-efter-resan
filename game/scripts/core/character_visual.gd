@@ -61,6 +61,9 @@ static func convert_material(src: Material) -> Material:
 	if b.albedo_texture:
 		m.set_shader_parameter("albedo_texture", b.albedo_texture)
 		m.set_shader_parameter("use_texture", true)
+		if b.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			var cut := b.alpha_scissor_threshold if b.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR else 0.5
+			m.set_shader_parameter("alpha_scissor", cut)
 	if lname.contains("crystal") or lname.contains("glow"):
 		m.set_shader_parameter("emission_strength", 0.9)
 	m.set_shader_parameter("ramp_softness", 0.22)

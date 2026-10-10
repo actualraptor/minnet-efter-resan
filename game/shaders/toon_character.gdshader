@@ -6,6 +6,7 @@ render_mode diffuse_burley, specular_disabled, cull_disabled;
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform sampler2D albedo_texture : source_color, filter_linear_mipmap;
 uniform bool use_texture = false;
+uniform float alpha_scissor = 0.0; // > 0: cut out texels below this alpha (hair, lashes)
 uniform vec3 shadow_tint : source_color = vec3(0.62, 0.55, 0.72);
 uniform float ramp_softness = 0.12;
 uniform float rim_strength = 0.35;
@@ -30,6 +31,9 @@ void fragment() {
 	vec4 c = albedo;
 	if (use_texture) {
 		c *= texture(albedo_texture, UV);
+	}
+	if (alpha_scissor > 0.0 && c.a < alpha_scissor) {
+		discard;
 	}
 	ALBEDO = c.rgb * COLOR.rgb;
 	EMISSION = c.rgb * emission_strength;

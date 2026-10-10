@@ -168,7 +168,7 @@ func _update_gaze(t: float, delta: float) -> void:
 		_next_saccade = t + randf_range(0.6, 2.8)
 		var base := Vector2.ZERO
 		if is_instance_valid(look_at_node):
-			var head_i := _skel.find_bone("head")
+			var head_i := RigNames.find(_skel, "head")
 			var head_xf := _skel.global_transform * _skel.get_bone_global_pose(head_i)
 			var local := head_xf.affine_inverse() * look_at_node.global_position
 			base = Vector2(clampf(local.x * 0.6, -1.0, 1.0), clampf(local.y * 0.6 - 0.1, -1.0, 1.0))

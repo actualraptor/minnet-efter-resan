@@ -11,7 +11,7 @@ extends RefCounted
 const GROUPS := {
 	"hairB_": {"stiffness": 1.0, "drag": 0.5, "gravity": 3.2, "radius": 0.025},
 	"hairS_": {"stiffness": 1.2, "drag": 0.45, "gravity": 1.6, "radius": 0.02},
-	"skirt_": {"stiffness": 4.0, "drag": 0.7, "gravity": 2.5, "radius": 0.018},
+	"skirt_": {"stiffness": 8.0, "drag": 0.7, "gravity": 2.0, "radius": 0.02},
 	"cape_": {"stiffness": 2.6, "drag": 0.55, "gravity": 0.3, "radius": 0.02},
 }
 
@@ -24,6 +24,17 @@ const COLLIDERS := [
 	["spine", "capsule", 0.13, 0.26, 0.5], ["chest", "capsule", 0.135, 0.24, 0.5],
 	["upper_arm.L", "capsule", 0.055, 0.3, 0.5], ["upper_arm.R", "capsule", 0.055, 0.3, 0.5],
 	["head", "sphere", 0.115, 0.0, 0.35],
+	# Humanoid (VRoid) rig.
+	# Measured on the VRoid tights: ~0.08 m radius at the top, 0.065 mid, 0.045 knee
+	# (+ ~1 cm so the chains, which sit inside the lining, keep the cloth clear).
+	["LeftUpperLeg", "capsule", 0.09, 0.2, 0.22], ["RightUpperLeg", "capsule", 0.09, 0.2, 0.22],
+	["LeftUpperLeg", "capsule", 0.075, 0.22, 0.62], ["RightUpperLeg", "capsule", 0.075, 0.22, 0.62],
+	["LeftLowerLeg", "sphere", 0.06, 0.0, 0.0], ["RightLowerLeg", "sphere", 0.06, 0.0, 0.0],   # knees
+	["LeftLowerLeg", "capsule", 0.055, 0.34, 0.45], ["RightLowerLeg", "capsule", 0.055, 0.34, 0.45],
+	["Spine", "capsule", 0.12, 0.2, 0.5], ["Chest", "capsule", 0.125, 0.2, 0.5],
+	["UpperChest", "capsule", 0.12, 0.18, 0.5],
+	["LeftUpperArm", "capsule", 0.05, 0.26, 0.5], ["RightUpperArm", "capsule", 0.05, 0.26, 0.5],
+	["Head", "sphere", 0.105, 0.0, 0.4],
 ]
 
 
@@ -46,6 +57,12 @@ static func setup(model: Node) -> SpringBoneSimulator3D:
 				chains.append([prefix, length, g])
 	if chains.is_empty():
 		return null
+	# Skirt chains first follow the thighs (see SkirtLegFollow), then simulate.
+	var follow := SkirtLegFollow.new()
+	follow.name = "SkirtLegFollow"
+	skel.add_child(follow)
+	if not follow.setup():
+		follow.queue_free()
 	var sim := SpringBoneSimulator3D.new()
 	sim.name = "SecondaryMotion"
 	skel.add_child(sim)
