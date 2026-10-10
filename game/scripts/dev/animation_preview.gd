@@ -321,6 +321,12 @@ func _auto_fly(out_path: String) -> void:
 	_height = float(OS.get_environment("PREVIEW_HEIGHT")) if OS.get_environment("PREVIEW_HEIGHT") != "" else _height
 	player.airflow_scale = float(OS.get_environment("PREVIEW_WIND")) if OS.get_environment("PREVIEW_WIND") != "" else 1.0
 	_aim_target = false
+	var hide := OS.get_environment("PREVIEW_HIDE")
+	for mi in player.model.find_children("*", "MeshInstance3D", true, false):
+		if hide == "LIST":
+			print("PREVIEW mesh ", mi.name)
+		elif hide != "" and String(mi.name) in hide.split(","):
+			(mi as MeshInstance3D).visible = false
 	var mode := OS.get_environment("PREVIEW_SPEED")   # hover | cruise | dash (default dash)
 	if mode != "hover":
 		Input.action_press("move_forward")
