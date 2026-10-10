@@ -33,6 +33,9 @@ enum Category { WHIMSICAL, ENVIRONMENTAL, UTILITY, EXPLORATION, DEFENSIVE, OFFEN
 @export var staff_pose: StringName = &""
 ## The body turns so the staff points at the aim point.
 @export var aim := false
+## Fired over the current focus-aim pose (no pose change of its own): only a
+## recoil kick. Used by the Zoltraak firing modes while RMB is held.
+@export var overlay := false
 ## Holds at the pose's sustain point while the cast button stays down.
 @export var sustained := false
 ## Seconds after the release before the next cast may start (cancels the

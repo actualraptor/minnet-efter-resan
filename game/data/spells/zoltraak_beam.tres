@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="SpellDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/spells/spell_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"spell_zoltraak_beam"
+display_name = "Zoltraak: Sustained Beam"
+description = "A channelled beam, held for a short time."
+category = 5
+targeting = 2
+mana_cost = 8
+cooldown = 0.2
+cast_time = 0.1
+recovery_time = 0.2
+radius = 1
+max_range = 60.0
+allowed_indoors = true
+cast_animation = &"Cast"
+aim = true
+overlay = true
+sustained = true
+chain_after = -1
+interruptible = true
+expression = &"focused"
+effect_script = "res://scripts/spells/zoltraak_beam_effect.gd"
+gather_particles = false
+gather_color = Color(0.6, 0.8, 1, 1)
+cast_sound = "spell_gather"
+release_sound = "spell_release"

@@ -157,7 +157,10 @@ func _process(_delta: float) -> void:
 		return
 	if busy or (_radius > 0.0 and _radius < STAFF_LENGTH):
 		_set_radius(_radius)  # keep the origin glued to the moving hand
-	if out and not busy and Time.get_ticks_msec() / 1000.0 - _last_used > STOW_AFTER:
+	var flying: bool = player != null and player.get("flying") == true
+	if flying:
+		touch()   # the staff stays out for as long as she flies
+	elif out and not busy and Time.get_ticks_msec() / 1000.0 - _last_used > STOW_AFTER:
 		stow()
 
 
@@ -199,7 +202,7 @@ func summon(variant := "") -> void:
 
 
 func stow() -> void:
-	if not out or busy:
+	if not out or busy or (player != null and player.get("flying") == true):
 		return
 	busy = true
 	_sparks.global_position = _grip()

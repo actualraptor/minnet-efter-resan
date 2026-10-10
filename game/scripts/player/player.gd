@@ -6,6 +6,7 @@ extends CharacterBody3D
 signal focus_changed(target: Node)
 signal stamina_changed(stamina: float, max_stamina: float)
 signal flight_changed(flying: bool)
+signal aim_changed(on: bool)
 
 const MIN_TAKEOFF_STAMINA := 12.0
 const EXHAUSTED_RECOVER := 35.0
@@ -70,6 +71,7 @@ var _stamina_rest := 0.0
 var _stamina_emit := 0.0
 var _last_jump_press := -10.0
 var _flight_hint_shown := false
+var _flight_pitch := 0.0
 var _lift_spell := 0.0
 var _lift_idle_goal := 0.0
 var _aim_active := false
@@ -82,6 +84,17 @@ var _cast_move := 0.0
 ## Soft world boundary (metres from the origin); scenes set their own.
 var play_radius := WorldLayout.PLAY_RADIUS
 var _cast_gen := 0
+## Zoltraak focus aim (hold RMB): staff raised, circle held, shots fire over it.
+var focus_aim := false
+var aim_charge := 0.0              # 0..1 over AIM_CHARGE_TIME while RMB is held
+var aim_blend := 0.0               # smoothed 0..1, drives camera, circle and reticle
+var _aim_fx: AimFx
+var _cast_hold := 0.0
+var _heavy_ready_sfx := false
+var _combat_goal := 0.0
+var _variants := {}
+const AIM_CHARGE_TIME := 1.5
+const AIM_MOVE_SCALE := 0.4
 var _lift := 0.0               # current levitation height (m)
 var _lift_goal := 0.0
 var _lift_t := 0.0
@@ -114,6 +127,10 @@ func _ready() -> void:
 	_setup_look_at()
 	_setup_grounding()
 	_setup_staff_rig()
+	_aim_fx = AimFx.new()
+	_aim_fx.name = "AimFx"
+	add_child(_aim_fx)
+	_aim_fx.setup(self)
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
 		loco.setup(_anim, "freyja_ual" if humanoid else "freyja")
@@ -207,6 +224,8 @@ func end_staff_hold() -> void:
 
 ## Cancels whatever is being cast; the rig eases out and control returns.
 func interrupt_cast() -> void:
+	if focus_aim:
+		_end_focus_aim(false)
 	if not _casting:
 		return
 	if staff_rig:
@@ -412,7 +431,7 @@ func begin_cast(anim: StringName, _duration: float) -> void:
 
 func end_cast() -> void:
 	_casting = false
-	if _aim_active:
+	if _aim_active and not focus_aim:
 		_aim_active = false
 		set_look_target(null)
 
@@ -525,9 +544,11 @@ func _physics_process(delta: float) -> void:
 	var climb := 0.0
 	if has_control() and (not _casting or _cast_move > 0.0):
 		input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-		running = Input.is_action_pressed("run") and not _casting
+		running = Input.is_action_pressed("run") and not _casting and not focus_aim
 		if _casting:
 			input *= _cast_move
+		elif focus_aim:
+			input *= AIM_MOVE_SCALE
 		if Input.is_action_just_pressed("jump") and not _casting and not flying:
 			_jump_buffer = 0.13
 	if has_control() and flying and not (_casting and _cast_move <= 0.0):
@@ -588,8 +609,17 @@ func _physics_process(delta: float) -> void:
 	_lean = lerpf(_lean, bank, 1.0 - exp(-6.0 * delta))
 	var pitch := clampf(accel_fwd * 0.012, -0.06, 0.08) if on_floor else 0.0
 	if flying:
-		# Lean into the flight: forward with speed, back a touch when braking.
-		pitch = deg_to_rad(17.0) * clampf(hv.length() / fly_speed, 0.0, 1.5) + clampf(accel_fwd * 0.01, -0.08, 0.05)
+		# Streamline with speed: upright when hovering, leaning in at a cruise and
+		# nearly flat out at full boost. She straightens up to cast or aim.
+		var sp := clampf(hv.length() / fly_boost_speed, 0.0, 1.0)
+		var lean := lerpf(0.0, deg_to_rad(80.0), smoothstep(0.0, 1.0, sp))
+		if _casting or _aim_active or focus_aim:
+			lean = minf(lean, deg_to_rad(8.0))
+		pitch = lean + clampf(accel_fwd * 0.01, -0.08, 0.05)
+		_flight_pitch = lerpf(_flight_pitch, pitch, 1.0 - exp(-4.0 * delta))
+		pitch = _flight_pitch
+	else:
+		_flight_pitch = lerpf(_flight_pitch, 0.0, 1.0 - exp(-6.0 * delta))
 	model.rotation.z = _lean
 	model.rotation.x = lerpf(model.rotation.x, pitch, 1.0 - exp(-5.0 * delta))
 
@@ -604,6 +634,7 @@ func _physics_process(delta: float) -> void:
 	_update_levitation(delta)
 	_update_hover_pose()
 	_update_stamina(delta, on_floor)
+	_update_focus_aim(delta)
 	RenderingServer.global_shader_parameter_set("player_position", global_position)
 
 
@@ -633,6 +664,10 @@ func start_flight() -> bool:
 		GameState.toast.emit("Too tired to fly.")
 		return false
 	flying = true
+	# Flight is a new, difficult art in this world: she always takes it with her
+	# staff, summoning it if it is not already in her hand.
+	if staff and not staff.out and not staff.busy:
+		staff.summon()
 	_exhausted = false
 	_exhausted_fall = false
 	_fly_t = 0.0
@@ -733,7 +768,12 @@ func _update_stamina(delta: float, on_floor: bool) -> void:
 func _update_flight_visual(delta: float) -> void:
 	_fly_blend = move_toward(_fly_blend, 1.0 if flying else 0.0, delta * 4.0)
 	var bob := sin(Time.get_ticks_msec() / 1000.0 * 1.9) * 0.04 * _fly_blend
-	model.position.y = _lift + bob
+	# Pitch about her centre of mass (hips), not her feet, so leaning in at speed
+	# swings the legs back instead of throwing the head forward.
+	var th := model.rotation.x
+	var pivot := 0.95
+	var shift := Basis(Vector3.UP, model.rotation.y) * Vector3(0.0, pivot * (1.0 - cos(th)), -pivot * sin(th))
+	model.position = Vector3(0.0, _lift + bob, 0.0) + shift * _fly_blend
 
 
 func _update_footsteps(delta: float, speed: float) -> void:
@@ -793,6 +833,119 @@ func emote(anim_name: String) -> void:
 		_play(StringName(anim_name), 0.3)
 
 
+# --- Zoltraak focus aim -----------------------------------------------------------
+
+func _zoltraak_equipped() -> bool:
+	var s := caster.current_spell()
+	return s != null and s.aim
+
+
+## Hold RMB: raise the staff and aim. Summons the staff first if it is away.
+func _begin_focus_aim() -> void:
+	if focus_aim or _casting or not has_control() or not _zoltraak_equipped():
+		return
+	if staff and not staff.out:
+		if staff.busy or is_indoors():
+			return
+		await staff.summon()
+		if not Input.is_action_pressed("aim") or _casting:
+			return
+	focus_aim = true
+	aim_charge = 0.0
+	_heavy_ready_sfx = false
+	_cast_hold = 0.0
+	_aim_active = true
+	_aim_offset = deg_to_rad(22.0)
+	set_look_target(_aim_marker)
+	if staff_rig:
+		staff_rig.play(StaffPoses.get_clip(&"zoltraak_aim"), 0.3, 0.5, true)
+	if staff:
+		staff.touch()
+	if face:
+		face.set_expression("focused", 0.0)
+	aim_changed.emit(true)
+
+
+## Release RMB. At full charge the circle is loosed as a heavy shot.
+func _end_focus_aim(allow_fire: bool) -> void:
+	if not focus_aim:
+		return
+	var heavy := allow_fire and aim_charge >= 0.98
+	focus_aim = false
+	aim_changed.emit(false)
+	if heavy:
+		_fire_variant("heavy", true)
+		get_tree().create_timer(0.55, false).timeout.connect(_release_aim_pose.bind(_cast_gen))
+	else:
+		_release_aim_pose(_cast_gen)
+
+
+func _release_aim_pose(gen: int) -> void:
+	if focus_aim or gen != _cast_gen:
+		return
+	if staff_rig and not _casting:
+		staff_rig.release_hold()
+	if not _casting:
+		_aim_active = false
+		set_look_target(null)
+	if face:
+		face.set_expression("neutral", 0.0)
+
+
+func _fire_variant(variant: String, force := false) -> void:
+	if not _variants.has(variant):
+		_variants[variant] = load("res://data/spells/zoltraak_%s.tres" % variant) as SpellDefinition
+	var sd: SpellDefinition = _variants[variant]
+	if sd == null:
+		return
+	if not force and not (focus_aim and can_start_cast()):
+		return
+	var reason := caster.try_cast(sd)
+	if reason != "" and reason != "busy":
+		GameState.toast.emit(reason)
+
+
+## Called by overlay spells: the staff kicks back a touch; returns the cast time.
+func begin_overlay_cast(spell: SpellDefinition) -> float:
+	recoil(1.0)
+	if staff:
+		staff.touch()
+	return spell.cast_time
+
+
+func recoil(amount: float) -> void:
+	if staff_rig:
+		staff_rig.kick(Vector3(0.0, 0.12, -0.85) * amount)
+
+
+func aim_point() -> Vector3:
+	return _aim_marker.global_position if _aim_marker else global_position + model.global_basis.z * 10.0
+
+
+func _update_focus_aim(delta: float) -> void:
+	aim_blend = move_toward(aim_blend, 1.0 if focus_aim else 0.0, delta * 5.0)
+	if focus_aim:
+		aim_charge = minf(aim_charge + delta / AIM_CHARGE_TIME, 1.0)
+		if aim_charge >= 0.99 and not _heavy_ready_sfx:
+			_heavy_ready_sfx = true
+			Audio.sfx("spell_gather", -14.0, 0.0)
+		# Holding the cast button past a tap channels the sustained beam.
+		if Input.is_action_pressed("cast") or Input.is_action_pressed("cast_alt"):
+			_cast_hold += delta
+			if _cast_hold > 0.3 and not caster.casting:
+				_fire_variant("beam")
+		else:
+			_cast_hold = 0.0
+	# Neutral combat-ready stance: staff out with Zoltraak equipped, she hovers a
+	# hand's breadth off the ground while standing.
+	var ready := staff != null and staff.out and _zoltraak_equipped() and not flying and is_on_floor() and velocity.length() < 0.4 and not _casting
+	var goal := 0.1 if ready else 0.0
+	if not is_equal_approx(goal, _combat_goal):
+		_combat_goal = goal
+		_lift_idle_goal = maxf(0.38 if hover_idle else 0.0, goal)
+		_refresh_lift_goal()
+
+
 # --- Interaction ------------------------------------------------------------------
 
 func _update_focus() -> void:
@@ -820,8 +973,31 @@ func _update_focus() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("aim") and has_control():
+		get_viewport().set_input_as_handled()
+		_begin_focus_aim()
+		return
+	if event.is_action_released("aim") and focus_aim:
+		get_viewport().set_input_as_handled()
+		_end_focus_aim(true)
+		return
 	if not has_control():
 		return
+	if focus_aim:
+		# While aiming the same keys fire the Zoltraak modes.
+		if (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
+			get_viewport().set_input_as_handled()
+			_cast_hold = 0.0
+			_fire_variant("quick")
+			return
+		if event.is_action_pressed("summon"):
+			get_viewport().set_input_as_handled()
+			_fire_variant("burst")
+			return
+		if event.is_action_pressed("interact"):
+			get_viewport().set_input_as_handled()
+			_fire_variant("volley")
+			return
 	if event.is_action_pressed("interact") and focus:
 		get_viewport().set_input_as_handled()
 		focus.interact(self)

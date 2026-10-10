@@ -100,7 +100,10 @@ func _cast(spell: SpellDefinition) -> void:
 	_cooldowns[spell.id] = GameState.game_time() + spell.cooldown + spell.cast_time
 	var staff_cast: bool = spell.staff_pose != &"" and body.has_method("begin_staff_cast")
 	var cast_time := spell.cast_time
-	if staff_cast:
+	var overlay: bool = spell.overlay and body.has_method("begin_overlay_cast")
+	if overlay:
+		cast_time = body.begin_overlay_cast(spell)
+	elif staff_cast:
 		# A chained cast starts partway into the pose, so its wind-up is shorter.
 		cast_time = body.begin_staff_cast(spell)
 	else:

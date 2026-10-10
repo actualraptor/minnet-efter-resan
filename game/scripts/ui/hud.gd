@@ -34,6 +34,10 @@ func _ready() -> void:
 		_player.focus_changed.connect(_on_focus)
 		_player.caster.mana_changed.connect(_on_mana)
 		_player.stamina_changed.connect(_on_stamina)
+		var reticle := AimReticle.new()
+		reticle.name = "AimReticle"
+		reticle.player = _player
+		add_child(reticle)
 		_player.caster.equipped_changed.connect(_on_spell)
 		_on_spell(_player.caster.current_spell())
 	GameState.quest_changed.connect(_on_quest)

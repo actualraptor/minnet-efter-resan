@@ -28,6 +28,7 @@ const KEYS := {
 }
 
 const MOUSE := {
+	"aim": MOUSE_BUTTON_RIGHT,
 	"cast": MOUSE_BUTTON_LEFT,
 	"advance": MOUSE_BUTTON_LEFT,
 }

@@ -20,6 +20,8 @@ static func get_clip(clip_name: StringName) -> StaffPoseClip:
 			c = _flower()
 		&"barrier":
 			c = _barrier()
+		&"zoltraak_aim":
+			c = _zoltraak_aim()
 	_cache[clip_name] = c
 	return c
 
@@ -45,6 +47,23 @@ static func _zoltraak() -> StaffPoseClip:
 	c.key(1.00, Vector3(-0.22, -0.26, 0.10), Vector3(6, 0, 0), {"gl": 0.0, "hold": true})
 	c.event(0.42, "charge_full")
 	c.event(0.50, "release")
+	return c
+
+
+## Held aim for Zoltraak's focus mode: raise to the aiming pose and hold there
+## (sustained) until the aim is released, then lower.
+static func _zoltraak_aim() -> StaffPoseClip:
+	var c := StaffPoseClip.new()
+	c.name = "zoltraak_aim"
+	c.aims = true
+	c.aim_yaw_deg = 22.0
+	c.aim_elev_deg = 9.0
+	c.release_t = 0.3
+	c.sustain_t = 0.3
+	c.key(0.00, Vector3(-0.22, -0.26, 0.10), Vector3(6, 0, 0), {"gl": 0.0, "hold": true})
+	c.key(0.14, Vector3(-0.20, -0.14, 0.05), Vector3(52, 14, 0), {"gl": 1.0, "lean": Vector3(2, 4, 0)})
+	c.key(0.30, Vector3(-0.20, -0.09, 0.00), Vector3(81, 22, 0), {"gl": 1.0, "lean": Vector3(3, 10, 0), "hold": true})
+	c.key(1.00, Vector3(-0.22, -0.26, 0.10), Vector3(6, 0, 0), {"gl": 0.0, "hold": true})
 	return c
 
 

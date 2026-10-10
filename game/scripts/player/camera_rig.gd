@@ -69,7 +69,9 @@ func _process(delta: float) -> void:
 	var goal := target.global_position + Vector3.UP * (h + target.hover_height() * 0.85)
 	global_position = global_position.lerp(goal, 1.0 - exp(-follow_speed * delta))
 	_zoom_smooth = lerpf(_zoom_smooth, zoom, 1.0 - exp(-10.0 * delta))
-	var want_len := (indoor_length if target.is_indoors() else outdoor_length) * _zoom_smooth
+	var ab := target.aim_blend
+	var want_len := (indoor_length if target.is_indoors() else outdoor_length) * _zoom_smooth * lerpf(1.0, 0.7, ab)
+	camera.fov = lerpf(62.0, 53.0, ab)
 	_arm.spring_length = lerpf(_arm.spring_length, want_len, 1.0 - exp(-4.0 * delta))
 	_apply()
 	# Fade the mage out when walls push the camera right up against her.
@@ -83,7 +85,7 @@ func _apply() -> void:
 	_pitch_node.rotation = Vector3(pitch, 0.0, 0.0)
 	# Offset slightly over the shoulder for a more cinematic frame.
 	var indoors := target != null and target.is_indoors()
-	_arm.position = _arm.position.lerp(Vector3((minf(0.12, shoulder_offset) if indoors else shoulder_offset) * clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0), 0.0, 0.0), 0.1)
+	_arm.position = _arm.position.lerp(Vector3((minf(0.12, shoulder_offset) if indoors else shoulder_offset * lerpf(1.0, 2.1, target.aim_blend if target else 0.0)) * clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0), 0.0, 0.0), 0.1)
 
 
 func snap_behind(model_yaw: float) -> void:

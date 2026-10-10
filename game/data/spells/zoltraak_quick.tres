@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SpellDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/spells/spell_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"spell_zoltraak_quick"
+display_name = "Zoltraak: Quick Shot"
+description = "One fast, precise bolt. Minimal cast time."
+category = 5
+targeting = 2
+mana_cost = 5
+cooldown = 0.05
+cast_time = 0.04
+recovery_time = 0.16
+radius = 1
+max_range = 60.0
+allowed_indoors = true
+cast_animation = &"Cast"
+aim = true
+overlay = true
+chain_after = 0
+interruptible = true
+expression = &"focused"
+effect_script = "res://scripts/spells/zoltraak_quick_effect.gd"
+gather_particles = false
+gather_color = Color(0.6, 0.8, 1, 1)
+cast_sound = "spell_gather"
+release_sound = "spell_release"
