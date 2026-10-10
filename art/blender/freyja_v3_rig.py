@@ -518,6 +518,46 @@ def blend_dynamic(o, arm, prefix, factor_fn, falloff=3.0):
             o.vertex_groups[n].add([v.index], w / tot * f, "ADD")
 
 
+def _scale_groups(o, names, k):
+    """Scale the given bone weights by k per vertex and renormalise."""
+    gname = {g.index: g.name for g in o.vertex_groups}
+    for v in o.data.vertices:
+        ws = {gname[g.group]: g.weight for g in v.groups}
+        if not any(n in ws for n in names):
+            continue
+        for n in names:
+            if n in ws:
+                ws[n] *= k
+        tot = sum(ws.values())
+        for n, w in ws.items():
+            o.vertex_groups[n].add([v.index], w / tot, "REPLACE")
+
+
+def _cuff_follow_hand(o, arm, J, reach=0.07, share=0.35):
+    """Sleeve cuffs: blend part of the forearm weight to the hand near the opening
+    so the cuff turns with the wrist instead of the hand rotating into it."""
+    for sfx, sgn in (("L", 1), ("R", -1)):
+        el = Vector((J["elbow"][0] * sgn, J["elbow"][1], J["elbow"][2]))
+        wr = Vector((J["wrist"][0] * sgn, J["wrist"][1], J["wrist"][2]))
+        d = (wr - el).normalized()
+        fa, hd = f"forearm.{sfx}", f"hand.{sfx}"
+        if fa not in o.vertex_groups:
+            continue
+        if hd not in o.vertex_groups:
+            o.vertex_groups.new(name=hd)
+        gi = o.vertex_groups[fa].index
+        for v in o.data.vertices:
+            w = next((g.weight for g in v.groups if g.group == gi), 0.0)
+            if w <= 1e-4:
+                continue
+            u = (v.co - wr).dot(d)  # 0 at the wrist joint, negative toward the elbow
+            f = _smooth01(-reach, 0.0, u) * share
+            if f <= 0.0:
+                continue
+            o.vertex_groups[fa].add([v.index], w * (1 - f), "REPLACE")
+            o.vertex_groups[hd].add([v.index], w * f, "ADD")
+
+
 def _smooth01(e0, e1, x):
     t = min(1.0, max(0.0, (x - e0) / (e1 - e0)))
     return t * t * (3 - 2 * t)
@@ -699,6 +739,12 @@ def run(root, mesh_objects, target_h):
     # Torso-only pieces must not inherit arm weights (they tear at the armpits).
     torso_ok = {"hips", "spine", "chest", "neck", "shoulder.L", "shoulder.R"}
     restrict = {o.name: (set(bones) | torso_ok) for (o, bones) in parts if bones is not None}
+    # Skirt layers keep the cloth-chain weights they share with the skirt;
+    # stripping them made the petticoat follow the thighs and swing through it.
+    chain_names = {b.name for b in arm.data.bones if b.name.startswith("skirt_")}
+    for o in skirtish:
+        if o.name in restrict:
+            restrict[o.name] |= chain_names
     for o in cloth:
         if o.name.startswith("Dress Skirt_M_Frieren_002"):
             restrict[o.name] = torso_ok | {b.name for b in arm.data.bones if b.name.startswith("cape_")}
@@ -721,6 +767,9 @@ def run(root, mesh_objects, target_h):
             else:
                 for gi, w in keep:
                     o.vertex_groups[gname[gi]].add([v.index], w / tot, "REPLACE")
+    for o in cloth:
+        if o.name.startswith("Dress Skirt_M_Frieren_001_0"):
+            _cuff_follow_hand(o, arm, J)
     bpy.data.objects.remove(proxy, do_unlink=True)
     for o in cloth:
         _select_only([o], o)

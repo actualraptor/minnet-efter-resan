@@ -24,16 +24,19 @@ ROOT = os.path.abspath(sys.argv[sys.argv.index("--") + 1])
 OUT = sys.argv[sys.argv.index("--") + 2] if len(sys.argv) > sys.argv.index("--") + 2 else os.path.join(ROOT, "art", "previews")
 GLB = os.path.join(ROOT, "game", "assets", "models", "characters", "freyja.glb")
 
-# (label, inner prefix, outer prefix, z-range of inner verts to test or None)
+# (label, inner prefix, outer prefix, z-range of inner verts or None,
+#  bones the tested inner verts must mainly follow or None)
 PAIRS = [
-    ("skin through coat", "Body01_", "Outfit_M_Freyja_001_0", None),
-    ("skin through tights", "Body01_", "Leggings_", (0.0, 0.95)),
-    ("tights through skirt", "Leggings_", "Outfit_M_Freyja_001_Skirt", (0.62, 1.0)),
-    ("coat through corset", "Outfit_M_Freyja_001_0", "Corset", (0.99, 1.13)),
-    ("sleeve through capelet", "Outfit_M_Freyja_001_0", "Outfit_M_Freyja_002", (1.15, 1.45)),
-    ("petticoat through skirt", "Petticoat", "Outfit_M_Freyja_001_Skirt", None),
-    ("tights through boots", "Leggings_", "Boots_", (0.0, 0.4)),
+    ("skin through coat", "Body01_", "Outfit_M_Freyja_001_0", None, None),
+    ("skin through tights", "Body01_", "Leggings_", (0.0, 0.95), None),
+    ("tights through skirt", "Leggings_", "Outfit_M_Freyja_001_Skirt", (0.62, 1.0), None),
+    ("coat through corset", "Outfit_M_Freyja_001_0", "Corset", (0.99, 1.13), None),
+    ("coat through capelet", "Outfit_M_Freyja_001_0", "Outfit_M_Freyja_002", (1.15, 1.45),
+     ("upper_arm.", "shoulder.", "chest", "spine", "neck")),
+    ("petticoat through skirt", "Petticoat", "Outfit_M_Freyja_001_Skirt", (0.585, 1.0), None),
+    ("tights through boots", "Leggings_", "Boots_", (0.0, 0.4), None),
 ]
+SAME_PATCH = 0.05  # the crossing must be through the fabric patch that covered it at rest
 COVER = 0.035      # a vertex is "covered" if the outer layer is this close at rest
 POKE = 0.002       # and counts as clipping once it is this far on the other side
 BUDGET = 0.004     # max fraction of covered vertices allowed through, per pair and pose
@@ -66,14 +69,19 @@ def posed_verts(objs):
     return out
 
 
-def signed(bvh, pts):
-    """Signed distance to the outer surface along its (possibly flipped) normal."""
+def signed(bvh, pts, faces=False):
+    """Signed distance to the outer surface along its (possibly flipped) normal,
+    plus the nearest outer face index (faces=True) or nearest point."""
     s = np.full(len(pts), np.nan)
+    f = np.full(len(pts), -1, dtype=int)
+    near = np.full((len(pts), 3), np.nan)
     for i, p in enumerate(pts):
         loc, nrm, idx, dist = bvh.find_nearest(Vector(p), COVER * 2)
         if loc is not None:
             s[i] = (Vector(p) - loc).dot(nrm)
-    return s
+            f[i] = idx
+            near[i] = loc[:]
+    return (s, f) if faces else (s, near)
 
 
 def main_bone(o, i, names):
@@ -94,7 +102,7 @@ def run():
     bpy.context.view_layer.update()
     rest = posed_verts(meshes)
     plan = []
-    for label, ipre, opre, zr in PAIRS:
+    for label, ipre, opre, zr, bones in PAIRS:
         inner, outer = by(ipre), by(opre)
         if not inner or not outer:
             print("SKIP", label)
@@ -110,9 +118,12 @@ def run():
             sel = np.arange(len(v))
             if zr:
                 sel = sel[(v[sel, 2] >= zr[0]) & (v[sel, 2] <= zr[1])]
-            s0 = signed(bvh, v[sel])
+            if bones:
+                names = {g.index: g.name for g in o.vertex_groups}
+                sel = np.array([i for i in sel if main_bone(o, int(i), names).startswith(bones)], dtype=int)
+            s0, f0 = signed(bvh, v[sel], faces=True)
             ok = ~np.isnan(s0) & (np.abs(s0) < COVER)
-            plan.append((label, o, outer, sel[ok], np.sign(s0[ok])))
+            plan.append((label, o, outer, sel[ok], np.sign(s0[ok]), f0[ok]))
     report = {"poses": [], "pairs": [p[0] for p in PAIRS]}
     fail = False
     for act in sorted(bpy.data.actions, key=lambda a: a.name):
@@ -123,15 +134,18 @@ def run():
             bpy.context.scene.frame_set(int(f), subframe=f - int(f))
             pv = posed_verts(meshes)
             row = {"clip": act.name, "phase": ph, "pairs": {}}
-            for label, o, outer, idx, side in plan:
+            for label, o, outer, idx, side, rest_face in plan:
                 ov = np.concatenate([pv[x.name][0] for x in outer])
                 ot, off = [], 0
                 for x in outer:
                     ot += [tuple(i + off for i in t) for t in pv[x.name][1]]
                     off += len(pv[x.name][0])
                 bvh = BVHTree.FromPolygons([Vector(p) for p in ov], ot)
-                s = signed(bvh, pv[o.name][0][idx])
-                bad = ~np.isnan(s) & (np.sign(s) != side) & (np.abs(s) > POKE)
+                s, near = signed(bvh, pv[o.name][0][idx])
+                # Only crossings through the patch that covered the vertex at rest.
+                cen = np.array([ov[list(ot[fi])].mean(axis=0) for fi in rest_face]) if len(rest_face) else np.zeros((0, 3))
+                same = np.linalg.norm(near - cen, axis=1) < SAME_PATCH
+                bad = ~np.isnan(s) & same & (np.sign(s) != side) & (np.abs(s) > POKE)
                 frac = float(bad.sum()) / max(len(idx), 1)
                 names = {g.index: g.name for g in o.vertex_groups}
                 regions = {}
