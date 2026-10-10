@@ -55,6 +55,8 @@ var _fade := 0.0
 var loco: LocomotionAnimator
 var staff: StaffSummon
 var _look_mod: LookAtModifier3D
+var _neck_mod: LookAtModifier3D
+var _fly_clip_on := false
 var grounder: FootGrounder
 var hands: HandPoser
 var staff_rig: StaffRig
@@ -72,6 +74,8 @@ var _stamina_emit := 0.0
 var _last_jump_press := -10.0
 var _flight_hint_shown := false
 var _flight_pitch := 0.0
+## Strength of the airflow on hair/cloth springs while flying (dev: 0 = off).
+var airflow_scale := 1.0
 var _lift_spell := 0.0
 var _lift_idle_goal := 0.0
 var _aim_active := false
@@ -131,6 +135,10 @@ func _ready() -> void:
 	_aim_fx.name = "AimFx"
 	add_child(_aim_fx)
 	_aim_fx.setup(self)
+	var flight_fx := FlightFx.new()
+	flight_fx.name = "FlightFx"
+	add_child(flight_fx)
+	flight_fx.setup(self)
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
 		loco.setup(_anim, "freyja_ual" if humanoid else "freyja")
@@ -295,6 +303,7 @@ func _setup_look_at() -> void:
 	# the collar). Limit angles are full ranges: neck +-22 deg, head +-32 deg.
 	var neck_mod := _make_look_mod(skel, RigNames.resolve(skel, "neck"), 44.0, 30.0, 0.6) if RigNames.find(skel, "neck") >= 0 else null
 	_look_mod = _make_look_mod(skel, RigNames.resolve(skel, "head"), 64.0, 36.0, 0.75)
+	_neck_mod = neck_mod
 	if neck_mod:
 		skel.move_child(neck_mod, 0)
 		skel.move_child(_look_mod, 1)
@@ -357,8 +366,12 @@ func _update_look(delta: float) -> void:
 	if _look_point == null:
 		return
 	var eye := global_position + Vector3(0, 1.52, 0)
-	var fwd := model.global_basis.z
+	var yaw_f := Vector3(sin(model.rotation.y), 0.0, cos(model.rotation.y))
+	var fwd := yaw_f
 	var want := eye + fwd * 4.0
+	if flying and Vector2(velocity.x, velocity.z).length() > 1.0:
+		var vd := Vector3(velocity.x, velocity.y * 0.6, velocity.z).normalized()
+		want = eye + vd * 8.0
 	if is_instance_valid(_look_node):
 		want = _look_node.global_position + _look_offset
 	else:
@@ -468,10 +481,37 @@ func hover_height() -> float:
 
 ## Hover legs follow how far she has risen; the leg trail follows her velocity
 ## in the model's frame.
+## While flying with her staff out the staff is held in the flight pose: upright
+## at her side while she hovers, both hands forward like a lance as she speeds up.
+func _update_flight_hold() -> void:
+	if staff_rig == null:
+		return
+	var clip := StaffPoses.get_clip(&"fly")
+	var spd := Vector2(velocity.x, velocity.z).length()
+	var want := flying and staff != null and staff.out and not _casting and not focus_aim and spd > 0.8
+	if want:
+		if not (staff_rig.playing and staff_rig.clip == clip):
+			staff_rig.play_param(clip)
+		staff_rig.param = clampf(spd / fly_boost_speed, 0.0, 1.0)
+		_fly_clip_on = true
+	elif _fly_clip_on:
+		_fly_clip_on = false
+		if staff_rig.clip == clip:
+			staff_rig.stop_param()
+
+
 func _update_hover_pose() -> void:
 	if hover_pose == null:
 		return
 	hover_pose.amount = maxf(smoothstep(0.0, 1.0, clampf(_lift / 0.25, 0.0, 1.0)), smoothstep(0.0, 1.0, _fly_blend))
+	hover_pose.body_pitch = model.rotation.x if flying else 0.0
+	hover_pose.speed01 = clampf(Vector2(velocity.x, velocity.z).length() / fly_boost_speed, 0.0, 1.0) if flying else 0.0
+	hover_pose.climb = velocity.y if flying else 0.0
+	# A body lying forward needs much more neck and head range to keep looking ahead.
+	if _look_mod:
+		_look_mod.secondary_limit_angle = deg_to_rad(lerpf(36.0, 120.0, _fly_blend))
+	if _neck_mod:
+		_neck_mod.secondary_limit_angle = deg_to_rad(lerpf(30.0, 100.0, _fly_blend))
 	hover_pose.velocity = model.global_basis.inverse() * Vector3(velocity.x, 0.0, velocity.z)
 
 
@@ -605,17 +645,19 @@ func _physics_process(delta: float) -> void:
 	_prev_yaw = model.rotation.y
 	var accel_fwd := (hv.length() - _prev_speed) / maxf(delta, 1e-4)
 	_prev_speed = hv.length()
-	var bank := clampf(-yaw_rate * hv.length() * 0.035, -0.18, 0.18) if (on_floor or flying) else 0.0
+	var bank := clampf(-yaw_rate * hv.length() * 0.035, -0.18, 0.18) if on_floor else 0.0
+	if flying:
+		bank = clampf(-yaw_rate * (0.5 + hv.length()) * 0.07, -0.55, 0.55)
 	_lean = lerpf(_lean, bank, 1.0 - exp(-6.0 * delta))
 	var pitch := clampf(accel_fwd * 0.012, -0.06, 0.08) if on_floor else 0.0
 	if flying:
-		# Streamline with speed: upright when hovering, leaning in at a cruise and
-		# nearly flat out at full boost. She straightens up to cast or aim.
+		# Levitation, not jet propulsion: upright when hovering, a small forward lean
+		# as she glides. She straightens up to cast or aim.
 		var sp := clampf(hv.length() / fly_boost_speed, 0.0, 1.0)
-		var lean := lerpf(0.0, deg_to_rad(80.0), smoothstep(0.0, 1.0, sp))
+		var lean := lerpf(0.0, deg_to_rad(24.0), smoothstep(0.0, 1.0, sp))
 		if _casting or _aim_active or focus_aim:
 			lean = minf(lean, deg_to_rad(8.0))
-		pitch = lean + clampf(accel_fwd * 0.01, -0.08, 0.05)
+		pitch = lean + clampf(accel_fwd * 0.02, -0.14, 0.05)   # brakes tip her back a touch
 		_flight_pitch = lerpf(_flight_pitch, pitch, 1.0 - exp(-4.0 * delta))
 		pitch = _flight_pitch
 	else:
@@ -635,6 +677,7 @@ func _physics_process(delta: float) -> void:
 	_update_hover_pose()
 	_update_stamina(delta, on_floor)
 	_update_focus_aim(delta)
+	_update_flight_hold()
 	RenderingServer.global_shader_parameter_set("player_position", global_position)
 
 
@@ -730,6 +773,11 @@ func ground_point() -> Vector3:
 func _fly_step(delta: float, on_floor: bool, climb: float, speed: float, boosting: bool) -> void:
 	_fly_t += delta
 	var vy_goal := climb * fly_climb_speed
+	# Touch down gently: the last couple of metres slow the descent.
+	if climb <= 0.0 and velocity.y < -0.4:
+		var h := global_position.y - ground_point().y
+		if h < 3.0:
+			velocity.y = maxf(velocity.y, -(0.7 + h * 0.9))
 	if global_position.y > FLY_CEILING and vy_goal > 0.0:
 		vy_goal = 0.0
 	velocity.y = move_toward(velocity.y, vy_goal, 10.0 * delta)
@@ -776,7 +824,7 @@ func _update_flight_visual(delta: float) -> void:
 	model.position = Vector3(0.0, _lift + bob, 0.0) + shift * _fly_blend
 	# Airflow: hair, cape and skirt stream back against her motion while flying.
 	if secondary:
-		var wind := -velocity * 0.7 * _fly_blend
+		var wind := -velocity * 0.7 * _fly_blend * airflow_scale
 		wind.y *= 0.5
 		secondary.external_force = secondary.external_force.lerp(wind.limit_length(7.0), 1.0 - exp(-5.0 * delta))
 

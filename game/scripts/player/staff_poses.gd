@@ -22,6 +22,8 @@ static func get_clip(clip_name: StringName) -> StaffPoseClip:
 			c = _barrier()
 		&"zoltraak_aim":
 			c = _zoltraak_aim()
+		&"fly":
+			c = _fly()
 	_cache[clip_name] = c
 	return c
 
@@ -64,6 +66,23 @@ static func _zoltraak_aim() -> StaffPoseClip:
 	c.key(0.14, Vector3(-0.20, -0.14, 0.05), Vector3(52, 14, 0), {"gl": 1.0, "lean": Vector3(2, 4, 0)})
 	c.key(0.30, Vector3(-0.20, -0.09, 0.00), Vector3(81, 22, 0), {"gl": 1.0, "lean": Vector3(3, 10, 0), "hold": true})
 	c.key(1.00, Vector3(-0.22, -0.26, 0.10), Vector3(6, 0, 0), {"gl": 0.0, "hold": true})
+	return c
+
+
+## Flying with the staff, after the flight concept sheet: key time is speed
+## (0 = hovering, 1 = full boost). The staff stays physically in the right hand:
+## upright at her side while she hovers, then carried forward and a little up as
+## she glides, while the free arm opens out behind for balance. Shaft pitch is
+## relative to the world horizontal (the rig subtracts her small body lean).
+static func _fly() -> StaffPoseClip:
+	var c := StaffPoseClip.new()
+	c.name = "fly"
+	c.param_driven = true
+	c.level_to_world = true
+	c.key(0.00, Vector3(-0.24, -0.30, 0.10), Vector3(4, 0, 0), {"gl": 0.0, "hold": true})
+	c.key(0.22, Vector3(-0.25, -0.16, 0.14), Vector3(30, -3, 0), {"gl": 0.0, "fh": Vector3(0.30, -0.18, 0.0), "fr": Vector3(0, 0, 14), "fw": 0.7})
+	c.key(0.55, Vector3(-0.26, -0.05, 0.20), Vector3(54, -5, 0), {"gl": 0.0, "fh": Vector3(0.35, -0.04, -0.10), "fr": Vector3(0, 0, 6), "fw": 1.0, "lean": Vector3(-2, 0, 0)})
+	c.key(1.00, Vector3(-0.25, 0.00, 0.26), Vector3(62, -6, 0), {"gl": 0.0, "fh": Vector3(0.34, 0.0, -0.16), "fr": Vector3(0, 0, 0), "fw": 1.0, "lean": Vector3(-3, 0, 0)})
 	return c
 
 

@@ -34,6 +34,12 @@ var aims := false
 ## Shaft elevation (deg above horizontal) at the aiming moment; the rig tilts the
 ## shaft by the difference to the camera aim, within +-18 deg.
 var aim_elev_deg := 0.0
+## Key times are a parameter (flight speed 0..1) instead of normalised time; the
+## owner sets StaffRig.param and the clip never finishes by itself.
+var param_driven := false
+## Shaft pitch keys are relative to the world horizontal, not the body: the rig
+## subtracts the body's forward pitch so "90" always means level.
+var level_to_world := false
 ## Repeat casts that arrive while this clip is still playing resume here instead
 ## of restarting from the carry pose (-1 = always restart).
 var chain_t := -1.0

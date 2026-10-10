@@ -316,12 +316,17 @@ func _auto_fly(out_path: String) -> void:
 	await get_tree().create_timer(1.5).timeout
 	player.start_flight()
 	await get_tree().create_timer(1.2).timeout
-	_yaw = PI * 0.5
-	_dist = 4.2
+	_yaw = deg_to_rad(float(OS.get_environment("PREVIEW_YAW"))) if OS.get_environment("PREVIEW_YAW") != "" else PI * 0.5
+	_dist = float(OS.get_environment("PREVIEW_DIST")) if OS.get_environment("PREVIEW_DIST") != "" else 4.2
+	_height = float(OS.get_environment("PREVIEW_HEIGHT")) if OS.get_environment("PREVIEW_HEIGHT") != "" else _height
+	player.airflow_scale = float(OS.get_environment("PREVIEW_WIND")) if OS.get_environment("PREVIEW_WIND") != "" else 1.0
 	_aim_target = false
-	Input.action_press("move_forward")
-	Input.action_press("run")
-	await get_tree().create_timer(2.4).timeout
+	var mode := OS.get_environment("PREVIEW_SPEED")   # hover | cruise | dash (default dash)
+	if mode != "hover":
+		Input.action_press("move_forward")
+	if mode != "cruise" and mode != "hover":
+		Input.action_press("run")
+	await get_tree().create_timer(2.6).timeout
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out_path)
 	print("PREVIEW fly ok speed=%.1f pitch=%.0f" % [Vector2(player.velocity.x, player.velocity.z).length(), rad_to_deg(player.model.rotation.x)])

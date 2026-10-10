@@ -27,6 +27,8 @@ var carry_global := Transform3D.IDENTITY
 ## Elevation (radians above horizontal) of the point being aimed at; set by the
 ## Player each frame while aiming.
 var aim_elevation := 0.0
+## Driving value for param_driven clips (flight speed 0..1).
+var param := 0.0
 
 # Results of the last evaluate(); read by StaffGrip and StaffSummon.
 var state: Dictionary = {}
@@ -81,6 +83,23 @@ func play(c: StaffPoseClip, cast_t: float, recovery_t: float, hold_at_sustain :=
 
 
 ## For sustained casts: let go and run the recovery.
+## Hold a param_driven clip (flight carry) until stop_param().
+func play_param(c: StaffPoseClip) -> void:
+	clip = c
+	cast_time = 1.0e6   # never reaches its end: sampling is by param
+	recovery_time = 1.0e6
+	_holding = false
+	sustained = false
+	_t = 0.0
+	_fired.clear()
+	playing = true
+
+
+func stop_param() -> void:
+	if clip and clip.param_driven:
+		playing = false
+
+
 func release_hold() -> void:
 	_holding = false
 
@@ -130,7 +149,10 @@ func _process(delta: float) -> void:
 func sample() -> Dictionary:
 	if clip == null:
 		return {}
-	state = clip.sample(clip.clip_time(_t, cast_time, recovery_time))
+	if clip.param_driven:
+		state = clip.sample(clampf(param, 0.0, 1.0))
+	else:
+		state = clip.sample(clip.clip_time(_t, cast_time, recovery_time))
 	return state
 
 
@@ -139,8 +161,10 @@ func evaluate() -> void:
 		return
 	var w := smoothstep(0.0, 1.0, weight)
 	var origin := skeleton.global_transform * skeleton.get_bone_global_pose(_ibone).origin
-	anchor = Transform3D(Basis(Vector3.UP, model.global_rotation.y), origin)
+	anchor = Transform3D(model.global_basis.orthonormalized(), origin)
 	var q: Quaternion = state.q
+	if clip.level_to_world:
+		q = Quaternion(Vector3.RIGHT, -model.rotation.x) * q
 	if clip.aims:
 		# Tilt the shaft toward the camera aim (elevation), within a safe range.
 		var d := clampf(aim_elevation - deg_to_rad(clip.aim_elev_deg), -0.31, 0.31)

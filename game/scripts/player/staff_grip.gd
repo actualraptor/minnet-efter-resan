@@ -55,7 +55,7 @@ func _process_modification_with_delta(_delta: float) -> void:
 	var w := smoothstep(0.0, 1.0, rig.weight)
 	_posture(sk, st.lean as Vector3, w)
 	rig.evaluate()
-	var mb := Basis(Vector3.UP, rig.model.global_rotation.y)
+	var mb := rig.anchor.basis   # body frame (yaw, pitch and bank)
 	var u := rig.shaft_up
 	# Right (staff) hand on the rear grip.
 	var pole_r := mb * Vector3(-0.35, -1.0, -0.25)
