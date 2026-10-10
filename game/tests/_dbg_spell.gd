@@ -18,7 +18,7 @@ func _ready() -> void:
 	await get_tree().create_timer(1.0).timeout
 	var p: Player = main.player
 	var rig: CameraRig = p.camera_rig
-	rig.zoom = 0.62
+	rig.zoom = 0.42
 	rig.pitch = deg_to_rad(-6.0)
 	for v in StaffSummon.VARIANTS.keys():
 		for ang in [35.0, -60.0]:

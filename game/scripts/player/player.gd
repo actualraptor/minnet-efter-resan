@@ -414,6 +414,10 @@ func _cast_with_staff() -> void:
 	var reason := caster.try_cast()
 	if reason == "" and staff:
 		staff.touch()
+	if reason == "" and hands:
+		# Free hand opens through the gather and strike, then relaxes.
+		hands.set_pose("L", "open")
+		get_tree().create_timer(1.7).timeout.connect(func(): if hands: hands.set_pose("L", "relaxed"))
 	elif reason != "" and reason != "busy":
 		GameState.toast.emit(reason)
 
