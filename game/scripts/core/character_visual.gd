@@ -22,9 +22,14 @@ static func find_animation_player(root: Node) -> AnimationPlayer:
 ## Quaternius Universal Animation Library (CC0), retargeted by Godot's humanoid
 ## import (both skeletons map to SkeletonProfileHumanoid as %GeneralSkeleton):
 ## game clip name -> library clip.
+## A list joins clips into one (enter -> action -> exit).
 const UAL_CLIPS := {
 	"Idle": "Idle", "Walk": "Walk_Formal", "Run": "Jog_Fwd", "Jump": "Jump_Start",
-	"Fall": "Jump", "Land": "Jump_Land", "Talk": "Idle_Talking", "Cast": "Spell_Simple_Shoot",
+	"Fall": "Jump", "Land": "Jump_Land", "Talk": "Idle_Talking",
+	"Cast": ["Spell_Simple_Enter", "Spell_Simple_Shoot", "Spell_Simple_Exit"],
+	# Pulling the staff out of thin air (see StaffSummon.VARIANTS for timing).
+	"Summon": "PickUp_Table", "SummonReach": "Interact",
+	"SummonFlick": ["Spell_Simple_Enter", "Spell_Simple_Exit"], "SummonTwirl": "PickUp_Table",
 }
 
 
@@ -44,10 +49,11 @@ static func use_humanoid_library(root: Node) -> bool:
 	var src_lib := (src.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer).get_animation_library("")
 	var lib := anim.get_animation_library("")
 	for game_name in UAL_CLIPS:
-		var a := src_lib.get_animation(UAL_CLIPS[game_name])
-		if a == null:
+		var spec = UAL_CLIPS[game_name]
+		var parts: Array = spec if spec is Array else [spec]
+		var c := _join(parts.map(func(n): return src_lib.get_animation(n)))
+		if c == null:
 			continue
-		var c := a.duplicate() as Animation
 		if game_name == "Run":
 			_soften_posture(c, sk, 0.45)
 		if lib.has_animation(game_name):
@@ -55,6 +61,39 @@ static func use_humanoid_library(root: Node) -> bool:
 		lib.add_animation(game_name, c)
 	src.free()
 	return true
+
+
+## Concatenate clips with identical track layouts into one.
+static func _join(clips: Array) -> Animation:
+	if clips.is_empty() or clips.has(null):
+		return null
+	if clips.size() == 1:
+		return (clips[0] as Animation).duplicate() as Animation
+	var out := Animation.new()
+	var t0 := 0.0
+	for a: Animation in clips:
+		for t in a.get_track_count():
+			var path := a.track_get_path(t)
+			var ty := a.track_get_type(t)
+			var ot := out.find_track(path, ty)
+			if ot < 0:
+				ot = out.add_track(ty)
+				out.track_set_path(ot, path)
+			for k in a.track_get_key_count(t):
+				var time := t0 + a.track_get_key_time(t, k)
+				var v = a.track_get_key_value(t, k)
+				match ty:
+					Animation.TYPE_ROTATION_3D:
+						out.rotation_track_insert_key(ot, time, v)
+					Animation.TYPE_POSITION_3D:
+						out.position_track_insert_key(ot, time, v)
+					Animation.TYPE_SCALE_3D:
+						out.scale_track_insert_key(ot, time, v)
+					_:
+						out.track_insert_key(ot, time, v)
+		t0 += a.length
+	out.length = t0
+	return out
 
 
 ## The library jog leans like a sprinter; keep `keep` of the spine/neck/head

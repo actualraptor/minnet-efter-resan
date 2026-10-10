@@ -51,7 +51,7 @@ func _ready() -> void:
 			var pg := skel.get_bone_global_pose(parent).basis.get_rotation_quaternion()
 			var rest := skel.get_bone_global_rest(bone).basis.get_rotation_quaternion()
 			var pr := skel.get_bone_global_rest(parent).basis.get_rotation_quaternion()
-			var q := Quaternion(Vector3.FORWARD, 0.85 if side == "Left" else -0.85)
+			var q := Quaternion(Vector3.FORWARD, 1.2 if side == "Left" else -1.2)
 			skel.set_bone_pose_rotation(bone, pg.inverse() * q * (pg * pr.inverse() * rest))
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL

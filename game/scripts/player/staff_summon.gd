@@ -11,7 +11,7 @@ const STOW_AFTER := 12.0
 const GROW_TIME := 0.45
 const STAFF_LENGTH := 1.9
 ## Ways Freyja draws her staff (clip -> seconds until it materialises in her hand).
-const VARIANTS := {"Summon": 0.45, "SummonFlick": 0.31, "SummonReach": 0.42, "SummonTwirl": 0.3}
+const VARIANTS := {"Summon": 0.42, "SummonFlick": 0.5, "SummonReach": 0.75, "SummonTwirl": 0.42}
 var _last_variant := ""
 
 var player: Node3D

@@ -408,7 +408,7 @@ def main():
         bms = bmesh.new()
         bms.from_mesh(sl.data)
         cut = [f for f in bms.faces
-               if ((sl.matrix_world @ f.calc_center_median()) - sh).dot((wr - sh).normalized()) / L < 0.2]
+               if ((sl.matrix_world @ f.calc_center_median()) - sh).dot((wr - sh).normalized()) / L < 0.3]
         bmesh.ops.delete(bms, geom=cut, context="FACES")
         bms.to_mesh(sl.data)
         bms.free()
@@ -444,15 +444,35 @@ def main():
     sh_x = abs(J(arm, "LeftUpperArm").x)
 
     def cape_fn(p, ws):
-        k = 0.6 * T.smoothstep(sh_x - 0.05, sh_x + 0.06, abs(p.x))
+        k = 0.85 * T.smoothstep(sh_x - 0.06, sh_x + 0.08, abs(p.x))
         if k <= 0:
             return ws
         side = "LeftUpperArm" if p.x > 0 else "RightUpperArm"
         out = {b: w * (1 - k) for b, w in ws.items()}
         out[side] = out.get(side, 0.0) + k
         return out
-    # (Letting the capelet sides follow the upper arms measured worse in the
-    # deformation test: 33 -> 65 sleeve verts through it. Kept rigid.)
+    # Capelet sides follow the upper arms halfway, so the cape drapes with the
+    # arm instead of standing out as a rigid platter (the sleeve tops under it
+    # are removed, so the arm can't poke through).
+    # The capelet is draped over arms posed DRAPE_ANGLE below the T-pose, but
+    # its arm weights rotate it from the T-pose rest. Pre-rotate each side
+    # vertex up by (its arm weight x DRAPE_ANGLE) about the shoulder, so the
+    # posed arm brings it back to the draped shape instead of folding it in.
+    DRAPE_ANGLE = 1.0
+    cape = g["Capelet"]
+    cmw = cape.matrix_world
+    cinv = cmw.inverted()
+    for v in cape.data.vertices:
+        p = cmw @ v.co
+        k = cape_fn(p, {"_": 1.0}).get("LeftUpperArm" if p.x > 0 else "RightUpperArm", 0.0)
+        if k <= 0:
+            continue
+        side = "Left" if p.x > 0 else "Right"
+        piv = J(arm, side + "UpperArm")
+        sign = 1 if side == "Left" else -1
+        R = Matrix.Rotation(-sign * DRAPE_ANGLE * k, 3, "Y")
+        v.co = cinv @ (piv + R @ (p - piv))
+    reweight(cape, cape_fn)
     # Hair chains -> hairB_<chain>_<n> for the game's spring bones.
     for b in list(arm.data.bones):
         m = re.match(r"J_Sec_Hair(\d+)_(\d+)$", b.name)

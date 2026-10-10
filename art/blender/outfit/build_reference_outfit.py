@@ -480,7 +480,7 @@ def build_outfit():
     for side in ("Left","Right"):
         piv = body.joint(side+"UpperArm")
         sign = 1 if side == "Left" else -1
-        rots[side] = (piv, Matrix.Rotation(sign*0.85, 3, "Y"))
+        rots[side] = (piv, Matrix.Rotation(sign*1.0, 3, "Y"))
     # Linear-blend-skinned copies in the review pose (arm verts rotate by their
     # arm weight, shoulder verts partially), including the fitted blouse's sleeves.
     for src in rest_sleeves:
@@ -513,7 +513,7 @@ def build_outfit():
         point = max(0.0, -math.sin(rad))**30*0.05+max(0.0, -math.sin(rad))**6*0.015 \
             + max(0.0, math.sin(rad))**30*0.055
         return fb_len*(1-side)+side_len*side+point
-    cr = T.drop_cloth(body, nc, cape_len, segs=128, rows=20, clearance=0.014, r0=0.06, z_cap=neck.z+0.01, flare=0.1)
+    cr = T.drop_cloth(body, nc, cape_len, segs=128, rows=20, clearance=0.014, r0=0.06, z_cap=neck.z+0.01, flare=0.15)
     cr = T.push_out(body, cr, nc, 0.012, rows_from=1, reach=0.08)
     cr = T.convexify(cr, nc, rows_from=4)
     for _ in range(8):
