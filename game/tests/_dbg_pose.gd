@@ -12,6 +12,11 @@ func _ready() -> void:
 	var rig: CameraRig = p.camera_rig
 	rig.zoom = float(OS.get_environment("DBG_ZOOM")) if OS.get_environment("DBG_ZOOM") != "" else 0.45
 	rig.pitch = deg_to_rad(-4.0)
+	var hide := OS.get_environment("DBG_HIDE")
+	if hide != "":
+		for mi in p.model.find_children("*", "MeshInstance3D", true, false):
+			if String(mi.name) in hide.split(","):
+				(mi as MeshInstance3D).visible = false
 	await p.staff.summon("Summon")
 	await get_tree().create_timer(1.5).timeout
 	for ang in [0.0, 70.0, -70.0, 180.0]:

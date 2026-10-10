@@ -51,7 +51,8 @@ PAIRS_VROID = [
 ]
 if "vroid" in MODEL:
     PAIRS = PAIRS_VROID
-SAME_PATCH = 0.05  # the crossing must be through the fabric patch that covered it at rest
+SAME_PATCH = 0.05
+RIM = 0.015        # ignore inner verts whose nearest outer point is this close to the outer layer's open edge  # the crossing must be through the fabric patch that covered it at rest
 COVER = 0.035      # a vertex is "covered" if the outer layer is this close at rest
 POKE = 0.002       # and counts as clipping once it is this far on the other side
 BUDGET = 0.004     # max fraction of covered vertices allowed through, per pair and pose
@@ -129,6 +130,18 @@ def run():
             ot += [tuple(i + off for i in t) for t in rest[o.name][1]]
             off += len(rest[o.name][0])
         bvh = BVHTree.FromPolygons([Vector(p) for p in ov], ot)
+        # Open edges of the outer layer: near a rim "inside/outside" is undefined.
+        from collections import Counter
+        from mathutils.kdtree import KDTree
+        ec = Counter()
+        for t in ot:
+            for k in range(len(t)):
+                ec[tuple(sorted((t[k], t[(k + 1) % len(t)])))] += 1
+        rim = {i for e, c in ec.items() if c == 1 for i in e}
+        kd = KDTree(max(len(rim), 1))
+        for i in rim:
+            kd.insert(Vector(ov[i]), i)
+        kd.balance()
         for o in inner:
             v = rest[o.name][0]
             sel = np.arange(len(v))
@@ -139,6 +152,11 @@ def run():
                 sel = np.array([i for i in sel if main_bone(o, int(i), names).startswith(bones)], dtype=int)
             s0, f0 = signed(bvh, v[sel], faces=True)
             ok = ~np.isnan(s0) & (np.abs(s0) < COVER)
+            if rim:
+                _, near0 = signed(bvh, v[sel])
+                for k in np.where(ok)[0]:
+                    if kd.find(Vector(near0[k]))[2] < RIM:
+                        ok[k] = False
             plan.append((label, o, outer, sel[ok], np.sign(s0[ok]), f0[ok]))
     report = {"poses": [], "pairs": [p[0] for p in PAIRS]}
     fail = False

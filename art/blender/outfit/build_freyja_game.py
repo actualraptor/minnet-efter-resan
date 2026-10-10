@@ -251,7 +251,9 @@ def grip_align(prox):
     return Bm @ A.inverted()
 
 
-GESTURES = ("Idle", "Cast", "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "Talk", "IdleStaff")
+# Idle/Walk/Run/Jump/Fall/Land/Talk/Cast come from the Quaternius UAL library at
+# runtime (CharacterVisual.UAL_CLIPS); only staff-specific clips are baked here.
+GESTURES = ( "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "IdleStaff")
 
 
 def bake_gestures(prox):
@@ -371,9 +373,50 @@ def main():
     sleeves = [ex["LeftGatheredSleeve"], ex["RightGatheredSleeve"]]
     is_body_skin = lambda m: m.split(" (")[0].endswith("_SKIN") and "BODY" in m
     for o in body.meshes:
-        remove_hidden(o, sleeves, 0.1, is_body_skin, margin=0)  # balloon sleeves: up to ~9 cm off the arm
+        remove_hidden(o, sleeves, 0.13, is_body_skin, margin=0)  # balloon sleeves: up to ~9 cm off the arm
     remove_hidden(g["Blouse"], [g["Corset"]] + [o for n, o in ex.items() if n.startswith("LeatherBelt")], 0.05)
+    # The corset is a closed ring from the waist to under the bust: any blouse
+    # inside that band is never visible (keep 1.2 cm under each rim).
+    czs = [(g["Corset"].matrix_world @ v.co).z for v in g["Corset"].data.vertices]
+    lo_c, hi_c = min(czs) + 0.006, max(czs) - 0.006
+    bmb = bmesh.new()
+    bmb.from_mesh(g["Blouse"].data)
+    gone = [f for f in bmb.faces if lo_c < (g["Blouse"].matrix_world @ f.calc_center_median()).z < hi_c]
+    bmesh.ops.delete(bmb, geom=gone, context="FACES")
+    bmb.to_mesh(g["Blouse"].data)
+    bmb.free()
+    print("HIDDEN removed Blouse band", len(gone), "faces inside the corset ring")
     remove_hidden(g["Tights"], [g["Boots"]], 0.03)
+    # Balloon sleeves hang from the upper arm: the elbow puff follows the upper
+    # arm (body weights would fold it up with a bent forearm into a flap that
+    # pokes through the capelet); the forearm takes over toward the cuff.
+    for side in ("Left", "Right"):
+        sh, el, wr = J(arm, side + "UpperArm"), J(arm, side + "LowerArm"), J(arm, side + "Hand")
+        L = (wr - sh).length
+        t_el = (el - sh).length / L
+        ua, la, hd = side + "UpperArm", side + "LowerArm", side + "Hand"
+
+        def sleeve_fn(p, ws, sh=sh, wr=wr, L=L, t_el=t_el, ua=ua, la=la, hd=hd):
+            t = (p - sh).dot((wr - sh).normalized()) / L
+            fl = T.smoothstep(t_el - 0.04, t_el + 0.05, t)    # forearm share: the puff rides the forearm
+            h = T.smoothstep(0.93, 1.0, t) * 0.5              # cuff turns with the hand
+            return {ua: (1 - fl), la: fl * (1 - h), hd: fl * h}
+        sl = ex[side + "GatheredSleeve"]
+        reweight(sl, sleeve_fn)
+        # The top fifth always sits under the capelet; attached to the shoulder
+        # it would stretch into a tongue through the cape when the arm moves.
+        bms = bmesh.new()
+        bms.from_mesh(sl.data)
+        cut = [f for f in bms.faces
+               if ((sl.matrix_world @ f.calc_center_median()) - sh).dot((wr - sh).normalized()) / L < 0.2]
+        bmesh.ops.delete(bms, geom=cut, context="FACES")
+        bms.to_mesh(sl.data)
+        bms.free()
+    # Sleeve tops always sit under the (chest-fixed) capelet; when the arm comes
+    # forward to hold the staff they would push through it. Two face rings are
+    # kept under the cape hem so no gap opens when the arm swings.
+    for sl in sleeves:
+        remove_hidden(sl, [g["Capelet"]], 0.12, margin=2)
     # Blouse inside the corset moves exactly like the corset: copy the nearest
     # corset vertex's weights, easing back to its own over 4 cm above the top.
     from mathutils.kdtree import KDTree
@@ -401,14 +444,15 @@ def main():
     sh_x = abs(J(arm, "LeftUpperArm").x)
 
     def cape_fn(p, ws):
-        k = 0.4 * T.smoothstep(sh_x - 0.05, sh_x + 0.06, abs(p.x))
+        k = 0.6 * T.smoothstep(sh_x - 0.05, sh_x + 0.06, abs(p.x))
         if k <= 0:
             return ws
         side = "LeftUpperArm" if p.x > 0 else "RightUpperArm"
         out = {b: w * (1 - k) for b, w in ws.items()}
         out[side] = out.get(side, 0.0) + k
         return out
-    reweight(g["Capelet"], cape_fn)
+    # (Letting the capelet sides follow the upper arms measured worse in the
+    # deformation test: 33 -> 65 sleeve verts through it. Kept rigid.)
     # Hair chains -> hairB_<chain>_<n> for the game's spring bones.
     for b in list(arm.data.bones):
         m = re.match(r"J_Sec_Hair(\d+)_(\d+)$", b.name)
@@ -426,11 +470,7 @@ def main():
     # Idle is the hand-keyed breathing/weight-shift loop (see GESTURES): the
     # mocap "standing" before the jump already starts the crouch and, looped,
     # pumps the hips back and forth.
-    clips = [("Walk", "07_01.bvh", {"lean": 4.0}),
-             ("Run", "09_02.bvh", {"lean": 9.0}),
-             ("Jump", "16_05.bvh", {"segment": "jump", "lean": 6.0, "calm_head": 0.7}),
-             ("Fall", "16_05.bvh", {"segment": "fall", "lean": 4.0, "calm_head": 0.7}),
-             ("Land", "16_05.bvh", {"segment": "land", "lean": 6.0, "calm_head": 0.6}),
+    clips = [
              # Staff in the right hand: forearm brought forward, wrist turned to hold it.
              ("WalkStaff", "07_01.bvh", {"hold_right": 0.55, "staff": True, "staff_tilt": 6, "lean": 4.0}),
              ("RunStaff", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 12, "lean": 9.0})]

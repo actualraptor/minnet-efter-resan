@@ -430,8 +430,13 @@ def build_outfit():
         e2 = axis.cross(e1).normalized()
         L = (wrist-shoulder).length
         t_band = (1-0.06/L)/0.94           # where the leather cuff band sits
+        # Bishop sleeve: fitted down to the elbow, the balloon swells on the
+        # forearm (so it moves rigidly with it; a puff centred on the elbow
+        # swings up through the capelet when the elbow bends).
+        t_el = (body.joint(side+"LowerArm")-shoulder).length/L/0.94
         def sleeve_r(t):
-            r = 0.031*(1-t)+0.03*t+0.056*math.sin(math.pi*t**0.78)**0.9
+            u = min(1.0, max(0.0, (t-t_el+0.02)/(t_band-t_el+0.02)))
+            r = 0.031*(1-t)+0.03*t+0.052*math.sin(math.pi*u**0.75)**0.85
             # Gathered into the cuff band, then a small puff below it.
             return r*(1-0.5*math.exp(-((t-t_band)/0.035)**2))
         CUFF[side] = sleeve_r(t_band)
