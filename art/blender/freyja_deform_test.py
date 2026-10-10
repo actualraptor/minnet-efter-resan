@@ -160,6 +160,7 @@ def run():
             plan.append((label, o, outer, sel[ok], np.sign(s0[ok]), f0[ok]))
     report = {"poses": [], "pairs": [p[0] for p in PAIRS]}
     fail = False
+    crossers = {}   # label -> {"mesh:vertex": [max penetration, rest x, y, z]}
     for act in sorted(bpy.data.actions, key=lambda a: a.name):
         arm.animation_data.action = act
         f0, f1 = act.frame_range
@@ -183,6 +184,13 @@ def run():
                 frac = float(bad.sum()) / max(len(idx), 1)
                 names = {g.index: g.name for g in o.vertex_groups}
                 regions = {}
+                cr = crossers.setdefault(label, {})
+                for k in np.where(bad)[0]:
+                    key = "%s:%d" % (o.name, int(idx[k]))
+                    d = float(abs(s[k]))
+                    if key not in cr or cr[key][0] < d:
+                        rv = rest[o.name][0][int(idx[k])]
+                        cr[key] = [d, float(rv[0]), float(rv[1]), float(rv[2])]
                 for i in idx[bad]:
                     b = main_bone(o, int(i), names)
                     regions[b] = regions.get(b, 0) + 1
@@ -210,6 +218,8 @@ def run():
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "deform_report.json"), "w") as fh:
         json.dump(report, fh, indent=1)
+    with open(os.path.join(OUT, "deform_crossers.json"), "w") as fh:
+        json.dump(crossers, fh, indent=1)
     print("RESULT", "FAIL" if fail else "PASS")
     return fail
 

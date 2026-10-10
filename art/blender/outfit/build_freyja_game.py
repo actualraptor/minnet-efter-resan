@@ -463,7 +463,7 @@ def main():
         bms = bmesh.new()
         bms.from_mesh(sl.data)
         cut = [f for f in bms.faces
-               if ((sl.matrix_world @ f.calc_center_median()) - sh).dot((wr - sh).normalized()) / L < 0.3]
+               if ((sl.matrix_world @ f.calc_center_median()) - sh).dot((wr - sh).normalized()) / L < 0.36]
         bmesh.ops.delete(bms, geom=cut, context="FACES")
         bms.to_mesh(sl.data)
         bms.free()
@@ -499,7 +499,7 @@ def main():
     sh_x = abs(J(arm, "LeftUpperArm").x)
 
     def cape_fn(p, ws):
-        k = 0.85 * T.smoothstep(sh_x - 0.06, sh_x + 0.08, abs(p.x))
+        k = 0.93 * T.smoothstep(sh_x - 0.07, sh_x + 0.06, abs(p.x))
         if k <= 0:
             return ws
         side = "LeftUpperArm" if p.x > 0 else "RightUpperArm"

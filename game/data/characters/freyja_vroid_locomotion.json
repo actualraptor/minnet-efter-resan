@@ -1,10 +1,5 @@
 {
  "natural_speed": {
-  "Walk": 1.296,
-  "Run": 3.147,
-  "Jump": 0.0,
-  "Fall": 0.0,
-  "Land": 0.0,
   "WalkStaff": 1.296,
   "RunStaff": 3.147
  },
