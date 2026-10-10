@@ -774,6 +774,11 @@ func _update_flight_visual(delta: float) -> void:
 	var pivot := 0.95
 	var shift := Basis(Vector3.UP, model.rotation.y) * Vector3(0.0, pivot * (1.0 - cos(th)), -pivot * sin(th))
 	model.position = Vector3(0.0, _lift + bob, 0.0) + shift * _fly_blend
+	# Airflow: hair, cape and skirt stream back against her motion while flying.
+	if secondary:
+		var wind := -velocity * 0.7 * _fly_blend
+		wind.y *= 0.5
+		secondary.external_force = secondary.external_force.lerp(wind.limit_length(7.0), 1.0 - exp(-5.0 * delta))
 
 
 func _update_footsteps(delta: float, speed: float) -> void:

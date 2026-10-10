@@ -29,6 +29,8 @@ func _ready() -> void:
 	_build_ui()
 	if OS.get_environment("PREVIEW_AUTO") != "":
 		_auto(OS.get_environment("PREVIEW_AUTO"))
+	if OS.get_environment("PREVIEW_FLY") != "":
+		_auto_fly(OS.get_environment("PREVIEW_FLY"))
 
 
 # --- stage ----------------------------------------------------------------------------
@@ -306,4 +308,21 @@ func _auto(out_path: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out_path)
 	print("PREVIEW ok rig_weight=%.2f" % player.staff_rig.weight)
+	get_tree().quit()
+
+
+## PREVIEW_FLY=<png path>: take off, fly forward at full boost and capture from the side.
+func _auto_fly(out_path: String) -> void:
+	await get_tree().create_timer(1.5).timeout
+	player.start_flight()
+	await get_tree().create_timer(1.2).timeout
+	_yaw = PI * 0.5
+	_dist = 4.2
+	_aim_target = false
+	Input.action_press("move_forward")
+	Input.action_press("run")
+	await get_tree().create_timer(2.4).timeout
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(out_path)
+	print("PREVIEW fly ok speed=%.1f pitch=%.0f" % [Vector2(player.velocity.x, player.velocity.z).length(), rad_to_deg(player.model.rotation.x)])
 	get_tree().quit()

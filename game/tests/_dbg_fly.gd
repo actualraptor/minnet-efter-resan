@@ -42,7 +42,7 @@ func _ready() -> void:
 	await get_tree().create_timer(1.5).timeout
 	_p = main.player
 	var rig: CameraRig = _p.camera_rig
-	rig.zoom = 1.0
+	rig.zoom = 0.55
 	rig.pitch = deg_to_rad(-8.0)
 	rig.yaw = _p.model.rotation.y + deg_to_rad(65.0)
 	_p.caster.mana = _p.caster.max_mana
