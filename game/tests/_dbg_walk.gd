@@ -5,9 +5,9 @@ var main: Node
 var out := ""
 var _sheet: Image
 var _n := 0
-const COLS := 8
-const CW := 240
-const CH := 300
+const COLS := 6
+const CW := 330
+const CH := 440
 
 func _ready() -> void:
 	main = get_parent()
@@ -55,6 +55,12 @@ func _press(actions: Array) -> void:
 
 func _grab() -> void:
 	await RenderingServer.frame_post_draw
+	var pl: Player = main.player
+	var tr := []
+	for m in pl._meshes:
+		if m.transparency > 0.0:
+			tr.append("%s=%.2f" % [m.name, m.transparency])
+	print("DBG fade %.3f transparent %s" % [pl._fade, tr])
 	var img := get_viewport().get_texture().get_image()
 	img.convert(Image.FORMAT_RGB8)
 	var w := img.get_width()

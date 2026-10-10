@@ -235,65 +235,192 @@ def recolor(objs):
                     m.diffuse_color = (0.08, 0.6, 0.45, 1)  # workbench previews
 
 
-def rebuild_hair(objs, body_objs):
-    """Remove the twin-tails' ties; re-hang rigid copies of the tail strands
-    behind the back as a long loose curtain (keeps the sculpted strand quality)."""
+def _hair_colour(cap):
+    """Median lit colour of the hair cap's texture under its UVs (so new strands match)."""
+    m = cap.data.materials[0]
+    img = next((n.image for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image), None) if m.use_nodes else None
+    if img is None:
+        return np.array([0.78, 0.76, 0.86])
+    a = image_np(img)
+    h, w = a.shape[:2]
+    uv = np.array([d.uv[:] for d in cap.data.uv_layers.active.data])
+    px = a[np.clip((uv[:, 1] * h).astype(int), 0, h - 1), np.clip((uv[:, 0] * w).astype(int), 0, w - 1), :3]
+    lum = px.mean(1)
+    px = px[lum > np.percentile(lum, 40)]
+    return np.median(px, axis=0)
+
+
+def _strand_texture(base):
+    """Anime strand texture: lengthwise streaks, darker root, soft lighter tips."""
+    W, H = 128, 512
+    rng = np.random.default_rng(7)
+    u = np.linspace(0, 1, W)
+    streak = np.zeros(W)
+    for f, amp in ((7, 0.06), (17, 0.05), (41, 0.035)):
+        streak += amp * np.sin(u * math.tau * f + rng.uniform(0, math.tau))
+    lines = np.zeros(W)
+    for c in rng.uniform(0.08, 0.92, 9):
+        lines -= 0.09 * np.exp(-((u - c) / 0.012) ** 2)
+    v = np.linspace(0, 1, H)[:, None]                      # 0 = root (bottom row), 1 = tip
+    shade = 0.86 + 0.14 * np.clip(v * 1.6, 0, 1) + streak[None, :] + lines[None, :]
+    edge = 1.0 - 0.18 * np.abs(u * 2 - 1)[None, :] ** 3   # strand edges a touch darker
+    rgb = np.clip(base[None, None, :] * (shade * edge)[..., None], 0, 1)
+    a = np.ones((H, W, 4), np.float32)
+    a[..., :3] = rgb
+    img = bpy.data.images.new("freyja_hair_strands", W, H)
+    set_image(img, a)
+    return img
+
+
+def _hair_material(cap):
+    base = _hair_colour(cap)
+    mat = bpy.data.materials.new("M_HairLong_freyja")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = _strand_texture(base)
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.6
+    mat.diffuse_color = (float(base[0]), float(base[1]), float(base[2]), 1.0)
+    return mat
+
+
+def _strand(bm, uvl, pts, outward, half_w, half_t, segs=8):
+    """Lens-section strand along pts, flat against the `outward` normals; UV u across, v along."""
+    L = [0.0]
+    for i in range(1, len(pts)):
+        L.append(L[-1] + (pts[i] - pts[i - 1]).length)
+    rings = []
+    for i, p in enumerate(pts):
+        d = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
+        nrm = (outward[i] - d * outward[i].dot(d)).normalized()
+        side = d.cross(nrm).normalized()
+        ring = []
+        for k in range(segs):
+            a = math.tau * k / segs
+            ring.append(bm.verts.new(p + side * math.cos(a) * half_w[i] + nrm * math.sin(a) * half_t[i]))
+        rings.append(ring)
+    for j in range(len(rings) - 1):
+        for k in range(segs):
+            f = bm.faces.new((rings[j][k], rings[j][(k + 1) % segs], rings[j + 1][(k + 1) % segs], rings[j + 1][k]))
+            for loop, (kk, jj) in zip(f.loops, ((k, j), (k + 1, j), (k + 1, j + 1), (k, j + 1))):
+                uu = 1.0 - abs((kk / segs) * 2 - 1)
+                loop[uvl].uv = (uu, L[jj] / L[-1])
+    tip = bm.verts.new(pts[-1] + (pts[-1] - pts[-2]).normalized() * 0.004)
+    for k in range(segs):
+        f = bm.faces.new((rings[-1][k], rings[-1][(k + 1) % segs], tip))
+        for loop in f.loops:
+            loop[uvl].uv = (0.5, 1.0)
+
+
+def _smoothstep(e0, e1, x):
+    t = min(1.0, max(0.0, (x - e0) / (e1 - e0)))
+    return t * t * (3 - 2 * t)
+
+
+def generate_hair(objs):
+    """Long loose hair (Freyja's sheet): strands rooted under the back of the hair
+    cap that drape over the skull, shoulders and capelet and then hang, in two
+    overlapping layers so there are no gaps. Replaces the twin-tails."""
     tails = find(objs, "Object_7_")
-    if tails is None:
-        return
-    z_top = 1.42 * TARGET_H / 1.586
+    if tails is not None:
+        bpy.data.objects.remove(tails, do_unlink=True)
+    cap = find(objs, "Object_6_")
+    drape_src = [o for o in mesh_objects() if o.name.startswith(("Body01_", "Dress Skirt_", "Leggings_", "Panties_", "Object_6_"))]
+    def pts_of(o):
+        q = np.array([o.matrix_world @ v.co for v in o.data.vertices])
+        if o.name.startswith("Body01_"):
+            q = q[~((q[:, 2] > 1.42) & (np.abs(q[:, 0]) > 0.075))]   # elf ears: hair falls behind them
+        return q
+    P = np.concatenate([pts_of(o) for o in drape_src])
+    # Hair drapes over head, shoulders and torso, never along the A-posed arms.
+    P = P[(np.abs(P[:, 0]) < 0.2) | (P[:, 2] > 1.47)]
+    torso = P[(np.abs(P[:, 2] - 1.15) < 0.1) & (np.abs(P[:, 0]) < 0.18)]
+    cy = float(np.percentile(torso[:, 1], 3) + np.percentile(torso[:, 1], 97)) / 2
+    Q = P - np.array([0.0, cy, 0.0])
+    ang = np.degrees(np.arctan2(Q[:, 1], Q[:, 0])) % 360
+    rad = np.hypot(Q[:, 0], Q[:, 1])
+    capP = np.array([cap.matrix_world @ v.co for v in cap.data.vertices]) - np.array([0.0, cy, 0.0])
+    cap_ang = np.degrees(np.arctan2(capP[:, 1], capP[:, 0])) % 360
+    cap_rad = np.hypot(capP[:, 0], capP[:, 1])
+    # Outer surface radius on a (z, angle) grid around the torso axis.
+    zs = np.arange(0.5, 1.75, 0.015)
+    angs = np.arange(0, 360, 4.0)
+    S = np.zeros((len(zs), len(angs)))
+    for i, z in enumerate(zs):
+        mz = np.abs(P[:, 2] - z) < 0.018
+        za, zr = ang[mz], rad[mz]
+        for j, a in enumerate(angs):
+            m = np.abs(((za - a) + 180) % 360 - 180) < 7
+            S[i, j] = np.percentile(zr[m], 97) if m.sum() > 3 else 0.0
+
+    def surf(z, a):
+        i = int(np.clip(round((z - zs[0]) / 0.015), 0, len(zs) - 1))
+        j = int(round((a % 360) / 4.0)) % len(angs)
+        return S[i, j]
+
+    mat = _hair_material(cap)
     bm = bmesh.new()
-    bm.from_mesh(tails.data)
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z >= z_top], context="VERTS")
-    # Split into left and right tails.
-    left = bmesh.new()
-    right = bmesh.new()
-    bm.to_mesh(tails.data)
+    uvl = bm.loops.layers.uv.new("UVMap")
+    rng = np.random.default_rng(3)
+    BACK = 90.0
+    layers = ((20, 100.0, 0.004, 0.0), (19, 92.0, 0.015, 0.5))   # (count, half-spread deg, clearance, phase)
+    for (count, spread, clear, phase) in layers:
+        for k in range(count):
+            t = (k + phase) / (count - 1 + (1 if phase else 0))
+            a0 = BACK + (t * 2 - 1) * spread
+            off_c = abs(a0 - BACK) / spread                       # 0 at the centre, 1 at the sides
+            z_root = 1.575 - 0.085 * off_c ** 1.4
+            mr = (np.abs(capP[:, 2] - z_root) < 0.015) & (np.abs(((cap_ang - a0) + 180) % 360 - 180) < 8)
+            r_root = float(np.percentile(cap_rad[mr], 60)) - 0.012 if mr.sum() > 3 else surf(z_root, a0) - 0.012
+            z_end = 0.7 + 0.12 * off_c ** 1.6 + rng.uniform(-0.03, 0.03)
+            pts, outs = [], []
+            r = r_root
+            z = z_root
+            first = True
+            while z > z_end:
+                # Below the shoulders the side strands gather toward the back.
+                gather = _smoothstep(1.42, 1.12, z)
+                a = BACK + (a0 - BACK) * (1.0 - 0.25 * gather)
+                # Extra room over the corset and belt (added later, ~2.5 cm proud of the coat).
+                belt = _smoothstep(0.9, 0.96, z) * (1.0 - _smoothstep(1.15, 1.2, z))
+                want = surf(z, a) + clear + 0.008 + 0.028 * belt
+                # Hug the skull and shoulders on the way down; below them hang
+                # freely (drift inward slowly, never into her).
+                if first:
+                    r = want
+                elif want > r:
+                    r = min(want, r + 0.011)    # ease out over the shoulders: no collar flare
+                else:
+                    r = max(want, r - (0.012 if z > 1.3 else 0.006))
+                first = False
+                ar = math.radians(a)
+                pts.append(Vector((math.cos(ar) * r, cy + math.sin(ar) * r, z)))
+                outs.append(Vector((math.cos(ar), math.sin(ar), 0.0)))
+                z -= 0.02
+            if len(pts) < 4:
+                continue
+            pts[0] = Vector((pts[0].x, pts[0].y, pts[0].z))
+            for _ in range(6):
+                pts = [pts[0]] + [(pts[i - 1] + pts[i] * 2 + pts[i + 1]) / 4 for i in range(1, len(pts) - 1)] + [pts[-1]]
+            n = len(pts)
+            arc = math.radians(2 * spread / max(count - 1, 1)) * 0.13
+            w = 0.036 * (0.92 + 0.16 * rng.random())
+            # Narrow at the root (tucked under the cap), widening as it falls, soft tip.
+            half_w = [w * (0.5 + 0.5 * _smoothstep(0, 0.18, i / n)) * (1 + 0.25 * _smoothstep(0.2, 0.6, i / n)) * (1 - 0.55 * _smoothstep(0.7, 1.0, i / n)) for i in range(n)]
+            half_t = [0.0035 * (1 - 0.5 * _smoothstep(0.7, 1.0, i / n)) for i in range(n)]
+            _strand(bm, uvl, pts, outs, half_w, half_t)
+    me = bpy.data.meshes.new("HairBackV3")
+    bm.to_mesh(me)
     bm.free()
-    halves = []
-    for side in (-1, 1):
-        o = tails.copy()
-        o.data = tails.data.copy()
-        bpy.context.scene.collection.objects.link(o)
-        b2 = bmesh.new()
-        b2.from_mesh(o.data)
-        bmesh.ops.delete(b2, geom=[v for v in b2.verts if (v.co.x > 0) != (side > 0)], context="VERTS")
-        b2.to_mesh(o.data)
-        b2.free()
-        halves.append((side, o))
-    bpy.data.objects.remove(tails, do_unlink=True)
-    copies = []
-    # (source side, x offset, y-rotation degrees, length scale, depth)
-    # The last two are an underlayer just inside the curtain so a parting in
-    # the middle shows more hair rather than the coat.
-    layout = [(-1, -0.08, 7, 1.32, 0.06), (1, 0.08, -7, 1.32, 0.06), (-1, -0.03, 3, 1.42, 0.06),
-              (1, 0.03, -3, 1.4, 0.06), (-1, 0.0, 0, 1.25, 0.06),
-              (1, -0.014, 1, 1.36, 0.045), (-1, 0.014, -1, 1.36, 0.045)]
-    for k, (side, dx, rot_y, ls, depth) in enumerate(layout):
-        src = [o for sd, o in halves if sd == side][0]
-        o = src.copy()
-        o.data = src.data.copy()
-        bpy.context.scene.collection.objects.link(o)
-        v = np.array([vv.co[:] for vv in o.data.vertices])
-        top = v[:, 2] > v[:, 2].max() - 0.04
-        root = v[top].mean(axis=0)
-        tip = v[v[:, 2] < v[:, 2].min() + 0.04].mean(axis=0)
-        d = Vector(tip - root).normalized()
-        target = Vector((0.0, 0.1, -1.0)).normalized()
-        R = d.rotation_difference(target).to_matrix()
-        R = Matrix.Rotation(math.radians(rot_y), 3, "Y") @ R
-        local = v - root
-        local[:, 2] *= ls
-        rotated = (np.array(R) @ local.T).T
-        new_root = np.array([dx, depth, z_top - 0.02])
-        o.data.vertices.foreach_set("co", (rotated + new_root).ravel())
-        o.data.update()
-        copies.append(o)
-    for sd, o in halves:
-        bpy.data.objects.remove(o, do_unlink=True)
-    joined = C.join(copies, "HairBackV3")
-    print("HAIR back curtain built", len(joined.data.vertices))
-    return joined
+    o = bpy.data.objects.new("HairBackV3", me)
+    bpy.context.scene.collection.objects.link(o)
+    me.materials.append(mat)
+    for poly in me.polygons:
+        poly.use_smooth = True
+    print("HAIR long strands", len(me.vertices), "verts, torso centre y %.3f" % cy)
+    return o
 
 
 def preview(tag):
@@ -306,7 +433,7 @@ def build(stage="look"):
     objs = load_and_clean()
     body = [o for n, o in objs.items() if n.startswith("Body01_defaultMat_0")]
     recolor(objs)
-    rebuild_hair(objs, body)
+    generate_hair(objs)
     for o in mesh_objects():
         n = len(o.data.polygons)
         if n > 60000:

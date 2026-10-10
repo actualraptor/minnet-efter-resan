@@ -119,9 +119,27 @@ func _run() -> void:
 
 	# Edda: enter the cottage and talk.
 	var door: Door = main.world.door
+	var edda: NPC = main.edda
+	# Walk in through the doorway (regression: a wall rail once blocked it).
+	var dc := door.interaction_point()
+	var n := door.global_basis.z
+	n.y = 0.0
+	n = n.normalized()
+	if n.dot(edda.global_position - dc) < 0.0:
+		n = -n
+	var outside := dc - n * 2.2
+	player.teleport(Vector3(outside.x, terrain.height_at(outside.x, outside.z) + 0.2, outside.z), atan2(n.x, n.z))
+	player.camera_rig.yaw = atan2(-n.x, -n.z)
+	await _frames(10)
 	door.set_open(true)
 	await _seconds(0.8)
-	var edda: NPC = main.edda
+	Input.action_press("move_forward")
+	await _seconds(2.6)
+	Input.action_release("move_forward")
+	await _frames(20)
+	check("walks in through the open door", player.is_indoors(), "stopped %.2f m past the door" % n.dot(player.global_position - dc))
+	door.set_open(true)
+	await _seconds(0.8)
 	player.teleport(edda.global_position + Vector3(-0.6, 0.2, 1.4), PI)
 	await _frames(30)
 	check("player registers as indoors", player.is_indoors())

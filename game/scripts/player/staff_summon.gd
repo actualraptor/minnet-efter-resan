@@ -94,6 +94,12 @@ func _process(_delta: float) -> void:
 		stow()
 
 
+func _hand(pose: String) -> void:
+	var h = player.get("hands")
+	if h:
+		h.set_pose("R", pose)
+
+
 func touch() -> void:
 	_last_used = Time.get_ticks_msec() / 1000.0
 
@@ -109,7 +115,9 @@ func summon(variant := "") -> void:
 	_last_variant = clip
 	if loco:
 		loco.summon(clip)
+	_hand("open")
 	await get_tree().create_timer(VARIANTS[clip]).timeout
+	_hand("grip")
 	_sparks.global_position = _grip()
 	_sparks.restart()
 	Audio.sfx("spell_gather", -10.0, 0.05)
@@ -129,6 +137,7 @@ func stow() -> void:
 	busy = true
 	_sparks.global_position = _grip()
 	_sparks.restart()
+	get_tree().create_timer(0.45).timeout.connect(_hand.bind("relaxed"))
 	var tw := create_tween()
 	tw.tween_method(_set_radius, STAFF_LENGTH + 0.1, 0.0, 0.6).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
 	if loco:

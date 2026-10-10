@@ -23,7 +23,7 @@ func _ready() -> void:
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(out.path_join("face_%s.png" % e))
 	p.face.set_expression("neutral")
-	rig.zoom = 0.4
+	rig.zoom = 0.2
 	for side in [-1, 1, 0]:
 		rig.yaw = p.model.rotation.y + side * deg_to_rad(55.0)
 		await get_tree().create_timer(1.4).timeout

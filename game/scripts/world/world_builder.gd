@@ -143,6 +143,9 @@ func _cottage() -> void:
 	var panel := AnimatableBody3D.new()
 	panel.name = "Panel"
 	panel.collision_layer = 1 | 32
+	# The door swings by rotating its parent; in sync-to-physics mode the body
+	# would keep its closed collider in the doorway (the "blocked door" bug).
+	panel.sync_to_physics = false
 	door.add_child(panel)
 	var dscene: PackedScene = load("res://assets/models/buildings/door.glb")
 	var dmodel := dscene.instantiate()

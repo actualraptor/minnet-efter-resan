@@ -148,6 +148,12 @@ def _aim(pb, d_world, twist_ref=None):
     return rot
 
 
+GRIP_ALIGN = None  # world rotation turning the rest hand so its gripped staff points up
+
+
+ARM_SPREAD = 9.0  # deg: Freyja's coat, corset and capelet are bulkier than the mocap actor
+
+
 def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_deg=4.0):
     """Keyframe the cycle onto `arm` (a mesh-free armature for speed)."""
     act = bpy.data.actions.new(name)
@@ -178,6 +184,10 @@ def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_de
                 continue
             if bname in spine_chain:
                 d = posture @ Vector(d)
+            if bname.startswith(("upper_arm.", "forearm.")):
+                side = 1.0 if pbs[bname].bone.head_local.x > 0 else -1.0
+                spread = Matrix.Rotation(math.radians(-side * ARM_SPREAD), 3, "Y")
+                d = spread @ Vector(d)
             if bname in hold and hold_right > 0:
                 d = Vector(d).normalized() * (1 - hold_right) + hold[bname].normalized() * hold_right
             tw = None
@@ -200,6 +210,8 @@ def bake(arm, name, cyc, n, hold_right=0.0, staff=False, staff_tilt=8.0, lean_de
             pb = pbs["hand.R"]
             rest = pb.bone.matrix_local.to_3x3()
             R = Matrix.Rotation(math.radians(staff_tilt), 3, "X")
+            if GRIP_ALIGN is not None:
+                R = R @ GRIP_ALIGN
             pb.matrix = Matrix.Translation(pb.matrix.translation) @ (R @ rest).to_4x4()
             bpy.context.view_layer.update()
         for p in pbs:

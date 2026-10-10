@@ -763,6 +763,8 @@ class Animator:
         pb = self.pb["hand.R"]
         rest = pb.bone.matrix_local.to_3x3()
         R = Euler((math.radians(tilt_x), math.radians(tilt_y), 0), "XYZ").to_matrix()
+        if getattr(self.rig, "grip_align", None) is not None:
+            R = R @ self.rig.grip_align  # hand turned so the gripped staff points up
         loc = pb.matrix.translation.copy()
         pb.matrix = Matrix.Translation(loc) @ (R @ rest).to_4x4()
         bpy.context.view_layer.update()

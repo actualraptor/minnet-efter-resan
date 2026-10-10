@@ -39,6 +39,8 @@ var _fade := 0.0
 var loco: LocomotionAnimator
 var staff: StaffSummon
 var _look_mod: LookAtModifier3D
+var grounder: FootGrounder
+var hands: HandPoser
 var _look_point: Node3D
 var _look_node: Node3D = null
 var _look_offset := Vector3.ZERO
@@ -63,6 +65,7 @@ func _ready() -> void:
 	face.setup(model, "freyja")
 	secondary = CharacterPhysics.setup(model)
 	_setup_look_at()
+	_setup_grounding()
 	if _anim and _anim.has_animation(&"Walk") and _anim.has_animation(&"Run"):
 		loco = LocomotionAnimator.new()
 		loco.setup(_anim, "freyja")
@@ -88,27 +91,60 @@ func _setup_look_at() -> void:
 	_look_point.name = "LookPoint"
 	_look_point.top_level = true
 	add_child(_look_point)
-	_look_mod = LookAtModifier3D.new()
-	_look_mod.name = "HeadLook"
-	skel.add_child(_look_mod)
-	skel.move_child(_look_mod, 0)  # before secondary motion
-	_look_mod.bone_name = "head"
-	_look_mod.forward_axis = SkeletonModifier3D.BONE_AXIS_PLUS_Z
-	_look_mod.primary_rotation_axis = Vector3.AXIS_Y
-	_look_mod.use_secondary_rotation = true
-	_look_mod.target_node = _look_mod.get_path_to(_look_point)
-	_look_mod.duration = 0.45
-	_look_mod.transition_type = Tween.TRANS_SINE
-	_look_mod.ease_type = Tween.EASE_IN_OUT
-	_look_mod.use_angle_limitation = true
-	_look_mod.symmetry_limitation = true
-	_look_mod.primary_limit_angle = deg_to_rad(110.0)
-	_look_mod.primary_damp_threshold = 0.6
-	_look_mod.secondary_limit_angle = deg_to_rad(50.0)
-	_look_mod.secondary_damp_threshold = 0.6
-	_look_mod.influence = 0.8
+	# The turn is shared by neck and head (a head-only twist folds the jaw into
+	# the collar). Limit angles are full ranges: neck +-22 deg, head +-32 deg.
+	var neck_mod := _make_look_mod(skel, "neck", 44.0, 30.0, 0.6) if skel.find_bone("neck") >= 0 else null
+	_look_mod = _make_look_mod(skel, "head", 64.0, 36.0, 0.75)
+	if neck_mod:
+		skel.move_child(neck_mod, 0)
+		skel.move_child(_look_mod, 1)
+	else:
+		skel.move_child(_look_mod, 0)  # before secondary motion
 	if face:
 		face.look_at_node = _look_point
+
+
+func _setup_grounding() -> void:
+	var skels := model.find_children("*", "Skeleton3D", true, false)
+	if skels.is_empty():
+		return
+	var skel: Skeleton3D = skels[0]
+	grounder = FootGrounder.new()
+	grounder.name = "FootGrounder"
+	skel.add_child(grounder)
+	skel.move_child(grounder, 0)  # feet first, then look-at, then spring bones
+	if not grounder.setup(self):
+		grounder.queue_free()
+		grounder = null
+	hands = HandPoser.new()
+	hands.name = "HandPoser"
+	skel.add_child(hands)
+	skel.move_child(hands, 1)
+	if not hands.setup():
+		hands.queue_free()
+		hands = null
+
+
+func _make_look_mod(skel: Skeleton3D, bone: String, yaw_range: float, pitch_range: float, weight: float) -> LookAtModifier3D:
+	var m := LookAtModifier3D.new()
+	m.name = "Look_" + bone
+	skel.add_child(m)
+	m.bone_name = bone
+	m.forward_axis = SkeletonModifier3D.BONE_AXIS_PLUS_Z
+	m.primary_rotation_axis = Vector3.AXIS_Y
+	m.use_secondary_rotation = true
+	m.target_node = m.get_path_to(_look_point)
+	m.duration = 0.55
+	m.transition_type = Tween.TRANS_SINE
+	m.ease_type = Tween.EASE_IN_OUT
+	m.use_angle_limitation = true
+	m.symmetry_limitation = true
+	m.primary_limit_angle = deg_to_rad(yaw_range)
+	m.primary_damp_threshold = 0.5
+	m.secondary_limit_angle = deg_to_rad(pitch_range)
+	m.secondary_damp_threshold = 0.5
+	m.influence = weight
+	return m
 
 
 ## Look at a node (e.g. a speaker) with an offset; null returns to automatic.
@@ -130,7 +166,7 @@ func _update_look(delta: float) -> void:
 		if cam:
 			var to := cam.global_position - eye
 			var flat := Vector3(to.x, 0, to.z).normalized()
-			if flat.dot(fwd) > 0.25 and to.length() < 9.0 and velocity.length() < 3.0:
+			if flat.dot(fwd) > 0.55 and to.length() < 9.0 and velocity.length() < 3.0:
 				want = cam.global_position
 	# Ease the target itself too, so glances are smooth rather than snapping.
 	_look_point.global_position = _look_point.global_position.lerp(want, 1.0 - exp(-6.0 * delta))

@@ -168,7 +168,16 @@ def build(root):
     # Door step stones
     vis.append(C.box("Step", (DOOR_X, -hy - 0.55, 0.12), (0.8, 0.35, 0.14), m["stone"], bevel=0.05))
     vis.append(C.box("Step2", (DOOR_X, -hy - 0.25, 0.3), (0.75, 0.22, 0.14), m["stone_dark"], bevel=0.04))
-    col.append(("StepCol", (DOOR_X, -hy - 0.45, 0.18), (0.8, 0.42, 0.2)))
+    # Walkable entrance: a ramp along the two step nosings up to a landing at
+    # floor height (a character controller can't climb a solid 38 cm block).
+    y0, y1 = -hy - 1.52, -hy - 0.45
+    run_, rise = y1 - y0, FLOOR
+    L = math.hypot(run_, rise)
+    a = math.atan2(rise, run_)
+    nrm = (-math.sin(a), math.cos(a))  # slope normal in (y, z)
+    mid = ((y0 + y1) / 2 - nrm[0] * 0.1, rise / 2 - nrm[1] * 0.1)
+    col.append(("StepRamp", (DOOR_X, mid[0], mid[1]), (0.8, L / 2, 0.1), a))
+    col.append(("StepLanding", (DOOR_X, -hy - 0.25, FLOOR / 2), (0.8, 0.25, FLOOR / 2)))
     col.append(("FloorCol", (0, 0, FLOOR / 2 - 0.1), (hx + 0.12, hy + 0.12, FLOOR / 2 + 0.1)))
 
     # --- Walls ------------------------------------------------------------------
@@ -194,7 +203,12 @@ def build(root):
             vis.append(C.box("Post", (sx * (hx - 0.1), sy * (hy - 0.1), FLOOR + WALL_H / 2), (0.13, 0.13, WALL_H / 2 + 0.02), m["timber"]))
     for sy in (-1, 1):
         vis.append(C.box("BeamTop", (0, sy * (hy - 0.08), top - 0.1), (hx + 0.02, 0.12, 0.11), m["timber"]))
-        vis.append(C.box("BeamMid", (0, sy * (hy - 0.08), FLOOR + 0.9), (hx, 0.11, 0.06), m["timber"]))
+        if sy < 0:  # front wall: stop the mid rail at the door jambs
+            gap0, gap1 = DOOR_X - DOOR_W / 2 - 0.13, DOOR_X + DOOR_W / 2 + 0.13
+            for (x0, x1) in ((-hx, gap0), (gap1, hx)):
+                vis.append(C.box("BeamMid", ((x0 + x1) / 2, sy * (hy - 0.08), FLOOR + 0.9), ((x1 - x0) / 2, 0.11, 0.06), m["timber"]))
+        else:
+            vis.append(C.box("BeamMid", (0, sy * (hy - 0.08), FLOOR + 0.9), (hx, 0.11, 0.06), m["timber"]))
     for sx in (-1, 1):
         vis.append(C.box("BeamTopS", (sx * (hx - 0.08), 0, top - 0.1), (0.12, hy, 0.11), m["timber"]))
     for (x0, x1) in ((-4.3, -3.2), (3.2, 4.3)):
@@ -520,8 +534,14 @@ def build(root):
         C.set_origin_world(o)
     house = C.join(vis, "Cottage")
     col_objs = []
-    for (name, c, h) in col:
-        o = C.box(name + "-colonly", c, h)
+    for entry in col:
+        name, c, h = entry[:3]
+        if len(entry) > 3:  # rotated about X (ramps)
+            o = C.box(name + "-colonly", (0, 0, 0), h)
+            o.rotation_euler = (entry[3], 0.0, 0.0)
+            o.location = c
+        else:
+            o = C.box(name + "-colonly", c, h)
         col_objs.append(o)
     out = os.path.join(root, "game", "assets", "models", "buildings")
     C.export_glb(os.path.join(out, "cottage.glb"), [house] + col_objs, animations=False)

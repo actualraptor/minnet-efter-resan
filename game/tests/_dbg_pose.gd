@@ -10,7 +10,7 @@ func _ready() -> void:
 	await get_tree().create_timer(1.0).timeout
 	var p: Player = main.player
 	var rig: CameraRig = p.camera_rig
-	rig.zoom = 0.45
+	rig.zoom = float(OS.get_environment("DBG_ZOOM")) if OS.get_environment("DBG_ZOOM") != "" else 0.45
 	rig.pitch = deg_to_rad(-4.0)
 	await p.staff.summon("Summon")
 	await get_tree().create_timer(1.5).timeout

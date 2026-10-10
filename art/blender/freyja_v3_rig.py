@@ -54,6 +54,81 @@ def surface_points(objs):
     return np.concatenate([np.array([v.co[:] for v in o.data.vertices]) for o in objs])
 
 
+class OuterShell:
+    """Exact outer surface of some meshes, sampled by casting rays from outside
+    toward the vertical axis through (0, cy). Sparse meshes (the skirt has ~300
+    vertices) made percentile sampling jump between wrong radii."""
+
+    def __init__(self, objs, start_r=0.42):
+        from mathutils.bvhtree import BVHTree
+        bm = bmesh.new()
+        for o in objs:
+            tmp = bmesh.new()
+            tmp.from_mesh(o.data)
+            tmp.transform(o.matrix_world)
+            me = bpy.data.meshes.new("_shell")
+            tmp.to_mesh(me)
+            tmp.free()
+            bm.from_mesh(me)
+            bpy.data.meshes.remove(me)
+        self.bvh = BVHTree.FromBMesh(bm)
+        bm.free()
+        self.start_r = start_r
+
+    def centre_y(self, z):
+        hits = [self.radius(a, z, 0.0, raw=True) for a in (90.0, 270.0)]
+        if None in hits:
+            return 0.0
+        return (hits[0] + hits[1]) / 2  # midway between the back and front surfaces
+
+    def radius(self, a_deg, z, cy, raw=False):
+        a = math.radians(a_deg)
+        d = Vector((math.cos(a), math.sin(a), 0.0))
+        origin = Vector((0.0, cy, z)) + d * self.start_r
+        loc, nrm, idx, dist = self.bvh.ray_cast(origin, -d, self.start_r)
+        if loc is None:
+            return None
+        if raw:
+            return loc.y if abs(d.y) > 0.5 else loc.x
+        return self.start_r - dist
+
+
+def wrap_shell(name, shell, z_top, z_bot, a0, a1, offset, mat, rows=8, segs=24, hem_drop=0.0):
+    """Band on the outer surface of `shell` (angles in degrees, 270 = front)."""
+    cy = shell.centre_y((z_top + z_bot) / 2)
+    bm = bmesh.new()
+    grid = []
+    prev = None
+    for j in range(rows + 1):
+        t = j / rows
+        z = z_top + (z_bot - z_top) * t
+        rs = []
+        for i in range(segs + 1):
+            a = a0 + (a1 - a0) * i / segs
+            r = shell.radius(a, z, cy)
+            rs.append(r if r is not None else (prev[i] if prev is not None else 0.15))
+        rs = np.array(rs)
+        full = abs((a1 - a0) - 360) < 1e-3
+        for _ in range(2):
+            pad = np.concatenate([rs[-3:-1], rs, rs[1:3]]) if full else np.concatenate([rs[:1], rs[:1], rs, rs[-1:], rs[-1:]])
+            rs = np.convolve(pad, np.ones(5) / 5, mode='valid')
+        prev = rs
+        row = []
+        for i in range(segs + 1):
+            u = i / segs
+            ar = math.radians(a0 + (a1 - a0) * u)
+            drop = hem_drop * (1 - abs(u * 2 - 1)) ** 1.3 * t ** 2
+            row.append(bm.verts.new((math.cos(ar) * (rs[i] + offset), cy + math.sin(ar) * (rs[i] + offset), z - drop)))
+        grid.append(row)
+    for j in range(rows):
+        for i in range(segs):
+            bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    edge = [grid[j][0].co.copy() for j in range(rows + 1)] + [v.co.copy() for v in grid[-1][1:]] + \
+           [grid[j][-1].co.copy() for j in range(rows - 1, -1, -1)]
+    return C.mesh_obj(name, bm, mat, smooth=True), edge
+
+
 def wrap_surface(name, pts, z_top, z_bot, a0, a1, offset, mat, rows=8, segs=24, hem_drop=0.0):
     """Band hugging the outer silhouette of pts (angles in degrees, 270 = front).
     Angles are measured around the torso's own centre: the model origin sits
@@ -106,13 +181,14 @@ def accessories(objs, rig):
     cp = surface_points(cloth)
     cp = cp[np.abs(cp[:, 0]) < 0.2]  # torso only (arms hang at waist height)
     parts = []
-    corset, _ = wrap_surface("Corset", cp, 1.13, 0.99, 0, 360, 0.01, M["leather"], rows=4, segs=40)
+    torso_shell = OuterShell(cloth, start_r=0.3)   # inside the A-posed arms
+    corset, _ = wrap_shell("Corset", torso_shell, 1.13, 0.99, 0, 360, 0.01, M["leather"], rows=4, segs=40)
     parts.append((corset, ["hips", "spine", "chest"]))
     trim = []
     front_r = float(np.percentile(np.abs(cp[(np.abs(cp[:, 2] - 1.08) < 0.02) & (np.abs(cp[:, 0]) < 0.03)][:, 1]), 97))
     for z in (1.11, 1.05, 1.0):
         trim.append(C.box("Buckle", (0.0, -front_r - 0.016, z), (0.016, 0.006, 0.012), M["gold"], bevel=0.003))
-    hip, _ = wrap_surface("HipBelt", cp, 0.975, 0.95, 0, 360, 0.018, M["leather_dark"], rows=1, segs=40)
+    hip, _ = wrap_shell("HipBelt", torso_shell, 0.975, 0.95, 0, 360, 0.016, M["leather_dark"], rows=1, segs=40)
     trim.append(hip)
     hip_r = float(np.percentile(np.abs(cp[(np.abs(cp[:, 2] - 0.96) < 0.02) & (np.abs(cp[:, 0]) < 0.04)][:, 1]), 97))
     trim.append(C.box("HipBuckle", (0.03, -hip_r - 0.024, 0.962), (0.02, 0.006, 0.016), M["gold"], bevel=0.004))
@@ -135,17 +211,14 @@ def accessories(objs, rig):
     hem_z = float(np.percentile(sp_[:, 2], 1))
     bits = []
     sp_ = sp_[np.abs(sp_[:, 0]) < 0.3]
+    skirt_shell = OuterShell(skirt or cloth, start_r=0.45)
     for (ac, hw) in ((270, 9), (215, 7), (325, 7), (90, 9)):
-        pn, edge = wrap_surface("PlumPanel", sp_, 0.9, hem_z + 0.01, ac - hw, ac + hw, 0.006, M["plum"], rows=8, segs=8, hem_drop=0.12)
+        pn, edge = wrap_shell("PlumPanel", skirt_shell, 0.9, hem_z + 0.01, ac - hw, ac + hw, 0.006, M["plum"], rows=10, segs=8, hem_drop=0.1)
         bits.append(pn)
-        bits.append(C.tube("PanelTrim", edge, [0.004] * len(edge), M["gold"], segs=4, caps=False))
+        bits.append(C.tube("PanelTrim", edge, [0.0035] * len(edge), M["gold"], segs=4, caps=False))
     parts.append((C.join(bits, "PlumPanels"), ["hips", "thigh.L", "thigh.R"]))
     # Two gathered ruffle tiers hanging straight down just inside the skirt hem.
-    near = sp_[np.abs(sp_[:, 2] - (hem_z + 0.03)) < 0.03]
-    pcy = float(np.percentile(near[:, 1], 3) + np.percentile(near[:, 1], 97)) / 2
-    near = near - np.array([0.0, pcy, 0.0])
-    ang = np.arctan2(near[:, 1], near[:, 0])
-    rad = np.hypot(near[:, 0], near[:, 1])
+    pcy = skirt_shell.centre_y(hem_z + 0.03)
     tiers = []
     for k, (top, bot, inset, freq) in enumerate(((hem_z + 0.06, hem_z - 0.035, 0.012, 22), (hem_z + 0.03, hem_z - 0.06, 0.03, 17))):
         bm = bmesh.new()
@@ -155,10 +228,13 @@ def accessories(objs, rig):
             row = []
             for i in range(segs):
                 a = i / segs * math.tau
-                m = np.abs(((ang - a) + math.pi) % math.tau - math.pi) < 0.2
-                r = float(np.percentile(rad[m], 50)) if m.sum() > 3 else float(np.median(rad))
-                r = r - inset + (0.006 * j)  # slight outward fall toward the hem
-                wav = math.sin(a * freq) * (0.006 + 0.004 * j)
+                # Follow the skirt at this row's height (inside it above the hem,
+                # flaring a little below it) so no wave pokes through the skirt.
+                r_here = skirt_shell.radius(math.degrees(a), max(z, hem_z + 0.012), pcy) or 0.2
+                amp = 0.005 + 0.004 * j
+                wav = math.sin(a * freq) * amp
+                below = max(0.0, hem_z - z)
+                r = r_here - inset - (amp if z > hem_z else 0.0) + below * 0.35
                 row.append(bm.verts.new((math.cos(a) * (r + wav), pcy + math.sin(a) * (r + wav), z + (math.sin(a * freq) * 0.004 if j == 2 else 0))))
             rows.append(row)
         for j in range(2):
@@ -259,10 +335,10 @@ def add_dynamic_chains(arm, objs):
     chains = {}
     # Back hair strands.
     zs = [1.5, 1.28, 1.06, 0.84, 0.64]
-    for k, x in enumerate(np.linspace(-0.09, 0.09, 7)):
+    for k, x in enumerate(np.linspace(-0.14, 0.14, 9)):
         pts = []
         for z in zs:
-            m = (np.abs(hair[:, 0] - x) < 0.025) & (np.abs(hair[:, 2] - z) < 0.04)
+            m = (np.abs(hair[:, 0] - x) < 0.03) & (np.abs(hair[:, 2] - z) < 0.04)
             y = float(hair[m, 1].mean()) if m.any() else 0.12
             pts.append(Vector((x, y, z)))
         chains[f"hairB_{k}"] = ("head", pts)
@@ -487,12 +563,20 @@ def run(root, mesh_objects, target_h):
     objs = {o.name: o for o in mesh_objects()}
     body = [o for n, o in objs.items() if n.startswith("Body01_defaultMat_0")]
     J = measure_joints(body)
-    relax_hands(body, J)
+    import freyja_hands as FH
+    hands = [FH.analyze(body, J, 1), FH.analyze(body, J, -1)]  # fingers stay straight at rest; Godot curls them
     Lc.J.update(J)
     spec = dict(BC.SPECS["freyja"])
     spec["height"] = Lc.BASE_H
     rig = Lc.Rig(spec)
     parts = accessories(objs, rig)
+    # The staff is modelled vertical at the old grip; move it into the right
+    # hand's palm and teach the staff poses the matching wrist orientation.
+    right = hands[1]
+    rig.grip_align = FH.grip_align(right)
+    staff_obj = next(o for o, _, _ in rig.objects if o.name.startswith("Staff"))
+    old_grip = rig.p("wrist", -1).lerp(rig.p("hand_tip", -1), 0.45)
+    rig.staff_tip = FH.place_staff(staff_obj, rig.staff_tip, old_grip, right)
     arm = build_rig(J, [])  # hair is driven by dynamic chains (add_dynamic_chains)
     rig.arm = arm
     # Eye bones (blink / squint / wide) placed at each eyeball's centre.
@@ -508,10 +592,11 @@ def run(root, mesh_objects, target_h):
         b.parent = arm.data.edit_bones["head"]
     bpy.ops.object.mode_set(mode="OBJECT")
     add_dynamic_chains(arm, objs)
+    FH.add_bones(arm, hands)
     names = [b.name for b in arm.data.bones]
     dyn = lambda p: [n for n in names if n.startswith(p)]
     head_bits = ("Object_3_", "Object_4_", "FrierenEyes")
-    core = [n for n in names if not n.startswith(("hair", "skirt_", "cape_", "eye."))]
+    core = [n for n in names if not n.startswith(("hair", "skirt_", "cape_", "eye.", "f_", "thumb_"))]
     skirt_bones = ["hips", "thigh.L", "thigh.R"] + dyn("skirt_")
     for n, o in objs.items():
         if n.startswith(head_bits):
@@ -588,6 +673,7 @@ def run(root, mesh_objects, target_h):
         print("HIDDEN BODY removed", len(kill), "verts from", n)
     src = proxy
     transfer_skin(src, body_objs, arm)
+    FH.weight(body_objs, arm, hands)
     cloth = [o for n, o in objs.items() if n.startswith(("Dress Skirt_", "Boots_", "Leggings_", "Panties_"))]
     cloth += [o for (o, bones) in parts if bones is not None]
     transfer_skin(src, cloth, arm)
@@ -599,14 +685,14 @@ def run(root, mesh_objects, target_h):
         for n in ("hips", "thigh.L", "thigh.R"):
             o.vertex_groups.new(name=n)
         for v in o.data.vertices:
-            leg = _smooth01(0.96, 0.6, v.co.z) * 0.85
+            leg = _smooth01(0.96, 0.6, v.co.z) * 0.4  # legs nudge the hem; springs + leg colliders do the rest
             side = 1.0 / (1.0 + math.exp(-v.co.x / 0.02))  # 1 = left
             o.vertex_groups["hips"].add([v.index], 1.0 - leg, "REPLACE")
             o.vertex_groups["thigh.L"].add([v.index], leg * side, "REPLACE")
             o.vertex_groups["thigh.R"].add([v.index], leg * (1.0 - side), "REPLACE")
         o.parent = arm
         _arm_mod(o, arm)
-        blend_dynamic(o, arm, "skirt_", lambda co: _smooth01(0.97, 0.8, co.z) * 0.45)
+        blend_dynamic(o, arm, "skirt_", lambda co: _smooth01(0.97, 0.78, co.z) * 0.62)
     for o in cloth:
         if o.name.startswith("Dress Skirt_") and o not in skirtish:
             blend_dynamic(o, arm, "cape_", lambda co: _smooth01(0.2, 0.25, math.hypot(co.x, co.y)) * (1.0 if 1.2 < co.z < 1.42 else 0.0) * 0.8)
@@ -671,6 +757,7 @@ def run(root, mesh_objects, target_h):
     tip.matrix_world = Matrix.Translation(rig.staff_tip)
     anim = Lc.Animator(rig)
     import mocap_retarget as MR
+    MR.GRIP_ALIGN = rig.grip_align
     mocap = os.path.join(root, "art", "source", "mocap")
     speeds = MR.retarget_clips(arm, [
         ("Walk", "07_01.bvh", {"lean": 4.0}),

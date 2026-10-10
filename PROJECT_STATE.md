@@ -67,6 +67,7 @@ See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from sc
 5. Milestone 002 planning: the village to the south and the next small quests.
 
 ## Change log (short)
+- 2026-10-10 (b): Freyja: generated long loose hair (replaces the twin-tail ribbons), finger/thumb bones with procedural hand poses (relaxed/grip/open) and the staff placed in her fist, foot IK grounding on terrain, neck+head look-at, skirt pieces fitted by ray-casting the real skirt surface, leg colliders sized to her thighs. Cottage: walkable step ramp; door collider now follows the swing (the door used to stay solid when open).
 - 2026-10-10: Freyja: head look-at, fixed a camera-fade bug that left her semi-transparent (eyes drew through her face), fixed back-of-waist clipping (bands wrapped around the wrong centre), back-hair underlayer, gem recolour, relaxed hand curl, free-armed jump/fall, playtest build.
 - 2026-10-09: Vision pass, characters: Freyja v2, Edda v2, Pippa v2. Golden-hour light, volumetric haze, cumulus sky, leaf-card trees, denser wildflowers.
 - 2026-10-09: Milestone 001 slice built: world, cottage, characters, spell, dialogue, quest, memory, audio, tests, docs, site.

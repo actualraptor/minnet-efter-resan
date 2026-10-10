@@ -11,13 +11,15 @@ extends RefCounted
 const GROUPS := {
 	"hairB_": {"stiffness": 1.0, "drag": 0.5, "gravity": 3.2, "radius": 0.025},
 	"hairS_": {"stiffness": 1.2, "drag": 0.45, "gravity": 1.6, "radius": 0.02},
-	"skirt_": {"stiffness": 5.0, "drag": 0.7, "gravity": 2.5, "radius": 0.012},
+	"skirt_": {"stiffness": 4.0, "drag": 0.7, "gravity": 2.5, "radius": 0.018},
 	"cape_": {"stiffness": 2.6, "drag": 0.55, "gravity": 0.3, "radius": 0.02},
 }
 
 ## bone, kind, radius, height (capsule), offset along bone (0..1 of its length)
 const COLLIDERS := [
-	["thigh.L", "capsule", 0.06, 0.38, 0.55], ["thigh.R", "capsule", 0.06, 0.38, 0.55],
+	# Thighs measured from the tights: ~0.09 m radius at the top, ~0.06 above the knee.
+	["thigh.L", "capsule", 0.085, 0.24, 0.25], ["thigh.R", "capsule", 0.085, 0.24, 0.25],
+	["thigh.L", "capsule", 0.068, 0.3, 0.62], ["thigh.R", "capsule", 0.068, 0.3, 0.62],
 	["shin.L", "capsule", 0.06, 0.36, 0.5], ["shin.R", "capsule", 0.06, 0.36, 0.5],
 	["spine", "capsule", 0.13, 0.26, 0.5], ["chest", "capsule", 0.135, 0.24, 0.5],
 	["upper_arm.L", "capsule", 0.055, 0.3, 0.5], ["upper_arm.R", "capsule", 0.055, 0.3, 0.5],
