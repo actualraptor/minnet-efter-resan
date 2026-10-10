@@ -21,6 +21,9 @@ func _ready() -> void:
 	rig.shoulder_offset = 0.0
 	rig.outdoor_length = 3.0
 	rig.pitch = deg_to_rad(-4.0)
+	if OS.get_environment("DBG_STAFF") == "1":
+		await get_tree().create_timer(1.0).timeout
+		await p.staff.summon()
 	for view in ["side", "back", "front"]:
 		var start := Vector3(-14.0, 0, 6.0)
 		start.y = t.height_at(start.x, start.z) + 0.1
