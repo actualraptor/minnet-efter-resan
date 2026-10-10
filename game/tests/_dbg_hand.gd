@@ -10,7 +10,7 @@ func _ready() -> void:
 	await get_tree().create_timer(1.0).timeout
 	var p: Player = main.player
 	var skel: Skeleton3D = p.model.find_children("*", "Skeleton3D", true, false)[0]
-	var hb := skel.find_bone("hand.R")
+	var hb := RigNames.find(skel, "hand.R")
 	var cam := Camera3D.new()
 	cam.fov = 35.0
 	add_child(cam)

@@ -25,6 +25,7 @@ var _last_used := 0.0
 var _radius := 0.0
 var _sparks: GPUParticles3D
 var _grip_bone := -1
+var _tip_bones: Array[int] = []   # curled fingertip knuckles: far side of the fist
 ## A staff exported as a free prop (no skin): held at the hand every frame,
 ## upright with a slight forward lean, so it reads right in any arm pose.
 var _prop: Node3D
@@ -49,6 +50,10 @@ func setup(p: Node3D, model: Node, locomotion: LocomotionAnimator) -> bool:
 		_skel = sk
 		_hand_bone = RigNames.find(_skel, "hand.R")
 		_grip_bone = _skel.find_bone("RightMiddleProximal")
+		for f in ["Index", "Middle", "Ring", "Little"]:
+			var d := _skel.find_bone("Right%sDistal" % f)
+			if d >= 0:
+				_tip_bones.append(d)
 		break
 	_sparks = GPUParticles3D.new()
 	_sparks.amount = 70
@@ -87,7 +92,14 @@ func _place_prop() -> void:
 	var fb := m.global_basis.orthonormalized() if m else Basis()
 	# Upright in her hand, top leaning a little forward (model +Z is forward).
 	var lean := Basis(fb.x.normalized(), deg_to_rad(8.0))
-	_prop.global_transform = Transform3D(lean * fb, _grip())
+	var o := _grip()
+	if not _tip_bones.is_empty():
+		# The fist's hole: halfway between the palm and the curled fingertips.
+		var c := Vector3.ZERO
+		for b in _tip_bones:
+			c += _skel.get_bone_global_pose(b).origin
+		o = o.lerp(_skel.global_transform * (c / _tip_bones.size()), 0.5)
+	_prop.global_transform = Transform3D(lean * fb, o)
 
 
 func _grip() -> Vector3:

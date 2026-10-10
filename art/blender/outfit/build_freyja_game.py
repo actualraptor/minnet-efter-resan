@@ -233,6 +233,24 @@ def build_staff(arm):
     return staff, st
 
 
+def grip_align(prox):
+    """World rotation that turns the stand-in rig's right hand from its T-pose
+    rest (fingers out to the side, palm down) to a staff-holding hand: fingers
+    pointing forward and a little down, palm facing her body, so the closed fist
+    holds an upright staff."""
+    hb = prox.data.bones["hand.R"]
+    rest = hb.matrix_local.to_3x3()
+    d0 = (rest @ Vector((0, 1, 0))).normalized()           # finger direction at rest
+    n0 = Vector((0, 0, -1))                                 # palm faces down in the T-pose
+    n0 = (n0 - d0 * n0.dot(d0)).normalized()
+    d1 = Vector((0.0, -1.0, -0.35)).normalized()            # forward (-Y) and slightly down
+    n1 = Vector((1.0, 0.0, 0.0))                            # palm toward her (+X for the right hand)
+    n1 = (n1 - d1 * n1.dot(d1)).normalized()
+    A = Matrix((d0, n0, d0.cross(n0))).transposed()
+    Bm = Matrix((d1, n1, d1.cross(n1))).transposed()
+    return Bm @ A.inverted()
+
+
 GESTURES = ("Cast", "Summon", "SummonFlick", "SummonReach", "SummonTwirl", "Talk", "IdleStaff")
 
 
@@ -250,8 +268,8 @@ def bake_gestures(prox):
     class Shim:
         arm = prox
         s = 1.0
-        staff_tip = None
-        grip_align = None
+        staff_tip = Vector((0, 0, 1))      # any non-zero: enables staff_upright
+        grip_align = grip_align(prox)
         spec = {}
     anim = Lc.Animator(Shim())
     made = []
@@ -260,12 +278,31 @@ def bake_gestures(prox):
             continue
 
         def posed(a, t, f, fn=fn):
-            fn(a, t, f)
-            for bn, Rd in corr.items():
-                pb = a.pb[bn]
-                M = pb.bone.matrix_local.to_3x3()
-                world = M @ pb.rotation_quaternion.to_matrix() @ M.inverted()
-                pb.rotation_quaternion = (M.inverted() @ world @ Rd @ M).to_quaternion()
+            # The A-pose drop must be in place before staff_upright sets the
+            # wrist (absolute); otherwise it would carry the wrist down with it.
+            state = {"done": False}
+            orig = a.staff_upright
+
+            def correct():
+                if state["done"]:
+                    return
+                state["done"] = True
+                for bn, Rd in corr.items():
+                    pb = a.pb[bn]
+                    M = pb.bone.matrix_local.to_3x3()
+                    world = M @ pb.rotation_quaternion.to_matrix() @ M.inverted()
+                    pb.rotation_quaternion = (M.inverted() @ world @ Rd @ M).to_quaternion()
+                bpy.context.view_layer.update()
+
+            def upright(*args, **kw):
+                correct()
+                orig(*args, **kw)
+            a.staff_upright = upright
+            try:
+                fn(a, t, f)
+            finally:
+                a.staff_upright = orig
+            correct()
         anim.action(name, frames, posed, loop)
         made.append(name)
     anim.reset()
@@ -295,7 +332,11 @@ def main():
              ("Run", "09_02.bvh", {"lean": 9.0}),
              ("Jump", "16_05.bvh", {"segment": "jump", "lean": 6.0, "calm_head": 0.7}),
              ("Fall", "16_05.bvh", {"segment": "fall", "lean": 4.0, "calm_head": 0.7}),
-             ("Land", "16_05.bvh", {"segment": "land", "lean": 6.0, "calm_head": 0.6})]
+             ("Land", "16_05.bvh", {"segment": "land", "lean": 6.0, "calm_head": 0.6}),
+             # Staff in the right hand: forearm brought forward, wrist turned to hold it.
+             ("WalkStaff", "07_01.bvh", {"hold_right": 0.55, "staff": True, "staff_tilt": 6, "lean": 4.0}),
+             ("RunStaff", "09_02.bvh", {"hold_right": 0.5, "staff": True, "staff_tilt": 12, "lean": 9.0})]
+    MR.GRIP_ALIGN = grip_align(prox)
     speeds = MR.retarget_clips(prox, clips, mocap)
     prox.animation_data_create()
     gestures = bake_gestures(prox)
@@ -303,10 +344,6 @@ def main():
         tr.mute = True
     fingers = finger_basis(arm)
     acts = [transfer(arm, prox, name, fingers) for name in [c[0] for c in clips] + gestures]
-    for a in ("Walk", "Run"):
-        c = next(x for x in acts if x.name == a).copy()
-        c.name = a + "Staff"
-        acts.append(c)
     arm.animation_data_create()
     for tr in list(arm.animation_data.nla_tracks):
         arm.animation_data.nla_tracks.remove(tr)

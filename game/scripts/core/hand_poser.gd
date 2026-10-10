@@ -22,31 +22,66 @@ var target := {"L": {"grip": 0.0, "open": 0.0}, "R": {"grip": 0.0, "open": 0.0}}
 var _cur := {"L": {"grip": 0.0, "open": 0.0}, "R": {"grip": 0.0, "open": 0.0}}
 var _bones := {}   # "L"/"R" -> {"f": [[id, id, id] x4], "t": [id, id, id]}
 var _rest := {}    # bone id -> Quaternion
+var _axis := {}    # bone id -> local curl axis (humanoid rigs)
 
 
 func setup() -> bool:
 	var sk := get_skeleton()
 	if sk == null:
 		return false
+	if _setup_layout(sk, false):
+		return true
+	_bones.clear()
+	_rest.clear()
+	_axis.clear()
+	if _setup_layout(sk, true):
+		return true
+	_bones.clear()   # no known finger layout: stay inert
+	_rest.clear()
+	_axis.clear()
+	active = false
+	return false
+
+
+## humanoid = VRoid/VRM names (LeftIndexProximal ...), curl axes derived from
+## the rest pose (fingers out to the side, palms down: curl = finger x down).
+func _setup_layout(sk: Skeleton3D, humanoid: bool) -> bool:
 	for s in ["L", "R"]:
+		var side := "Left" if s == "L" else "Right"
 		var fingers := []
 		for f in FINGERS:
 			var ids := []
 			for k in 3:
-				ids.append(sk.find_bone("f_%s_%d.%s" % [f, k + 1, s]))
+				if humanoid:
+					var hf: String = {"index": "Index", "middle": "Middle", "ring": "Ring", "pinky": "Little"}[f]
+					ids.append(sk.find_bone("%s%s%s" % [side, hf, ["Proximal", "Intermediate", "Distal"][k]]))
+				else:
+					ids.append(sk.find_bone("f_%s_%d.%s" % [f, k + 1, s]))
 			fingers.append(ids)
 		var thumb := []
 		for k in 3:
-			thumb.append(sk.find_bone("thumb_%d.%s" % [k + 1, s]))
+			if humanoid:
+				thumb.append(sk.find_bone("%sThumb%s" % [side, ["Metacarpal", "Proximal", "Distal"][k]]))
+			else:
+				thumb.append(sk.find_bone("thumb_%d.%s" % [k + 1, s]))
 		_bones[s] = {"f": fingers, "t": thumb}
 		for ids in fingers + [thumb]:
 			for i in ids:
 				if i < 0:
-					_bones.clear()   # not this rig's finger layout (e.g. VRoid): stay inert
-					_rest.clear()
-					active = false
 					return false
 				_rest[i] = sk.get_bone_rest(i).basis.get_rotation_quaternion()
+				if humanoid:
+					var g := sk.get_bone_global_rest(i)
+					var kids := sk.get_bone_children(i)
+					var d: Vector3
+					if kids.size() > 0:
+						d = sk.get_bone_global_rest(kids[0]).origin - g.origin
+					else:
+						d = g.origin - sk.get_bone_global_rest(sk.get_bone_parent(i)).origin
+					var ax := d.normalized().cross(Vector3.DOWN)
+					if ax.length() < 1e-4:
+						ax = Vector3.RIGHT
+					_axis[i] = (g.basis.orthonormalized().inverse() * ax).normalized()
 	return true
 
 
@@ -78,4 +113,5 @@ func _process_modification_with_delta(delta: float) -> void:
 
 
 func _apply(sk: Skeleton3D, bone: int, deg: float) -> void:
-	sk.set_bone_pose_rotation(bone, _rest[bone] * Quaternion(Vector3.RIGHT, deg_to_rad(deg)))
+	var ax: Vector3 = _axis.get(bone, Vector3.RIGHT)
+	sk.set_bone_pose_rotation(bone, _rest[bone] * Quaternion(ax, deg_to_rad(deg)))
