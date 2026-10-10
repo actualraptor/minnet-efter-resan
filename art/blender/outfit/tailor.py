@@ -113,7 +113,7 @@ class Body:
         parts = []
         for o in self.meshes:
             mats = [m.name.upper() if m else "" for m in o.data.materials]
-            if not any(m.endswith("_SKIN") for m in mats):
+            if not any(m.split(" (")[0].endswith("_SKIN") for m in mats):
                 continue
             c = o.copy()
             c.data = o.data.copy()
@@ -122,7 +122,7 @@ class Body:
                 c.shape_key_clear()
             bm = bmesh.new()
             bm.from_mesh(c.data)
-            bmesh.ops.delete(bm, geom=[f for f in bm.faces if not mats[f.material_index].endswith("_SKIN")], context="FACES")
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if not mats[f.material_index].split(" (")[0].endswith("_SKIN")], context="FACES")
             bm.to_mesh(c.data)
             bm.free()
             c.modifiers.clear()
@@ -182,11 +182,25 @@ class Body:
         if key not in cache:
             bm = bmesh.new()
             for o in [self.shell()] + (self.layers or []):
-                tmp = o.data.copy()
-                tmp.transform(o.matrix_world)
-                bm.from_mesh(tmp)
-                bpy.data.meshes.remove(tmp)
-            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_center_median().z > z_max], context="FACES")
+                part = bmesh.new()
+                part.from_mesh(o.data)
+                part.transform(o.matrix_world)
+                if o is self.shell():
+                    # Skin: drop the head and neck by their bone weights (a height
+                    # cut would also remove raised shoulders and sleeve puffs).
+                    head = {g.index for g in o.vertex_groups if g.name in ("Head", "Neck")}
+                    dl = part.verts.layers.deform.active
+                    if dl is not None and head and z_max < 9:
+                        kill = [f for f in part.faces
+                                if sum(sum(w for gi, w in v[dl].items() if gi in head) for v in f.verts) / len(f.verts) > 0.5]
+                        bmesh.ops.delete(part, geom=kill, context="FACES")
+                else:
+                    bmesh.ops.delete(part, geom=[f for f in part.faces if f.calc_center_median().z > z_max], context="FACES")
+                me = bpy.data.meshes.new("_tmp")
+                part.to_mesh(me)
+                part.free()
+                bm.from_mesh(me)
+                bpy.data.meshes.remove(me)
             cache[key] = BVHTree.FromBMesh(bm)
             bm.free()
             self._below = cache
@@ -233,8 +247,10 @@ def limit_and_normalise(obj, max_bones=4, allowed=None):
         ws.sort(reverse=True)
         keep = ws[:max_bones]
         tot = sum(w for w, _ in keep)
-        for g in list(v.groups):
-            obj.vertex_groups[g.group].remove([v.index])
+        # Removing a weight reallocates Blender's deform array. Copy integer
+        # indices first; retaining RNA group references can read freed memory.
+        for group_index in [g.group for g in v.groups]:
+            obj.vertex_groups[group_index].remove([v.index])
         if tot <= 1e-6:
             continue
         for w, gi in keep:
@@ -422,7 +438,7 @@ def drop_cloth(body, centre, length_fn, segs=72, rows=16, clearance=0.006, r0=0.
         last_z = centre.z
         while r < r_start + L + 0.02:
             q = Vector(centre) + d * r
-            hit = bvh.ray_cast(Vector((q.x, q.y, centre.z + 0.08)), Vector((0, 0, -1)), 0.5)
+            hit = bvh.ray_cast(Vector((q.x, q.y, centre.z + 0.2)), Vector((0, 0, -1)), 0.7)
             if hit[0] is None or last_z - hit[0].z > 0.06:
                 break           # past the body edge (or a jump down to something far below)
             last_z = hit[0].z
@@ -508,7 +524,10 @@ def push_out(body, rings, centre, clearance, rows_from=0, reach=0.6):
                 continue
             d.normalize()
             cur = (p - c).dot(d)
-            start = min(reach, cur + reach) if reach < 0.6 else reach
+            # Search from just outside the garment point inward: the first hit is
+            # the outermost surface it must clear (a short reach ignores things far
+            # outside, e.g. the other arm).
+            start = cur + reach if reach < 0.6 else reach
             hit = bvh.ray_cast(c + d * start, -d, start)
             if hit[0] is None:
                 continue

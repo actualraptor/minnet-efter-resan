@@ -188,7 +188,7 @@ def body_mask(body, covering, path, size=1024, reach=0.03):
             hit = bvh.ray_cast(p, n, reach)
             cov_v[v.index] = hit[0] is not None
         for tri in me.loop_triangles:
-            if not (mats[tri.material_index].endswith("_SKIN") and "BODY" in mats[tri.material_index]):
+            if not (mats[tri.material_index].split(" (")[0].endswith("_SKIN") and "BODY" in mats[tri.material_index]):
                 continue
             if not all(cov_v[vi] for vi in tri.vertices):
                 continue

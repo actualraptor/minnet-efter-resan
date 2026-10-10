@@ -4,6 +4,12 @@ How game-ready, physics-driven clothing is built for Minnet efter resan.
 Written 2026-10-10, when Freyja moved to a VRoid body (`art/source/vroid/freyja.vrm`)
 and her clothing became a separate, modular outfit.
 
+The owner's newer reference outfit is being developed through three separate
+geometry, animation and secondary-motion gates. See
+[FREYJA_REFERENCE_OUTFIT.md](FREYJA_REFERENCE_OUTFIT.md) for the isolated
+milestone-1 candidate, current inspection findings and acceptance limits.
+The principles below describe the original base-outfit implementation.
+
 ## Principles (why it is built this way)
 
 1. **Modular garments on a shared skeleton.** Clothing is its own asset

@@ -1,0 +1,222 @@
+{
+  "stage": "geometry_and_materials",
+  "body_source": "art\\source\\vroid\\freyja.glb",
+  "simulation_enabled": false,
+  "visual_acceptance": "pending_owner_review",
+  "mesh_count": 51,
+  "repaired_unweighted_vertices": 77,
+  "geometry_checks": "finite positions, UVs, 1-4 normalized skin influences per vertex",
+  "vertices": 76233,
+  "triangles": 151716,
+  "meshes": [
+    {
+      "name": "Tights",
+      "vertices": 4757
+    },
+    {
+      "name": "Blouse",
+      "vertices": 6450
+    },
+    {
+      "name": "Corset",
+      "vertices": 4386
+    },
+    {
+      "name": "Capelet",
+      "vertices": 5376
+    },
+    {
+      "name": "Boots",
+      "vertices": 2693
+    },
+    {
+      "name": "SagePanel01",
+      "vertices": 1650
+    },
+    {
+      "name": "PlumPanel01",
+      "vertices": 1650
+    },
+    {
+      "name": "SagePanel02",
+      "vertices": 1650
+    },
+    {
+      "name": "PlumPanel02",
+      "vertices": 1650
+    },
+    {
+      "name": "SagePanel03",
+      "vertices": 1650
+    },
+    {
+      "name": "PlumPanel03",
+      "vertices": 1650
+    },
+    {
+      "name": "SagePanel04",
+      "vertices": 1650
+    },
+    {
+      "name": "PlumPanel04",
+      "vertices": 1650
+    },
+    {
+      "name": "CreamSkirtLining",
+      "vertices": 6450
+    },
+    {
+      "name": "CreamRuffle01",
+      "vertices": 4246
+    },
+    {
+      "name": "CreamRuffle02",
+      "vertices": 4246
+    },
+    {
+      "name": "CreamRuffle03",
+      "vertices": 4246
+    },
+    {
+      "name": "LeftGatheredSleeve",
+      "vertices": 3250
+    },
+    {
+      "name": "RightGatheredSleeve",
+      "vertices": 3250
+    },
+    {
+      "name": "CapeFrontBrooch",
+      "vertices": 10
+    },
+    {
+      "name": "CapeBackBrooch",
+      "vertices": 10
+    },
+    {
+      "name": "RuffledCollar",
+      "vertices": 1358
+    },
+    {
+      "name": "LeftRuffledCuff",
+      "vertices": 1170
+    },
+    {
+      "name": "LeftLeatherCuffBand",
+      "vertices": 390
+    },
+    {
+      "name": "RightRuffledCuff",
+      "vertices": 1170
+    },
+    {
+      "name": "RightLeatherCuffBand",
+      "vertices": 390
+    },
+    {
+      "name": "LeatherBelt1",
+      "vertices": 1290
+    },
+    {
+      "name": "BrassBuckle1",
+      "vertices": 56
+    },
+    {
+      "name": "LeatherBelt2",
+      "vertices": 1290
+    },
+    {
+      "name": "BrassBuckle2",
+      "vertices": 56
+    },
+    {
+      "name": "CorsetBoningSeam0",
+      "vertices": 168
+    },
+    {
+      "name": "CorsetBoningSeam1",
+      "vertices": 168
+    },
+    {
+      "name": "CorsetBoningSeam2",
+      "vertices": 168
+    },
+    {
+      "name": "CorsetBoningSeam3",
+      "vertices": 168
+    },
+    {
+      "name": "CorsetTopSeam",
+      "vertices": 1032
+    },
+    {
+      "name": "CorsetBottomSeam",
+      "vertices": 1032
+    },
+    {
+      "name": "DiagonalLeatherStrap",
+      "vertices": 490
+    },
+    {
+      "name": "LeatherPouch",
+      "vertices": 1105
+    },
+    {
+      "name": "PouchFlap",
+      "vertices": 650
+    },
+    {
+      "name": "PouchFlapStitching",
+      "vertices": 392
+    },
+    {
+      "name": "PouchBuckle",
+      "vertices": 56
+    },
+    {
+      "name": "GoldSwag1",
+      "vertices": 264
+    },
+    {
+      "name": "Medallion0_8",
+      "vertices": 86
+    },
+    {
+      "name": "Medallion0_16",
+      "vertices": 86
+    },
+    {
+      "name": "Medallion0_24",
+      "vertices": 86
+    },
+    {
+      "name": "GoldSwag2",
+      "vertices": 264
+    },
+    {
+      "name": "Medallion1_8",
+      "vertices": 86
+    },
+    {
+      "name": "Medallion1_16",
+      "vertices": 86
+    },
+    {
+      "name": "Medallion1_24",
+      "vertices": 86
+    },
+    {
+      "name": "PlumPanelOrnament0",
+      "vertices": 10
+    },
+    {
+      "name": "PlumPanelOrnament2",
+      "vertices": 10
+    }
+  ],
+  "limitations": [
+    "Animation deformation and collision are milestone 2/3 acceptance gates.",
+    "No runtime equipment integration or retargeting to the playable legacy skeleton yet.",
+    "Hair/capelet interaction must be checked on the visible avatar."
+  ]
+}

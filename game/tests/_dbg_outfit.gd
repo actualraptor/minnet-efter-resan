@@ -13,7 +13,7 @@ func _ready() -> void:
 	var p: Player = main.player
 	p.visible = false
 	p.set_physics_process(false)
-	var body: Node3D = (load("res://assets/dev/base_female.vrm") as PackedScene).instantiate()
+	var body: Node3D = (load(OS.get_environment("DBG_BODY") if OS.get_environment("DBG_BODY") != "" else "res://assets/models/characters/freyja_vroid.vrm") as PackedScene).instantiate()
 	add_child(body)
 	# Open meadow in full sun (no canopy shadows on the cloth).
 	var t3: MeadowTerrain = main.terrain

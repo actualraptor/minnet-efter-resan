@@ -36,7 +36,7 @@ static func find_skeleton(root: Node) -> Skeleton3D:
 
 ## Returns the SpringBoneSimulator3D driving the outfit (or null).
 ## strip_avatar_clothing: remove the avatar's own garments (VRoid tags them *_CLOTH).
-static func dress(character: Node3D, outfit_scene: PackedScene, body_mask: Texture2D = null, strip_avatar_clothing := true) -> SpringBoneSimulator3D:
+static func dress(character: Node3D, outfit_scene: PackedScene, body_mask: Texture2D = null, strip_avatar_clothing := true, simulate := true, use_toon := true) -> SpringBoneSimulator3D:
 	var skel := find_skeleton(character)
 	var outfit := outfit_scene.instantiate() as Node3D
 	var oskel := find_skeleton(outfit)
@@ -50,12 +50,12 @@ static func dress(character: Node3D, outfit_scene: PackedScene, body_mask: Textu
 		var n := oskel.get_bone_name(i)
 		if skel.find_bone(n) >= 0:
 			continue
-		var parent := oskel.get_bone_name(oskel.get_bone_parent(i))
-		var pi := skel.find_bone(parent)
-		if pi < 0:
+		var source_parent := oskel.get_bone_parent(i)
+		var pi := skel.find_bone(oskel.get_bone_name(source_parent)) if source_parent >= 0 else -1
+		if source_parent >= 0 and pi < 0:
 			continue
 		var g_rest := align * oskel.get_bone_global_rest(i)
-		var local := skel.get_bone_global_rest(pi).affine_inverse() * g_rest
+		var local := skel.get_bone_global_rest(pi).affine_inverse() * g_rest if pi >= 0 else g_rest
 		var bi := skel.get_bone_count()
 		skel.add_bone(n)
 		skel.set_bone_parent(bi, pi)
@@ -79,6 +79,7 @@ static func dress(character: Node3D, outfit_scene: PackedScene, body_mask: Textu
 				continue
 			skin.add_named_bind(bname, skel.get_bone_global_rest(ti).affine_inverse() * align * mesh_to_skel)
 		m.get_parent().remove_child(m)
+		m.owner = null
 		skel.add_child(m)
 		m.transform = Transform3D.IDENTITY
 		m.skin = skin
@@ -86,14 +87,15 @@ static func dress(character: Node3D, outfit_scene: PackedScene, body_mask: Textu
 		garments.append(m)
 		# Same toon look as every other character in the game.
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		for si in m.mesh.get_surface_count():
-			m.set_surface_override_material(si, CharacterVisual.convert_material(m.get_active_material(si)))
+		if use_toon:
+			for si in m.mesh.get_surface_count():
+				m.set_surface_override_material(si, CharacterVisual.convert_material(m.get_active_material(si)))
 	outfit.queue_free()
 	# 3. hide covered skin (and the avatar's own clothes).
 	if body_mask or strip_avatar_clothing:
 		_mask_body(skel, body_mask.get_image() if body_mask else null, garments, strip_avatar_clothing)
 	# 4. secondary motion.
-	return _springs(skel)
+	return _springs(skel) if simulate else null
 
 
 ## Transform of `node` relative to `root` (works outside the scene tree).
@@ -161,7 +163,7 @@ static func _mask_body(skel: Skeleton3D, mask: Image, garments: Array[MeshInstan
 		for s in src.get_surface_count():
 			var sm := src.surface_get_material(s)
 			var sn := String(sm.resource_name).to_upper() if sm else ""
-			if (strip and sn.contains("_CLOTH")) or (mask != null and sn.ends_with("_SKIN") and sn.contains("BODY")):
+			if (strip and sn.contains("_CLOTH")) or (mask != null and sn.get_slice(" (", 0).ends_with("_SKIN") and sn.contains("BODY")):
 				relevant = true
 		if not relevant:
 			continue
@@ -180,7 +182,7 @@ static func _mask_body(skel: Skeleton3D, mask: Image, garments: Array[MeshInstan
 				continue
 			var arrays := src.surface_get_arrays(s)
 			# The mask is in the body texture's UV space: body skin only, never the face.
-			var is_skin := mask != null and mname.ends_with("_SKIN") and mname.contains("BODY")
+			var is_skin := mask != null and mname.get_slice(" (", 0).ends_with("_SKIN") and mname.contains("BODY")
 			if is_skin and arrays[Mesh.ARRAY_TEX_UV] != null and arrays[Mesh.ARRAY_INDEX] != null:
 				var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 				var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]

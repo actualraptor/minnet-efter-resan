@@ -29,7 +29,8 @@ META = {}
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ROOT = os.path.abspath(ARGS[0]) if ARGS else os.getcwd()
-BODY = ARGS[1] if len(ARGS) > 1 and ARGS[1] != "-" else os.path.join(ROOT, "art", "source", "vroid_ref", "base_female.glb")
+_FREYJA = os.path.join(ROOT, "art", "source", "vroid", "freyja.glb")   # her VRM, copied as .glb
+BODY = ARGS[1] if len(ARGS) > 1 and ARGS[1] != "-" else (_FREYJA if os.path.exists(_FREYJA) else os.path.join(ROOT, "art", "source", "vroid_ref", "base_female.glb"))
 STAGE = ARGS[2] if len(ARGS) > 2 else "preview"
 
 PAL = {
@@ -206,9 +207,12 @@ def build(body):
 
     # --- capelet: draped over the shoulders, short at the sides ----------------------
     nk = T.centre_at(body, neck.z - 0.012, x_max=0.12)
+    # Sides end just past the shoulder joint (measured), front/back scale with her height.
+    side_len = abs(lua.x - nk.x) * 0.95
+    fb_len = 0.25 * body.height / 1.6
     def cape_len(a):
-        side = abs(math.cos(math.radians(a)))      # 1 at her left/right
-        return 0.25 * (1 - side) + 0.14 * side
+        side = abs(math.cos(math.radians(a))) ** 1.5      # 1 at her left/right
+        return fb_len * (1 - side) + side_len * side
     rings = T.drop_cloth(body, nk, cape_len, segs=128, rows=20, clearance=0.008, r0=0.058, z_cap=neck.z + 0.01)
     rings = T.push_out(body, rings, nk, 0.008, rows_from=1, reach=0.06)
     rings = T.convexify(rings, nk, rows_from=4)
@@ -288,4 +292,5 @@ def main():
     print("PREVIEW", prev)
 
 
-main()
+if __name__ == "__main__":
+    main()

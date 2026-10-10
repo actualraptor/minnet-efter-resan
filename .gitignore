@@ -12,6 +12,7 @@ build/
 .claude/
 art/previews/
 art/blender/__pycache__/
+art/blender/outfit/__pycache__/
 *.blend1
 .DS_Store
 Thumbs.db
