@@ -364,6 +364,61 @@ def reweight(obj, fn):
             vg.add([v.index], w / tot, "REPLACE")
 
 
+def add_cape_springs(arm, cape, angles=(240, 270, 300, 60, 90, 120), follow=0.75):
+    """Spring chains on the capelet's front and back hems (cape_<k>_<n>, driven
+    by CharacterPhysics). The sides already ride the upper arms. Each chain runs
+    from 40% down the cape to the hem, just inside it; the lower cape blends
+    onto the nearest two chains."""
+    import rig_outfit as R
+    mw = cape.matrix_world
+    P = [mw @ v.co for v in cape.data.vertices]
+    top = max(p.z for p in P)
+    cx = sum(p.x for p in P) / len(P)
+    cy = sum(p.y for p in P) / len(P)
+    # Old chains from the base outfit's capelet no longer match this geometry.
+    T._select_only([arm])
+    bpy.ops.object.mode_set(mode="EDIT")
+    for eb in [b for b in arm.data.edit_bones if b.name.startswith("cape_")]:
+        arm.data.edit_bones.remove(eb)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    chains = {}
+    for k, a in enumerate(angles):
+        ar = math.radians(a)
+        win = [p for p in P if abs((math.degrees(math.atan2(p.y - cy, p.x - cx)) - a + 180) % 360 - 180) < 8]
+        if len(win) < 4:
+            continue
+        hem = min(win, key=lambda p: p.z)
+        mid_z = top - 0.4 * (top - hem.z)
+        mid = min(win, key=lambda p: abs(p.z - mid_z))
+        inward = Vector((cx - hem.x, cy - hem.y, 0)).normalized() * 0.01
+        chains[f"cape_{k}"] = ("UpperChest", [mid + inward, mid.lerp(hem, 0.5) + inward, hem + inward])
+    R.add_chains(arm, chains)
+    bones = {n: [arm.data.bones[f"{n}_1"], arm.data.bones[f"{n}_2"]] for n in chains}
+    cang = {n: math.atan2(c[1][0].y - cy, c[1][0].x - cx) for n, c in chains.items()}
+
+    lo = min(p.z for p in P)
+
+    def _cape_mix_inner(p, ws):
+        a = math.atan2(p.y - cy, p.x - cx)
+        fb = abs(math.sin(a)) ** 2                     # front/back only
+        f = follow * fb * T.smoothstep(0.3, 0.85, (top - p.z) / max(top - lo, 1e-6))
+        if f <= 0.01:
+            return ws
+        near = sorted(cang, key=lambda n: abs((a - cang[n] + math.pi) % math.tau - math.pi))[:2]
+        d = [abs((a - cang[n] + math.pi) % math.tau - math.pi) + 1e-3 for n in near]
+        wsum = 1 / d[0] + 1 / d[1]
+        out = {b_: w * (1 - f) for b_, w in ws.items()}
+        for n, dd in zip(near, d):
+            share = f * (1 / dd) / wsum
+            b1, b2 = bones[n]
+            t = T.smoothstep(b1.head_local.z, b2.head_local.z, p.z) if b1.head_local.z != b2.head_local.z else 0.5
+            out[b1.name] = out.get(b1.name, 0.0) + share * (1 - t)
+            out[b2.name] = out.get(b2.name, 0.0) + share * t
+        return out
+    reweight(cape, _cape_mix_inner)
+    print("CAPE springs", list(chains))
+
+
 def main():
     built = REF.build_outfit()
     body, arm, output = built["body"], built["arm"], built["output"]
@@ -473,6 +528,7 @@ def main():
         R = Matrix.Rotation(-sign * DRAPE_ANGLE * k, 3, "Y")
         v.co = cinv @ (piv + R @ (p - piv))
     reweight(cape, cape_fn)
+    add_cape_springs(arm, cape)
     # Hair chains -> hairB_<chain>_<n> for the game's spring bones.
     for b in list(arm.data.bones):
         m = re.match(r"J_Sec_Hair(\d+)_(\d+)$", b.name)

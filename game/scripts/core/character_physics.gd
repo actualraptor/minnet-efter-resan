@@ -12,7 +12,7 @@ const GROUPS := {
 	"hairB_": {"stiffness": 1.0, "drag": 0.5, "gravity": 3.2, "radius": 0.025},
 	"hairS_": {"stiffness": 1.2, "drag": 0.45, "gravity": 1.6, "radius": 0.02},
 	"skirt_": {"stiffness": 12.0, "drag": 0.75, "gravity": 2.0, "radius": 0.02},
-	"cape_": {"stiffness": 2.6, "drag": 0.55, "gravity": 0.3, "radius": 0.02},
+	"cape_": {"stiffness": 5.0, "drag": 0.6, "gravity": 0.5, "radius": 0.02},
 }
 
 ## bone, kind, radius, height (capsule), offset along bone (0..1 of its length)

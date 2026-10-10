@@ -9,6 +9,15 @@ func _ready() -> void:
 			out = a.substr(6)
 	await get_tree().create_timer(1.0).timeout
 	var p: Player = main.player
+	var ns := OS.get_environment("DBG_NOCAST")
+	if ns != "":
+		var names := ns.split(",")
+		for mi in p.model.find_children("*", "GeometryInstance3D", true, false):
+			if ns == "ALL" or String(mi.name) in names:
+				(mi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		print("DBG casters ", p.model.find_children("*", "GeometryInstance3D", true, false).map(func(m): return m.name))
+	if OS.get_environment("DBG_NOSUN") != "":
+		main.world.sun.shadow_enabled = false
 	var rig: CameraRig = p.camera_rig
 	rig.zoom = 0.18
 	rig.yaw = p.model.rotation.y   # camera in front, looking at her face
