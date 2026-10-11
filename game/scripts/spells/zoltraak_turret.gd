@@ -117,7 +117,7 @@ func _process(delta: float) -> void:
 			_monster.rotation.y = lerp_angle(_monster.rotation.y, atan2(to.x, to.z), 1.0 - exp(-4.0 * delta))
 	elif _eye != null:
 		_eye.scale = Vector3.ONE * (1.0 + 0.25 * sin(Time.get_ticks_msec() / 1000.0 * 2.0) + _pulse * 0.6)
-	if auto_target == null or not is_instance_valid(auto_target) or _busy:
+	if down or auto_target == null or not is_instance_valid(auto_target) or _busy:
 		return
 	_clock += delta
 	if _clock < interval:
@@ -183,7 +183,7 @@ func fire_beam(at: Vector3, seconds := 2.0, radius := 0.22) -> ZoltraakBeam:
 	b.base_radius = radius
 	b.seals = 2
 	b.seal_radius = 0.7
-	b.power = 1.0
+	b.power = beam_power
 	b.reach = 70.0
 	b.exclude.append(get_rid())
 	var src := self
@@ -197,6 +197,25 @@ func fire_beam(at: Vector3, seconds := 2.0, radius := 0.22) -> ZoltraakBeam:
 		if is_instance_valid(b):
 			b.release())
 	return b
+
+
+## Beam power multiplier for attacks launched by _run_attack (barrier stress).
+var beam_power := 1.0
+var down := false
+
+
+## Knocked out: plays the death animation once and stops hunting.
+func ko() -> void:
+	if down:
+		return
+	down = true
+	auto_target = null
+	if _anim != null:
+		for n in _anim.get_animation_list():
+			if String(n).to_lower().contains("death"):
+				_anim.get_animation(n).loop_mode = Animation.LOOP_NONE
+				_anim.play(n, 0.1)
+				break
 
 
 func zoltraak_hit(_damage: float, _dir: Vector3) -> void:
