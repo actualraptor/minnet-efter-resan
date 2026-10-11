@@ -24,7 +24,7 @@ func _fire_series() -> void:
 		var up := side.cross(dir).normalized()
 		var spread := deg_to_rad(2.4)
 		dir = (dir + side * _rng.randfn(0.0, spread) + up * _rng.randfn(0.0, spread)).normalized()
-		ZoltraakShots.spawn_bolt(get_parent(), _ctx.caster, ZoltraakShots.muzzle(_ctx.caster), dir, 70.0, 0.55)
+		ZoltraakShots.spawn_bolt(get_parent(), _ctx.caster, ZoltraakShots.muzzle(_ctx.caster), dir, 70.0, 0.55, ZoltraakVisuals.kind_of(_ctx.spell))
 		if _ctx.caster.has_method("recoil"):
 			_ctx.caster.call("recoil", 0.35)
 		await get_tree().create_timer(GAP).timeout

@@ -38,7 +38,7 @@ func _ready() -> void:
 		title.visible = false
 		# Dev audits: --dbg --face|--spell|--pose|--walk (default: staff walk).
 		var dbg := "staffwalk"
-		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics"]:
+		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak"]:
 			if "--" + k in args:
 				dbg = k
 		add_child(load("res://tests/_dbg_%s.gd" % dbg).new())

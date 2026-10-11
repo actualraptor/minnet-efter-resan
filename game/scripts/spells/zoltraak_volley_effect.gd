@@ -15,7 +15,7 @@ func start(ctx: SpellContext) -> void:
 	for i in COUNT:
 		var k := float(i) - (COUNT - 1) * 0.5
 		var d := (dir + side * k * 0.2 + up * (0.12 if i % 2 == 0 else -0.04)).normalized()
-		var b := ZoltraakShots.spawn_bolt(get_parent(), ctx.caster, from, d, 34.0, 0.6)
+		var b := ZoltraakShots.spawn_bolt(get_parent(), ctx.caster, from, d, 34.0, 0.6, ZoltraakVisuals.kind_of(ctx.spell))
 		b.life = 2.2
 		b.turn_rate = 2.4
 		b.target = target

@@ -57,6 +57,8 @@ var staff: StaffSummon
 var _look_mod: LookAtModifier3D
 var _neck_mod: LookAtModifier3D
 var _fly_clip_on := false
+var _prop_t := 0.0
+signal thrust_pulse(strength: float)
 var gait_polish: GaitPolish
 var grounder: FootGrounder
 var hands: HandPoser
@@ -95,6 +97,9 @@ var aim_charge := 0.0              # 0..1 over AIM_CHARGE_TIME while RMB is held
 var aim_blend := 0.0               # smoothed 0..1, drives camera, circle and reticle
 var _aim_fx: AimFx
 var _cast_hold := 0.0
+## Charge multiplier for the next charged Zoltraak (1 = uncharged); read and
+## reset by the effect.
+var cast_power := 1.0
 var _heavy_ready_sfx := false
 var _combat_goal := 0.0
 var _variants := {}
@@ -153,7 +158,7 @@ func _ready() -> void:
 			staff.queue_free()
 			staff = null
 	if caster.spells.is_empty():
-		for sp in ["field_of_flowers", "zoltraak", "barrier"]:
+		for sp in ["field_of_flowers", "zoltraak", "barrier", "zoltraak_original"]:
 			var path := "res://data/spells/%s.tres" % sp
 			if ResourceLoader.exists(path):
 				caster.spells.append(load(path) as SpellDefinition)
@@ -509,12 +514,22 @@ func _update_flight_hold() -> void:
 		return
 	var clip := StaffPoses.get_clip(&"fly")
 	var spd := Vector2(velocity.x, velocity.z).length()
-	var want := flying and staff != null and staff.out and not _casting and not focus_aim and spd > 0.8
+	var want := flying and staff != null and staff.out and not _casting and not focus_aim
 	if want:
 		if not (staff_rig.playing and staff_rig.clip == clip):
 			staff_rig.play_param(clip)
 		staff_rig.param = clampf(spd / fly_boost_speed, 0.0, 1.0)
 		_fly_clip_on = true
+		# Push-off strokes: every so often she drives the staff forward and the
+		# magic bursts from its tail. Quicker the faster she goes; the first
+		# stroke comes as she sets off.
+		_prop_t -= get_physics_process_delta_time()
+		if spd > 0.9 and _prop_t <= 0.0:
+			_prop_t = lerpf(1.35, 0.7, clampf(spd / fly_boost_speed, 0.0, 1.0))
+			staff_rig.kick(Vector3(0.0, -0.1, 1.9))
+			thrust_pulse.emit(clampf(0.5 + spd / fly_boost_speed, 0.5, 1.5))
+		elif spd <= 0.9:
+			_prop_t = minf(_prop_t, 0.15)
 	elif _fly_clip_on:
 		_fly_clip_on = false
 		if staff_rig.clip == clip:
@@ -948,7 +963,9 @@ func _begin_focus_aim() -> void:
 func _end_focus_aim(allow_fire: bool) -> void:
 	if not focus_aim:
 		return
-	var heavy := allow_fire and aim_charge >= 0.98
+	# Any meaningful charge fires; width and brightness scale with it (1..3).
+	var heavy := allow_fire and aim_charge >= 0.4
+	cast_power = lerpf(1.0, 3.0, clampf((aim_charge - 0.4) / 0.6, 0.0, 1.0))
 	focus_aim = false
 	aim_changed.emit(false)
 	if heavy:
@@ -994,6 +1011,20 @@ func begin_overlay_cast(spell: SpellDefinition) -> float:
 func recoil(amount: float) -> void:
 	if staff_rig:
 		staff_rig.kick(Vector3(0.0, 0.12, -0.85) * amount)
+
+
+## Where the barrier faces: toward the dev aim point if set, otherwise where the
+## camera looks (flattened, with a little of its pitch so high attacks are covered).
+func guard_direction() -> Vector3:
+	if aim_point_override.is_finite():
+		var to := aim_point_override - (global_position + Vector3(0, 1.2, 0))
+		if to.length() > 0.5:
+			return to.normalized()
+	var cam := get_viewport().get_camera_3d()
+	if cam:
+		var f := -cam.global_basis.z
+		return Vector3(f.x, clampf(f.y, -0.2, 0.35), f.z).normalized()
+	return model.global_basis.z
 
 
 func aim_point() -> Vector3:
@@ -1082,9 +1113,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
 		get_viewport().set_input_as_handled()
 		_cast_with_staff()
-	elif event.is_action_pressed("spell_1") or event.is_action_pressed("spell_2") or event.is_action_pressed("spell_3"):
+	elif event.is_action_pressed("spell_1") or event.is_action_pressed("spell_2") or event.is_action_pressed("spell_3") or event.is_action_pressed("spell_4"):
 		if not caster.casting:
-			caster.equip(0 if event.is_action_pressed("spell_1") else (1 if event.is_action_pressed("spell_2") else 2))
+			caster.equip(0 if event.is_action_pressed("spell_1") else (1 if event.is_action_pressed("spell_2") else (2 if event.is_action_pressed("spell_3") else 3)))
 	elif event.is_action_pressed("fly"):
 		toggle_flight()
 	elif event.is_action_pressed("interrupt"):

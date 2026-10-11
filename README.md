@@ -31,7 +31,7 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 | Choose | 1–3 or click | — |
 | Summon / stow staff | Q | — |
 | Cast equipped spell (summons the staff if needed; hold for the barrier) | Left mouse or F | RB |
-| Select spell: Field of Flowers / Zoltraak / Barrier | 1 / 2 / 3 | — |
+| Select spell: Field of Flowers / Zoltraak / Barrier / original (black) Zoltraak | 1 / 2 / 3 / 4 | — |
 | Zoltraak focus aim (hold; releasing at full charge fires the heavy shot) | Right mouse | — |
 | While aiming: quick shot / sustained beam / rapid burst / tracking volley | Tap or hold LMB or F / Q / E | — |
 | Cancel a cast | X | — |

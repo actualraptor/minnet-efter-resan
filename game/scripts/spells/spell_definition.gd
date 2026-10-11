@@ -52,6 +52,8 @@ enum Category { WHIMSICAL, ENVIRONMENTAL, UTILITY, EXPLORATION, DEFENSIVE, OFFEN
 @export_file("*.gd") var effect_script := ""
 ## Motes drawn toward the staff head while casting.
 @export var gather_particles := true
+## Visual family: &"white" (modern Zoltraak) or &"black" (the original killing magic).
+@export var visual: StringName = &"white"
 @export var gather_color := Color(0.8, 1.0, 0.55)
 @export var effect_scene: PackedScene
 @export var cast_sound := "spell_gather"

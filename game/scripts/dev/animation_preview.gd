@@ -29,6 +29,8 @@ func _ready() -> void:
 	_build_ui()
 	if OS.get_environment("PREVIEW_AUTO") != "":
 		_auto(OS.get_environment("PREVIEW_AUTO"))
+	if OS.get_environment("PREVIEW_BEAM") != "":
+		_auto_beam(OS.get_environment("PREVIEW_BEAM"))
 	if OS.get_environment("PREVIEW_FLY") != "":
 		_auto_fly(OS.get_environment("PREVIEW_FLY"))
 
@@ -336,4 +338,41 @@ func _auto_fly(out_path: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out_path)
 	print("PREVIEW fly ok speed=%.1f pitch=%.0f" % [Vector2(player.velocity.x, player.velocity.z).length(), rad_to_deg(player.model.rotation.x)])
+	get_tree().quit()
+
+
+## PREVIEW_BEAM=<png> [PREVIEW_KIND=white|black] [PREVIEW_SEALS=n] [PREVIEW_NIGHT=1]:
+## a static beam seen side-on, for judging the beam body and seals themselves.
+func _auto_beam(out_path: String) -> void:
+	var kind := ZoltraakVisuals.Kind.BLACK if OS.get_environment("PREVIEW_KIND") == "black" else ZoltraakVisuals.Kind.WHITE
+	if OS.get_environment("PREVIEW_NIGHT") == "1":
+		var we: WorldEnvironment = null
+		for n in get_children():
+			if n is WorldEnvironment:
+				we = n
+		we.environment.background_color = Color(0.02, 0.03, 0.07)
+		we.environment.ambient_light_energy = 0.15
+		for n in get_children():
+			if n is DirectionalLight3D:
+				(n as DirectionalLight3D).light_energy = 0.05
+	await get_tree().create_timer(0.6).timeout
+	var beam := ZoltraakBeam.new()
+	beam.kind = kind
+	beam.mode = ZoltraakBeam.Mode.SUSTAINED
+	beam.base_radius = float(OS.get_environment("PREVIEW_RADIUS")) if OS.get_environment("PREVIEW_RADIUS") != "" else 0.35
+	beam.seals = int(OS.get_environment("PREVIEW_SEALS")) if OS.get_environment("PREVIEW_SEALS") != "" else 3
+	beam.seal_radius = 1.0
+	beam.reach = 16.0
+	beam.aim_fn = func() -> Array: return [Vector3(-3.0, 1.5, 3.0), Vector3(1.0, 0.0, 0.0)]
+	world.add_child(beam)
+	beam.setup()
+	_yaw = PI
+	_dist = 7.5
+	_height = 1.5
+	_aim_target = false
+	player.visible = false
+	await get_tree().create_timer(1.6).timeout
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(out_path)
+	print("PREVIEW beam ok")
 	get_tree().quit()

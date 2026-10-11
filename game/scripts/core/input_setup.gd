@@ -18,6 +18,7 @@ const KEYS := {
 	"spell_1": [KEY_1],
 	"spell_2": [KEY_2],
 	"spell_3": [KEY_3],
+	"spell_4": [KEY_4],
 	"fly": [KEY_H],
 	"descend": [KEY_CTRL, KEY_C],
 	"interrupt": [KEY_X],

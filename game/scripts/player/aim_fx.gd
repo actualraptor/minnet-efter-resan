@@ -15,8 +15,10 @@ var _ready_pulse := 0.0
 func setup(p: Player) -> void:
 	player = p
 	top_level = true
-	circle = SixPetalCircle.new(0.62, Color(0.55, 0.78, 1.0))
+	circle = SixPetalCircle.new(0.7, Color(0.78, 0.9, 1.0))
 	add_child(circle)
+	circle.set_aperture(0.22)
+	circle.set_energy(2.6)
 	circle.set_alpha(0.0)
 	impact = SixPetalCircle.new(0.3, Color(0.65, 0.85, 1.0))
 	add_child(impact)
