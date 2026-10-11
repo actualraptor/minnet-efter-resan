@@ -73,8 +73,8 @@ static func _cyl_mesh(length: float, radius: float) -> CylinderMesh:
 	cm.height = maxf(length, 0.05)
 	cm.radial_segments = 20
 	cm.rings = 1
-	cm.cap_top = false
-	cm.cap_bottom = false
+	cm.cap_top = true
+	cm.cap_bottom = true
 	return cm
 
 
@@ -102,22 +102,49 @@ static func _halo(length: float, radius: float, kind: Kind) -> MeshInstance3D:
 	return h
 
 
+const OUTLINE_SCALE := 1.05
+
+
+static func _solid_material(kind: Kind) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED     # opaque: never see-through
+	m.cull_mode = BaseMaterial3D.CULL_BACK
+	if kind == Kind.WHITE:
+		m.albedo_color = Color(3.0, 3.0, 3.1)                 # HDR white, blooms
+	else:
+		m.albedo_color = Color(0.0, 0.0, 0.0)
+	return m
+
+
+static func _outline_material(kind: Kind) -> StandardMaterial3D:
+	# Inverted-hull edge: a slightly larger shell drawn behind the body, so the
+	# beam always has a crisp coloured silhouette from any angle.
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.cull_mode = BaseMaterial3D.CULL_FRONT
+	m.albedo_color = Color(0.12, 0.25, 1.0) if kind == Kind.WHITE else Color(0.5, 0.22, 1.2)
+	return m
+
+
+## A SOLID beam lying along local +Z from the origin: an opaque body with closed
+## ends (so it is a filled volume from the front, the back or the side, never a
+## hollow shell), an inverted-hull outline and a soft additive halo.
 static func make_beam(length: float, radius: float, kind: Kind) -> MeshInstance3D:
-	var cm := CylinderMesh.new()
-	cm.top_radius = radius
-	cm.bottom_radius = radius
-	cm.height = maxf(length, 0.05)
-	cm.radial_segments = 20
-	cm.rings = 1
-	cm.cap_top = false
-	cm.cap_bottom = false
 	var mi := MeshInstance3D.new()
-	mi.mesh = cm
-	mi.material_override = beam_material(kind, length)
+	mi.mesh = _cyl_mesh(length, radius)
+	mi.material_override = _solid_material(kind)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.rotation_degrees = Vector3(90, 0, 0)
 	mi.position = Vector3(0, 0, length * 0.5)
 	mi.extra_cull_margin = 2.0
+	var ol := MeshInstance3D.new()
+	ol.name = "Outline"
+	ol.mesh = _cyl_mesh(length, radius * OUTLINE_SCALE)
+	ol.material_override = _outline_material(kind)
+	ol.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ol.extra_cull_margin = 2.0
+	mi.add_child(ol)
 	mi.add_child(_halo(length, radius, kind))
 	return mi
 
@@ -128,7 +155,12 @@ static func set_beam_length(mi: MeshInstance3D, length: float, radius: float) ->
 	cm.top_radius = radius
 	cm.bottom_radius = radius
 	mi.position = Vector3(0, 0, length * 0.5)
-	(mi.material_override as ShaderMaterial).set_shader_parameter("length_m", length)
+	var ol := mi.get_node_or_null("Outline") as MeshInstance3D
+	if ol:
+		var om := ol.mesh as CylinderMesh
+		om.height = maxf(length, 0.05) * 1.0
+		om.top_radius = radius * OUTLINE_SCALE
+		om.bottom_radius = radius * OUTLINE_SCALE
 	var halo := mi.get_node_or_null("Halo") as MeshInstance3D
 	if halo:
 		var hm := halo.mesh as CylinderMesh

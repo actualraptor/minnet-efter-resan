@@ -19,6 +19,12 @@ var _zoom_smooth := 1.0
 @export var max_pitch := deg_to_rad(28.0)
 @export var shoulder_offset := 0.35
 
+## Combat framing (while aiming): sideways offset in metres (+ = over her right
+## shoulder), boom length scale and extra height. Tuned so a beam leaving her
+## staff crosses the picture instead of running away down the lens.
+var aim_shoulder := 1.7
+var aim_boom := 0.78
+var aim_height := 0.2
 var yaw := 0.0
 var pitch := deg_to_rad(-14.0)
 var target: Player
@@ -66,11 +72,11 @@ func _process(delta: float) -> void:
 	# Zoomed in, the camera pivots on her face instead of her shoulders.
 	var close_t := clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0)
 	var h := lerpf(1.47, height if not target.is_indoors() else height - 0.1, close_t)
-	var goal := target.global_position + Vector3.UP * (h + target.hover_height() * 0.85)
+	var goal := target.global_position + Vector3.UP * (h + target.hover_height() * 0.85 + aim_height * target.aim_blend)
 	global_position = global_position.lerp(goal, 1.0 - exp(-follow_speed * delta))
 	_zoom_smooth = lerpf(_zoom_smooth, zoom, 1.0 - exp(-10.0 * delta))
 	var ab := target.aim_blend
-	var want_len := (indoor_length if target.is_indoors() else outdoor_length) * _zoom_smooth * lerpf(1.0, 0.7, ab)
+	var want_len := (indoor_length if target.is_indoors() else outdoor_length) * _zoom_smooth * lerpf(1.0, aim_boom, ab)
 	camera.fov = lerpf(62.0, 53.0, ab)
 	_arm.spring_length = lerpf(_arm.spring_length, want_len, 1.0 - exp(-4.0 * delta))
 	_apply()
@@ -88,7 +94,7 @@ func _apply() -> void:
 	_pitch_node.rotation = Vector3(pitch + aim_lift, 0.0, 0.0)
 	# Offset slightly over the shoulder for a more cinematic frame.
 	var indoors := target != null and target.is_indoors()
-	_arm.position = _arm.position.lerp(Vector3((minf(0.12, shoulder_offset) if indoors else shoulder_offset * lerpf(1.0, 3.2, target.aim_blend if target else 0.0)) * clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0), 0.0, 0.0), 0.1)
+	_arm.position = _arm.position.lerp(Vector3((minf(0.12, shoulder_offset) if indoors else lerpf(shoulder_offset, aim_shoulder, target.aim_blend if target else 0.0)) * clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0), 0.0, 0.0), 0.1)
 
 
 func snap_behind(model_yaw: float) -> void:

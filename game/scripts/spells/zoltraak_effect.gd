@@ -15,7 +15,7 @@ func start(ctx: SpellContext) -> void:
 	beam.power = power
 	beam.hold = 0.18 + 0.1 * power
 	beam.seals = 3
-	beam.seal_radius = 0.9 + 0.5 * (power - 1.0)
+	beam.seal_radius = 3.0 * beam.base_radius + 0.6   # seals stand clear of the beam body
 	beam.reach = maxf(ctx.spell.max_range, 30.0)
 	if caster is CollisionObject3D:
 		beam.exclude.append((caster as CollisionObject3D).get_rid())

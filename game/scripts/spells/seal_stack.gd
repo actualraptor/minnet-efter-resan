@@ -45,7 +45,9 @@ func _view_scale() -> float:
 	var axis := global_basis.z.normalized()
 	var look := (-cam.global_basis.z).normalized()
 	var d := absf(axis.dot(look))
-	return lerpf(1.0, 0.25, smoothstep(0.82, 0.99, d))
+	# The beam is a solid body now, so the seals no longer need to get out of
+	# the way when seen end-on: they stay as drawn.
+	return lerpf(1.0, 0.85, smoothstep(0.9, 0.99, d))
 
 
 func assemble(delay_per_seal := 0.05) -> void:

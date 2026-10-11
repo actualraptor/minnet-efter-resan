@@ -62,6 +62,11 @@ func _ready() -> void:
 	_p.caster.cast_started.connect(func(sp): print("IN   cast_started %s at %.2f" % [sp.id, Time.get_ticks_msec() / 1000.0]))
 	await _wait(0.6)
 	_p.camera_rig.pitch = deg_to_rad(-10.0)
+	if OS.get_environment("DBG_CAM") != "":
+		var c := OS.get_environment("DBG_CAM").split(",")
+		_p.camera_rig.aim_shoulder = float(c[0])
+		_p.camera_rig.aim_boom = float(c[1])
+		_p.camera_rig.aim_height = float(c[2])
 
 	_p._begin_focus_aim()
 	await _wait(0.4)

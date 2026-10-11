@@ -45,8 +45,6 @@ func _build() -> void:
 	add_child(body)
 	_body = body
 	body.position = Vector3(0, 0, -blen * 0.5)
-	(body.material_override as ShaderMaterial).set_shader_parameter("start_fade", 1.0)
-	(body.material_override as ShaderMaterial).set_shader_parameter("flow", 0.0)
 	_light = OmniLight3D.new()
 	_light.light_color = ZoltraakVisuals.accent(kind)
 	_light.light_energy = 1.4 * size

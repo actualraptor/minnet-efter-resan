@@ -19,7 +19,7 @@ uniform float grain = 1.0;
 uniform float flow = 2.4;
 uniform float dark = 0.0;
 uniform float length_m = 10.0;
-uniform float start_fade = 0.6;
+uniform float start_fade = 0.12;
 uniform vec3 outline_color : source_color = vec3(0.16, 0.28, 0.95);
 uniform float outline_start = 0.9;
 uniform sampler2D noise : filter_linear_mipmap, repeat_enable;
