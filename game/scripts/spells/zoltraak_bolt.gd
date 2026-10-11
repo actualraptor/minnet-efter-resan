@@ -20,6 +20,7 @@ var kind := ZoltraakVisuals.Kind.WHITE
 var team := 0
 var power := 1.0
 var _light: OmniLight3D
+var _body: MeshInstance3D
 var _trail: GPUParticles3D
 var _done := false
 
@@ -42,6 +43,7 @@ func _build() -> void:
 	# The streak trails behind the head (local +Z is the direction of travel):
 	# the body spans z in [-len, 0] and its start fade tapers the tail.
 	add_child(body)
+	_body = body
 	body.position = Vector3(0, 0, -blen * 0.5)
 	(body.material_override as ShaderMaterial).set_shader_parameter("start_fade", 1.0)
 	(body.material_override as ShaderMaterial).set_shader_parameter("flow", 0.0)
@@ -78,6 +80,15 @@ func _build() -> void:
 func _orient() -> void:
 	var up := Vector3.UP if absf(direction.y) < 0.95 else Vector3.RIGHT
 	global_basis = Basis.looking_at(direction, up)
+
+
+func _process(_delta: float) -> void:
+	# Keep even a small bolt a few pixels wide at any range.
+	var cam := get_viewport().get_camera_3d()
+	if cam != null and _body != null:
+		var d := cam.global_position.distance_to(global_position)
+		var s := maxf(1.0, d * 0.016 / (0.1 * size))
+		_body.scale = Vector3(s, 1.0, s)
 
 
 func _physics_process(delta: float) -> void:

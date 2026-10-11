@@ -11,11 +11,11 @@ func start(ctx: SpellContext) -> void:
 	var beam := ZoltraakBeam.new()
 	beam.kind = kind
 	beam.mode = ZoltraakBeam.Mode.PULSE
-	beam.base_radius = 0.26 * power
+	beam.base_radius = 0.3 + 0.35 * (power - 1.0)
 	beam.power = power
 	beam.hold = 0.18 + 0.1 * power
-	beam.seals = 3 + int(round(power - 1.0))
-	beam.seal_radius = 0.7 + 0.25 * power
+	beam.seals = 3
+	beam.seal_radius = 0.9 + 0.5 * (power - 1.0)
 	beam.reach = maxf(ctx.spell.max_range, 30.0)
 	if caster is CollisionObject3D:
 		beam.exclude.append((caster as CollisionObject3D).get_rid())

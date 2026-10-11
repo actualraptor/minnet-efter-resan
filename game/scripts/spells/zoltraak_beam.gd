@@ -34,6 +34,7 @@ var _body: MeshInstance3D
 var _stack: SealStack
 var _contact: GPUParticles3D
 var _flat: SixPetalCircle
+var _head: MeshInstance3D
 var _light: OmniLight3D
 var _tick := 0.0
 var _length := 1.0
@@ -63,6 +64,25 @@ func setup() -> void:
 	_flat.top_level = true
 	_flat.set_charge(0.7)
 	_flat.set_alpha(0.0)
+	# A bright glow at the point of contact (billboard), so the line has a clear
+	# end that reads from any camera angle, including looking straight down it.
+	var q := QuadMesh.new()
+	q.size = Vector2(1.0, 1.0)
+	var hm := StandardMaterial3D.new()
+	hm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	hm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	hm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	hm.albedo_texture = MoteTexture.get_texture()
+	hm.vertex_color_use_as_albedo = true
+	hm.albedo_color = Color(1.4, 1.4, 1.6) if kind == ZoltraakVisuals.Kind.WHITE else Color(0.7, 0.35, 1.6)
+	hm.no_depth_test = true
+	q.material = hm
+	_head = MeshInstance3D.new()
+	_head.mesh = q
+	_head.top_level = true
+	_head.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_head)
 	_update(0.0)
 
 
@@ -128,6 +148,12 @@ func _update(delta: float) -> void:
 	last_trace = tr
 	_length = float(tr.length)
 	var rad := base_radius * lerpf(0.25, 1.0, _width) * (1.0 + 0.04 * sin(_t * 40.0))
+	# Never thinner than a few pixels' worth: size the beam by its distance from
+	# the camera so a small beam stays clearly readable at range.
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		var mid := _origin + _dir * minf(_length * 0.5, 14.0)
+		rad = maxf(rad, cam.global_position.distance_to(mid) * 0.014 * _width)
 	ZoltraakVisuals.set_beam_length(_body, _length, rad)
 	_body.visible = _width > 0.02
 
@@ -158,5 +184,8 @@ func _update(delta: float) -> void:
 		_flat.set_alpha(_width * 0.9)
 	else:
 		_flat.set_alpha(0.0)
+	_head.global_position = _origin + _dir * _length
+	_head.scale = Vector3.ONE * (0.9 + base_radius * 5.0) * _width
+	_head.visible = _width > 0.05
 	_light.global_position = _origin + _dir * minf(_length, 3.0)
 	_light.light_energy = 3.0 * _width * base_radius * 4.0

@@ -11,7 +11,9 @@ const WORLD_MASK := 1 | 4 | 16
 ## hit (bool)}.
 static func trace(tree: SceneTree, world: World3D, from: Vector3, dir: Vector3, reach: float, exclude: Array[RID], team := 0) -> Dictionary:
 	var out := {"length": reach, "point": from + dir * reach, "normal": -dir, "collider": null, "barrier": null, "hit": false}
-	var q := PhysicsRayQueryParameters3D.create(from, from + dir * reach, WORLD_MASK, exclude)
+	# Hostile attacks also strike the player's body (physics layer 2).
+	var mask := WORLD_MASK | (2 if team != 0 else 0)
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * reach, mask, exclude)
 	var hit := world.direct_space_state.intersect_ray(q)
 	if not hit.is_empty():
 		out.length = from.distance_to(hit.position)

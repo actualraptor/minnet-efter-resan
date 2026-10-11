@@ -1073,6 +1073,19 @@ func begin_overlay_cast(spell: SpellDefinition) -> float:
 	return spell.cast_time
 
 
+## Struck by a hostile Zoltraak: a flinch, a toast now and then. (No health
+## system yet; this is the hook for one.)
+var _hit_t := -10.0
+
+
+func zoltraak_hit(_damage: float, _dir: Vector3) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _hit_t > 1.2:
+		GameState.toast.emit("Struck. A barrier would have helped.")
+	_hit_t = now
+	recoil(0.8)
+
+
 func recoil(amount: float) -> void:
 	if staff_rig:
 		staff_rig.kick(Vector3(0.0, 0.12, -0.85) * amount)

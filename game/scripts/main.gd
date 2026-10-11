@@ -38,7 +38,7 @@ func _ready() -> void:
 		title.visible = false
 		# Dev audits: --dbg --face|--spell|--pose|--walk (default: staff walk).
 		var dbg := "staffwalk"
-		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak"]:
+		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range"]:
 			if "--" + k in args:
 				dbg = k
 		add_child(load("res://tests/_dbg_%s.gd" % dbg).new())
@@ -55,7 +55,37 @@ func _ready() -> void:
 		add_child(t)
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_build_practice_range()
 	_opening()
+
+
+## Practice range for spell testing, just up the path from where she arrives:
+## straw dummies to hit, and two shooters (Mörkstråk beam, Solstråk volley) that
+## hunt her on a telegraphed line so the barrier can be tried against them.
+func _build_practice_range() -> void:
+	var root := Node3D.new()
+	root.name = "PracticeRange"
+	add_child(root)
+	var dummies := [Vector2(-9, 23), Vector2(-3, 19), Vector2(4, 24), Vector2(10, 20), Vector2(-14, 29)]
+	for d in dummies:
+		var dm := PracticeDummy.new()
+		root.add_child(dm)
+		dm.global_position = _ground(d.x, d.y)
+		dm.rotation.y = randf_range(-0.4, 0.4)
+	var black := ZoltraakTurret.new()
+	black.kind = ZoltraakVisuals.Kind.BLACK
+	root.add_child(black)
+	black.global_position = _ground(9.0, 12.0)
+	black.auto_target = player
+	black.interval = 9.0
+	var white := ZoltraakTurret.new()
+	white.kind = ZoltraakVisuals.Kind.WHITE
+	root.add_child(white)
+	white.global_position = _ground(-13.0, 14.0)
+	white.auto_target = player
+	white.volley = true
+	white.interval = 7.0
+	white._clock = 3.0
 
 
 func _ground(x: float, z: float) -> Vector3:

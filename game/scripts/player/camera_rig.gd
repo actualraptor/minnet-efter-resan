@@ -82,10 +82,13 @@ func _process(delta: float) -> void:
 
 func _apply() -> void:
 	rotation = Vector3(0.0, yaw, 0.0)
-	_pitch_node.rotation = Vector3(pitch, 0.0, 0.0)
+	# Aiming lifts the view a little, so the crosshair lands far down-range
+	# instead of on the grass a few metres ahead (a beam needs room to read).
+	var aim_lift := deg_to_rad(9.0) * (target.aim_blend if target else 0.0)
+	_pitch_node.rotation = Vector3(pitch + aim_lift, 0.0, 0.0)
 	# Offset slightly over the shoulder for a more cinematic frame.
 	var indoors := target != null and target.is_indoors()
-	_arm.position = _arm.position.lerp(Vector3((minf(0.12, shoulder_offset) if indoors else shoulder_offset * lerpf(1.0, 2.1, target.aim_blend if target else 0.0)) * clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0), 0.0, 0.0), 0.1)
+	_arm.position = _arm.position.lerp(Vector3((minf(0.12, shoulder_offset) if indoors else shoulder_offset * lerpf(1.0, 3.2, target.aim_blend if target else 0.0)) * clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0), 0.0, 0.0), 0.1)
 
 
 func snap_behind(model_yaw: float) -> void:

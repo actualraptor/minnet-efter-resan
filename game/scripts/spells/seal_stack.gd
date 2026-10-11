@@ -15,7 +15,7 @@ var _alpha_scale := 1.0
 
 func build(count: int, base_radius: float, spacing: float, kind: ZoltraakVisuals.Kind) -> SealStack:
 	for i in count:
-		var r := base_radius * (1.0 + 0.55 * i)
+		var r := base_radius * (1.0 + 0.28 * i)
 		var s := SixPetalCircle.new(r, ZoltraakVisuals.seal_tint(kind), 6 if i % 2 == 0 else 8)
 		add_child(s)
 		s.position = Vector3(0, 0, 0.35 + spacing * i)
@@ -34,6 +34,18 @@ func set_charge(c: float) -> void:
 
 func set_alpha_scale(a: float) -> void:
 	_alpha_scale = a
+
+
+## Seen along its own axis a stack is a smear of overlapping rings; fade it out
+## as the camera lines up with the beam so the beam body is what you see.
+func _view_scale() -> float:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return 1.0
+	var axis := global_basis.z.normalized()
+	var look := (-cam.global_basis.z).normalized()
+	var d := absf(axis.dot(look))
+	return lerpf(1.0, 0.25, smoothstep(0.82, 0.99, d))
 
 
 func assemble(delay_per_seal := 0.05) -> void:
@@ -60,6 +72,6 @@ func _process(delta: float) -> void:
 		# Each seal starts a little after the previous one and snaps into place.
 		var k := clampf((_a - i * _delay * 3.0) / maxf(1.0 - i * _delay * 3.0, 0.2), 0.0, 1.0)
 		k = k * k * (3.0 - 2.0 * k)
-		s.set_alpha(k * _alpha_scale * (0.95 - 0.07 * i))
+		s.set_alpha(k * _alpha_scale * (0.95 - 0.07 * i) * _view_scale())
 		s.set_charge(_charge * (0.55 + 0.45 * k))
 		s.scale = Vector3.ONE * lerpf(0.55, 1.0, k)

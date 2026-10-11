@@ -19,7 +19,9 @@ void vertex() {
 
 void fragment() {
 	float ndv = abs(dot(normalize(NORMAL), normalize(VIEW)));
-	float a = pow(ndv, falloff);
+	vec3 axis_v = normalize((VIEW_MATRIX * MODEL_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	float endon = smoothstep(0.5, 0.9, abs(dot(axis_v, normalize(VIEW))));
+	float a = mix(pow(ndv, falloff), 0.0, endon);
 	float f = smoothstep(0.0, max(start_fade, 0.01), v_along);
 	ALBEDO = color * energy * a * f;
 	ALPHA = a * f;
