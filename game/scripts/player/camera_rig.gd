@@ -49,10 +49,20 @@ func _ready() -> void:
 	_apply()
 
 
+## In flight the view may go almost straight down or up (to aim at the ground
+## below or the sky above); on foot it stays in the comfortable range.
+func _min_pitch() -> float:
+	return deg_to_rad(-86.0) if target != null and target.flying else min_pitch
+
+
+func _max_pitch() -> float:
+	return deg_to_rad(78.0) if target != null and target.flying else max_pitch
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and target and target.has_control():
 		yaw -= event.relative.x * mouse_sensitivity
-		pitch = clampf(pitch - event.relative.y * mouse_sensitivity, min_pitch, max_pitch)
+		pitch = clampf(pitch - event.relative.y * mouse_sensitivity, _min_pitch(), _max_pitch())
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and target and target.has_control():
 		zoom = clampf(zoom * (0.88 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 0.88), min_zoom, max_zoom)
 		get_viewport().set_input_as_handled()
@@ -68,8 +78,10 @@ func _process(delta: float) -> void:
 		var look := Vector2(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y))
 		if look.length() > 0.15:
 			yaw -= look.x * pad_sensitivity * delta
-			pitch = clampf(pitch - look.y * pad_sensitivity * delta, min_pitch, max_pitch)
+			pitch = clampf(pitch - look.y * pad_sensitivity * delta, _min_pitch(), _max_pitch())
 	# Zoomed in, the camera pivots on her face instead of her shoulders.
+	# Leaving flight eases the view back into the on-foot range.
+	pitch = clampf(pitch, _min_pitch(), _max_pitch())
 	var close_t := clampf((_zoom_smooth - min_zoom) / 0.55, 0.0, 1.0)
 	var h := lerpf(1.47, height if not target.is_indoors() else height - 0.1, close_t)
 	var goal := target.global_position + Vector3.UP * (h + target.hover_height() * 0.85 + aim_height * target.aim_blend)

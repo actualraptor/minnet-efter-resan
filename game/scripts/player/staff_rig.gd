@@ -27,6 +27,9 @@ var carry_global := Transform3D.IDENTITY
 ## Elevation (radians above horizontal) of the point being aimed at; set by the
 ## Player each frame while aiming.
 var aim_elevation := 0.0
+## How far (radians) the shaft may tilt off the clip's pitch to follow the aim:
+## a little on foot, nearly straight up/down in flight.
+var max_aim_delta := 0.31
 ## Driving value for param_driven clips (flight speed 0..1).
 var param := 0.0
 
@@ -167,7 +170,7 @@ func evaluate() -> void:
 		q = Quaternion(Vector3.RIGHT, -model.rotation.x) * q
 	if clip.aims:
 		# Tilt the shaft toward the camera aim (elevation), within a safe range.
-		var d := clampf(aim_elevation - deg_to_rad(clip.aim_elev_deg), -0.31, 0.31)
+		var d := clampf(aim_elevation - deg_to_rad(clip.aim_elev_deg), -max_aim_delta, max_aim_delta)
 		q = Quaternion(Vector3.RIGHT, -d * w) * q
 	var u := q * Vector3.UP
 	# While authority is blending in, the right hand keeps its carry grip and

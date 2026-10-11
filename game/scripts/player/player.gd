@@ -297,6 +297,7 @@ func _update_aim() -> void:
 	_aim_yaw = atan2(flat.x, flat.z)
 	if staff_rig:
 		staff_rig.aim_elevation = atan2(p.y - from_pt.y, flat.length())
+		staff_rig.max_aim_delta = 1.45 if flying else 0.31
 
 
 ## Procedural finishing layer for the walk/run (pelvic tilt, torso carry, level
