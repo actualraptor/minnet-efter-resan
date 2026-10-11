@@ -11,10 +11,12 @@ var _circle: MagicCircle
 var _t := 0.0
 var _dur := 1.0
 var _done := false
+var _expand := 5.5
 
 
-func begin(body: Node3D, _spell: SpellDefinition, cast_time: float) -> void:
+func begin(body: Node3D, spell: SpellDefinition, cast_time: float) -> void:
 	_body = body
+	_expand = clampf(spell.radius * 0.5 / BASE_RADIUS, 5.5, 16.0)
 	_dur = maxf(cast_time, 0.05)
 	_circle = MagicCircle.new()
 	add_child(_circle)
@@ -46,6 +48,6 @@ func finish() -> void:
 		return
 	_done = true
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_circle, "scale", Vector3.ONE * 5.5, 1.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(_circle, "scale", Vector3.ONE * _expand, 1.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tw.tween_property(_circle, "alpha", 0.0, 1.5).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(queue_free)

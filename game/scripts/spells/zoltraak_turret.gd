@@ -21,6 +21,7 @@ var _clock := 0.0
 var _busy := false
 var _eye: MeshInstance3D
 var _monster: Node3D
+var _dummy: PracticeDummy
 var _anim: AnimationPlayer
 var _model_scale := 1.0
 ## Which monster wears this turret: "Slime" (sun-yellow, Solstråk), "Skeleton"
@@ -42,7 +43,7 @@ func _ready() -> void:
 	var white := kind == ZoltraakVisuals.Kind.WHITE
 	_build_monster(white)
 	var lbl := Label3D.new()
-	lbl.text = ("Mörkstråk" if not white else "Solstråk") + " " + (monster if monster != "" else ("Slime" if white else "Skeleton")).to_lower()
+	lbl.text = ("Mörkstråk" if not white else "Solstråk") + " shooter"
 	lbl.font_size = 40
 	lbl.pixel_size = 0.004
 	lbl.modulate = Color(0.85, 0.8, 1.0) if not white else Color(0.9, 0.95, 1.0)
@@ -52,7 +53,40 @@ func _ready() -> void:
 	add_child(lbl)
 
 
+## A straw practice dummy wearing a glowing sigil: the friendly shooter.
+func _build_dummy(white: bool) -> void:
+	var d := PracticeDummy.new()
+	d.show_count = false
+	add_child(d)
+	d.collision_layer = 0                       # the turret's own collider is the target
+	d.remove_from_group("zoltraak_target")
+	_dummy = d
+	_monster = d
+	_model_scale = 1.0
+	var orb := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.2
+	sm.height = 0.4
+	var em := StandardMaterial3D.new()
+	em.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	em.albedo_color = Color(2.4, 2.4, 2.6) if white else Color(0.5, 0.2, 1.4)
+	sm.material = em
+	orb.mesh = sm
+	orb.position = Vector3(0, 2.45, 0)
+	add_child(orb)
+	var light := OmniLight3D.new()
+	light.light_color = Color(0.9, 0.95, 1.0) if white else Color(0.65, 0.4, 1.0)
+	light.light_energy = 1.6
+	light.omni_range = 5.0
+	light.shadow_enabled = false
+	light.position = Vector3(0, 2.45, 0)
+	add_child(light)
+
+
 func _build_monster(white: bool) -> void:
+	if monster == "dummy":
+		_build_dummy(white)
+		return
 	var name := monster if monster != "" else ("Slime" if white else "Skeleton")
 	var path := "res://assets/models/monsters/%s.glb" % name
 	if not ResourceLoader.exists(path):
@@ -104,6 +138,8 @@ func _play(base: String) -> void:
 
 
 func muzzle() -> Vector3:
+	if _dummy != null:
+		return global_position + Vector3(0, 2.45 * _model_scale, 0)
 	return global_position + Vector3(0, 1.8 * _model_scale + 0.3, 0) if _monster else global_position + Vector3(0, 2.45, 0)
 
 
@@ -218,5 +254,7 @@ func ko() -> void:
 				break
 
 
-func zoltraak_hit(_damage: float, _dir: Vector3) -> void:
+func zoltraak_hit(damage: float, dir: Vector3) -> void:
 	_pulse = 1.0
+	if _dummy != null:
+		_dummy.zoltraak_hit(damage, dir)

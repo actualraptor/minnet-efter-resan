@@ -74,12 +74,14 @@ func _build_practice_range() -> void:
 		dm.rotation.y = randf_range(-0.4, 0.4)
 	var black := ZoltraakTurret.new()
 	black.kind = ZoltraakVisuals.Kind.BLACK
+	black.monster = "dummy"
 	root.add_child(black)
 	black.global_position = _ground(9.0, 12.0)
 	black.auto_target = player
 	black.interval = 9.0
 	var white := ZoltraakTurret.new()
 	white.kind = ZoltraakVisuals.Kind.WHITE
+	white.monster = "dummy"
 	root.add_child(white)
 	white.global_position = _ground(-13.0, 14.0)
 	white.auto_target = player

@@ -5,6 +5,8 @@ extends StaticBody3D
 ## "zoltraak_target", so the tracking missiles and lock-on find it.
 
 var damage_taken := 0.0
+## Show the running damage count above the head.
+var show_count := true
 var _label: Label3D
 var _flash: StandardMaterial3D
 var _tilt := Vector3.ZERO
@@ -85,8 +87,9 @@ func zoltraak_hit(damage: float, dir: Vector3) -> void:
 	# A shove away from the attack, sprung back.
 	var flat := Vector3(dir.x, 0.0, dir.z).normalized()
 	_tilt_v += Vector3(flat.z, 0.0, -flat.x) * clampf(damage * 0.08, 0.3, 2.0)
-	_label.text = "%d" % int(damage_taken)
-	_label.modulate.a = 1.0
+	if show_count:
+		_label.text = "%d" % int(damage_taken)
+		_label.modulate.a = 1.0
 
 
 func _process(delta: float) -> void:
