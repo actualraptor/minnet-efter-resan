@@ -9,6 +9,11 @@ static func muzzle(caster: Node) -> Vector3:
 
 
 static func aim(caster: Node, fallback: Vector3) -> Vector3:
+	# While aiming, the shot goes toward the aim point (the camera crosshair).
+	if caster.has_method("aim_point") and caster.get("_aim_active") == true:
+		var d0: Vector3 = (caster.call("aim_point") as Vector3) - muzzle(caster)
+		if d0.length() > 1.5:
+			return d0.normalized()
 	if caster.has_method("staff_direction"):
 		var d: Vector3 = caster.call("staff_direction")
 		if d.length() > 0.1:
@@ -26,6 +31,19 @@ static func spawn_bolt(world_parent: Node, caster: Node, from: Vector3, dir: Vec
 	return b
 
 
+## 0..1: how well the staff itself is lined up with the aim. Formations fade in
+## as she brings the staff onto the target and fade out as it drops away, so a
+## raised or lowered staff never throws seals up into the sky.
+static func alignment(caster: Node) -> float:
+	if not caster.has_method("staff_direction") or not caster.has_method("aim_point"):
+		return 1.0
+	var shaft: Vector3 = caster.call("staff_direction")
+	var want: Vector3 = (caster.call("aim_point") as Vector3) - muzzle(caster)
+	if want.length() < 1.0 or shaft.length() < 0.1:
+		return 1.0
+	return smoothstep(0.78, 0.97, shaft.normalized().dot(want.normalized()))
+
+
 ## The caster's current charge multiplier (1 = uncharged); consumed on read.
 static func take_power(caster: Node) -> float:
 	var v = caster.get("cast_power")
@@ -39,7 +57,7 @@ static func take_power(caster: Node) -> float:
 static func flash_seals(parent: Node, caster: Node, kind: ZoltraakVisuals.Kind, count := 2) -> void:
 	var st := SealStack.new()
 	parent.add_child(st)
-	st.build(count, 0.42, 0.6, kind)
+	st.build(count, 0.3, 0.5, kind)
 	var from := muzzle(caster)
 	var dir := aim(caster, Vector3.FORWARD)
 	var up := Vector3.UP if absf(dir.y) < 0.95 else Vector3.RIGHT

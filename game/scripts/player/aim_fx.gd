@@ -15,10 +15,10 @@ var _ready_pulse := 0.0
 func setup(p: Player) -> void:
 	player = p
 	top_level = true
-	circle = SixPetalCircle.new(0.7, Color(0.78, 0.9, 1.0))
+	circle = SixPetalCircle.new(0.72, Color(0.78, 0.9, 1.0))
 	add_child(circle)
 	circle.set_aperture(0.22)
-	circle.set_energy(2.6)
+	circle.set_energy(3.4)
 	circle.set_alpha(0.0)
 	impact = SixPetalCircle.new(0.3, Color(0.65, 0.85, 1.0))
 	add_child(impact)
@@ -41,7 +41,7 @@ func _process(delta: float) -> void:
 	var show_circle := blend > 0.02 and player.staff != null and player.staff.out
 	if show_circle:
 		var dir := ZoltraakShots.aim(player, player.model.global_basis.z)
-		circle.global_position = ZoltraakShots.muzzle(player) + dir * 0.55
+		circle.global_position = ZoltraakShots.muzzle(player) + dir * 0.9
 		circle.face(dir)
 		var c := player.aim_charge
 		circle.set_charge(c)
@@ -49,7 +49,7 @@ func _process(delta: float) -> void:
 		if c >= 0.99:
 			_ready_pulse += delta * 7.0
 			pulse = 0.12 * sin(_ready_pulse)
-		circle.set_alpha(blend * (0.85 + pulse))
+		circle.set_alpha(blend * (0.85 + pulse) * lerpf(0.35, 1.0, ZoltraakShots.alignment(player)))
 		circle.scale = Vector3.ONE * (0.55 + 0.45 * smoothstep(0.0, 0.25, blend) + 0.12 * c)
 	else:
 		circle.set_alpha(0.0)

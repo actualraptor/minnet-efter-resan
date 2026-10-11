@@ -19,7 +19,7 @@ func begin(body: Node3D, spell: SpellDefinition, cast_time: float) -> void:
 	_kind = ZoltraakVisuals.kind_of(spell)
 	_stack = SealStack.new()
 	add_child(_stack)
-	_stack.build(3, 0.55, 0.85, _kind)
+	_stack.build(3, 0.34, 0.7, _kind)
 	_stack.assemble(0.06)
 	_light = OmniLight3D.new()
 	_light.light_color = ZoltraakVisuals.accent(_kind)
@@ -45,6 +45,7 @@ func _process(delta: float) -> void:
 	_t += delta
 	var p := clampf(_t / _dur, 0.0, 1.0)
 	_follow()
+	_stack.set_alpha_scale(ZoltraakShots.alignment(_body))
 	_stack.set_charge(p)
 	_light.light_energy = 0.4 + 2.4 * p * p
 

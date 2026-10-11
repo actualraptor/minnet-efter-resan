@@ -15,7 +15,7 @@ var _alpha_scale := 1.0
 
 func build(count: int, base_radius: float, spacing: float, kind: ZoltraakVisuals.Kind) -> SealStack:
 	for i in count:
-		var r := base_radius * (1.0 + 0.32 * i)
+		var r := base_radius * (1.0 + 0.55 * i)
 		var s := SixPetalCircle.new(r, ZoltraakVisuals.seal_tint(kind), 6 if i % 2 == 0 else 8)
 		add_child(s)
 		s.position = Vector3(0, 0, 0.35 + spacing * i)

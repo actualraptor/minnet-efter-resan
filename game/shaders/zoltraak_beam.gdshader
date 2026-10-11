@@ -16,7 +16,7 @@ uniform float opacity = 1.0;
 uniform float core_width = 0.58;
 // Deep-blue outline: keeps the white shaft readable against a bright sky (the
 // anime beams carry a speckled blue-violet edge for the same reason).
-uniform vec3 outline_color : source_color = vec3(0.07, 0.13, 0.8);
+uniform vec3 outline_color : source_color = vec3(0.16, 0.28, 0.95);
 uniform float outline_start = 0.8;
 uniform float grain = 1.0;
 uniform float flow = 2.4;
@@ -47,7 +47,7 @@ void fragment() {
 	float jag = (n1 - 0.5) * 0.07 + (n2 - 0.5) * 0.10;
 	float rr = r + jag * grain;
 
-	float core = 1.0 - smoothstep(core_width - 0.06, core_width + 0.08, rr);
+	float core = 1.0 - smoothstep(core_width - 0.05, core_width + 0.1, rr);
 	float body = 1.0 - smoothstep(0.86, 0.99, rr);
 	// Speckled rim: sparse grains cling just outside the solid body.
 	float speck = step(0.78, texture(noise, uv2 * 2.7 + 0.37).r) * (1.0 - smoothstep(0.9, 1.0, r)) * smoothstep(0.7, 0.9, r);

@@ -92,14 +92,21 @@ func _ready() -> void:
 	await _snap("1 quick white shot")
 	await _wait(0.5)
 
-	# 2. Charged shot: hold, release.
-	_p.aim_charge = 1.0
-	await _wait(0.4)
-	await _snap("2 charge held (seal building)")
-	_p._end_focus_aim(true)
-	await _wait(0.22)
+	# 2. Charged shot (new scheme): RMB held charges with the symbol in front,
+	# LMB looses it where she aims.
+	await _wait(1.2)
+	_check("2 charge builds while RMB is held", _p.aim_charge > 0.6, "charge=%.2f" % _p.aim_charge)
+	await _snap("2 charge held (symbol in front)")
+	var power_before := _p.aim_charge
+	_p._fire_charged()
+	await _wait(0.3)
 	await _snap("2 charged shot fired")
+	_check("2 firing spends the charge", _p.aim_charge < power_before)
+	Input.action_release("cast")
 	await _wait(1.0)
+	# The symbol must lie in front of the staff, facing the aim.
+	var align := ZoltraakShots.alignment(_p)
+	_check("2 staff is lined up with the aim (alignment %.2f)" % align, align > 0.8)
 
 	# 3. Sustained beam sweeping across three targets.
 	var t_left := _turret(Vector3(-7, 0, 14))
@@ -136,11 +143,21 @@ func _ready() -> void:
 	await _wait(0.25)
 	await _snap("4 rapid burst")
 	await _wait(0.9)
+	# 4b. Lock-on: Ctrl+RMB picks the target; LMB sends arcing missiles that
+	# leave to the sides and curve in.
+	_p.lock_target = tgt
+	var vol_hits := [0]
+	await _wait(0.2)
 	_p._fire_variant("volley")
-	await _wait(0.4)
-	await _snap("4 tracking volley")
-	await _wait(1.6)
+	await _wait(0.5)
+	await _snap("4 lock-on missiles arcing out")
+	var side_swing := 0.0
+	for b in get_tree().get_nodes_in_group("zoltraak_missile"):
+		side_swing = maxf(side_swing, absf((b.global_position - _p.global_position).x))
+	_check("4 missiles swing out wide before homing (%.1f m)" % side_swing, side_swing > 0.8)
+	await _wait(1.8)
 	_p._end_focus_aim(false)
+	_check("4 lock cleared when aim ends", _p.lock_target == null)
 	await _wait(0.3)
 
 	# 5. Original black Zoltraak (charged beam).

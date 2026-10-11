@@ -12,6 +12,9 @@ var life := 1.4
 var size := 1.0
 var target: Node3D
 var turn_rate := 0.0
+## Missiles first sweep out along `direction` for this long without homing, then
+## curve in on the target: the arc that gets around a barrier's front.
+var arc_time := 0.0
 var exclude: Array[RID] = []
 var kind := ZoltraakVisuals.Kind.WHITE
 var team := 0
@@ -22,6 +25,7 @@ var _done := false
 
 
 func setup(from: Vector3, dir: Vector3, spd: float, scale_factor := 1.0, visual := ZoltraakVisuals.Kind.WHITE) -> void:
+	add_to_group("zoltraak_missile")
 	global_position = from
 	direction = dir.normalized()
 	speed = spd
@@ -79,7 +83,9 @@ func _orient() -> void:
 func _physics_process(delta: float) -> void:
 	if _done:
 		return
-	if is_instance_valid(target) and turn_rate > 0.0:
+	if arc_time > 0.0:
+		arc_time -= delta
+	elif is_instance_valid(target) and turn_rate > 0.0:
 		var want := (target.global_position + Vector3(0, 0.9, 0) - global_position).normalized()
 		var axis := direction.cross(want)
 		if axis.length() > 1e-4:

@@ -21,6 +21,7 @@ const KEYS := {
 	"spell_4": [KEY_4],
 	"fly": [KEY_H],
 	"descend": [KEY_CTRL, KEY_C],
+	"lock": [KEY_CTRL],
 	"interrupt": [KEY_X],
 	"advance": [KEY_SPACE, KEY_ENTER, KEY_E],
 	"quick_save": [KEY_F5],

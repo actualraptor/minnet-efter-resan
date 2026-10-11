@@ -31,9 +31,11 @@ Fifty years after her party defeated the Hollow King, the centuries-old elven ma
 | Choose | 1–3 or click | — |
 | Summon / stow staff | Q | — |
 | Cast equipped spell (summons the staff if needed; hold for the barrier) | Left mouse or F | RB |
-| Select spell: Field of Flowers / Zoltraak / Barrier / original (black) Zoltraak | 1 / 2 / 3 / 4 | — |
-| Zoltraak focus aim (hold; releasing at full charge fires the heavy shot) | Right mouse | — |
-| While aiming: quick shot / sustained beam / rapid burst / tracking volley | Tap or hold LMB or F / Q / E | — |
+| Select spell: Field of Flowers / Solstråk / Barrier / Mörkstråk (the original, black form) | 1 / 2 / 3 / 4 | — |
+| Aim a Solstråk/Mörkstråk (hold: staff raised, circle charges in front) | Right mouse | — |
+| While aiming: loose the charge where you aim (hold for a sustained beam) | Left mouse | — |
+| While aiming: lock on, then LMB sends arcing missiles | Ctrl + RMB, then LMB | — |
+| While aiming: rapid burst | Q | — |
 | Cancel a cast | X | — |
 | Fly (toggle; also double-tap Space in the air) | H | Y |
 | Climb / descend while flying (Shift = faster) | Space / Ctrl | A / LB |

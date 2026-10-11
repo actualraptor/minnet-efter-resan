@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_def")
 id = &"spell_zoltraak_beam"
-display_name = "Zoltraak: Sustained Beam"
-description = "A channelled beam, held for a short time."
+display_name = "Solstråk: Sustained Beam"
+description = "A channelled beam, held for as long as she can spare."
 category = 5
 targeting = 2
 mana_cost = 8

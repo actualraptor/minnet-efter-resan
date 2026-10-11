@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 // Defensive barrier: a translucent dome (mesh centred on its own origin, facing
 // +Z) tiled with glowing hexagonal cells. Idle it is almost transparent: a faint
 // outline and a rim. Hits light the cells around the impact, send an outward
@@ -13,13 +13,13 @@ render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabl
 // imp_data[i] x = strength 0..2, y = 1 for a persistent contact,
 //             z = hole radius in metres along the surface (0 = intact)
 
-uniform vec3 tint : source_color = vec3(0.45, 0.82, 1.0);
+uniform vec3 tint : source_color = vec3(0.12, 0.6, 1.0);
 uniform vec3 stress_tint : source_color = vec3(1.0, 0.72, 0.4);
 uniform float radius = 1.7;
-uniform float cell = 0.2;
+uniform float cell = 0.26;
 uniform float appear = 1.0;
 uniform float stress = 0.0;
-uniform float idle_alpha = 0.16;
+uniform float idle_alpha = 0.62;
 uniform float ripple_speed = 3.0;
 uniform vec4 imp_dir[8];
 uniform vec4 imp_data[8];
@@ -59,7 +59,7 @@ void fragment() {
 	vec4 hx = hexcell(q);
 	float e = hx.x;
 	vec2 cid = hx.yz;
-	float outline = smoothstep(0.40, 0.49, e);
+	float outline = smoothstep(0.33, 0.46, e);
 
 	// Distance (in cells) from the dome's centre line: the formation assembles
 	// outward from the middle when it appears.
@@ -111,12 +111,14 @@ void fragment() {
 	float flicker = 0.85 + 0.15 * sin(TIME * 23.0 + hash2(cid) * 6.28) * step(0.4, stress);
 
 	vec3 base = mix(tint, stress_tint, smoothstep(0.55, 1.0, stress));
-	float line = outline * (idle_alpha + glow_edge * 0.9 + glow_fill * 0.7 + stress * 0.45) * flicker;
-	float fill = (1.0 - outline) * (0.025 + glow_fill * 0.28 + stress * 0.06 * hash2(cid)) * flicker;
-	float edge = rim * (0.05 + 0.1 * stress);
-	float inten = (line + fill + edge) * holes * reveal * appear;
-	// Torn rims of holes glow white-hot.
-	inten += hole_edge * 0.9 * appear * reveal;
-	ALBEDO = base * inten * 2.2 + vec3(1.0) * (glow_fill * 0.12 * outline) * holes;
-	ALPHA = clamp(inten, 0.0, 1.0);
+	float lit = clamp(glow_fill + glow_edge, 0.0, 1.0);
+	float line = outline * (idle_alpha + glow_edge * 0.8 + glow_fill * 0.5 + stress * 0.3) * flicker;
+	float fill = (1.0 - outline) * (0.10 + glow_fill * 0.30 + stress * 0.08 * hash2(cid)) * flicker;
+	float edge = rim * (0.22 + 0.15 * stress);
+	float a = clamp(line + fill + edge, 0.0, 1.0) * holes * reveal * appear;
+	// Torn rims of holes burn white-hot.
+	a = clamp(a + hole_edge * 0.8 * appear * reveal, 0.0, 1.0);
+	vec3 col = mix(base, vec3(0.85, 0.97, 1.0), lit * 0.75);
+	ALBEDO = col * (1.0 + 1.4 * lit + hole_edge * 0.8);
+	ALPHA = a;
 }

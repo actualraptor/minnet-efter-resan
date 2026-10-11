@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_def")
 id = &"spell_zoltraak_original"
-display_name = "Zoltraak (original)"
-description = "The killing magic as it was first cast: a black, oppressive beam. Slower to answer and unmistakably older."
+display_name = "Mörkstråk"
+description = "The first form, as it was cast in the old wars: a black, oppressive beam. Slower to answer and unmistakably older."
 category = 5
 targeting = 2
 mana_cost = 14.0

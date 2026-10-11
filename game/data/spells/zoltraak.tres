@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_def")
 id = &"spell_zoltraak"
-display_name = "Zoltraak"
-description = "Standard offensive magic: a thin, fast, exacting beam. No ceremony. She has done this a thousand times."
+display_name = "Solstråk"
+description = "Freyja's own: a thin, fast, exacting line of sunlight. No ceremony. She has done this a thousand times."
 category = 5
 targeting = 2
 mana_cost = 8.0

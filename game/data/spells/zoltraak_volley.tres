@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_def")
 id = &"spell_zoltraak_volley"
-display_name = "Zoltraak: Tracking Volley"
-description = "Smaller bolts that curve toward nearby targets."
+display_name = "Solstråk: Arcing Missiles"
+description = "Smaller bolts that swing wide and curve in on a locked target."
 category = 5
 targeting = 2
 mana_cost = 16

@@ -97,6 +97,8 @@ var aim_charge := 0.0              # 0..1 over AIM_CHARGE_TIME while RMB is held
 var aim_blend := 0.0               # smoothed 0..1, drives camera, circle and reticle
 var _aim_fx: AimFx
 var _cast_hold := 0.0
+## Lock-on (hold Ctrl with RMB): the target the arcing missiles home on.
+var lock_target: Node3D
 ## Charge multiplier for the next charged Zoltraak (1 = uncharged); read and
 ## reset by the effect.
 var cast_power := 1.0
@@ -281,6 +283,8 @@ func _update_aim() -> void:
 	var p: Vector3 = hit.position if not hit.is_empty() else from + dir * 40.0
 	if aim_point_override.is_finite():
 		p = aim_point_override
+	elif lock_target != null and is_instance_valid(lock_target):
+		p = lock_target.global_position + Vector3(0, 1.0, 0)
 	# Measure from the staff head so the beam, not her chest, hits the point.
 	var from_pt := staff_tip() if staff_rig and staff_rig.is_active() else global_position + Vector3(0.0, 1.3, 0.0)
 	var flat := Vector3(p.x - from_pt.x, 0.0, p.z - from_pt.z)
@@ -632,7 +636,7 @@ func _physics_process(delta: float) -> void:
 		if Input.is_action_just_pressed("jump") and not _casting and not flying:
 			_jump_buffer = 0.13
 	if has_control() and flying and not (_casting and _cast_move <= 0.0):
-		climb = Input.get_action_strength("jump") - Input.get_action_strength("descend")
+		climb = Input.get_action_strength("jump") - (0.0 if focus_aim else Input.get_action_strength("descend"))
 	# Double-tap jump in the air: take off.
 	if has_control() and not flying and not on_floor and Input.is_action_just_pressed("jump"):
 		var now := Time.get_ticks_msec() / 1000.0
@@ -945,6 +949,9 @@ func _begin_focus_aim() -> void:
 			return
 	focus_aim = true
 	aim_charge = 0.0
+	lock_target = null
+	if Input.is_action_pressed("lock"):
+		_acquire_lock()
 	_heavy_ready_sfx = false
 	_cast_hold = 0.0
 	_aim_active = true
@@ -959,20 +966,50 @@ func _begin_focus_aim() -> void:
 	aim_changed.emit(true)
 
 
-## Release RMB. At full charge the circle is loosed as a heavy shot.
-func _end_focus_aim(allow_fire: bool) -> void:
+## Release RMB: stand down. The charge is dropped (it is fired with the left
+## button, not by letting go).
+func _end_focus_aim(_allow_fire: bool) -> void:
 	if not focus_aim:
 		return
-	# Any meaningful charge fires; width and brightness scale with it (1..3).
-	var heavy := allow_fire and aim_charge >= 0.4
-	cast_power = lerpf(1.0, 3.0, clampf((aim_charge - 0.4) / 0.6, 0.0, 1.0))
 	focus_aim = false
+	lock_target = null
+	aim_charge = 0.0
 	aim_changed.emit(false)
-	if heavy:
-		_fire_variant("heavy", true)
-		get_tree().create_timer(0.55, false).timeout.connect(_release_aim_pose.bind(_cast_gen))
-	else:
-		_release_aim_pose(_cast_gen)
+	_release_aim_pose(_cast_gen)
+
+
+## Picks the target nearest the camera's centre line (within 40 degrees, 70 m).
+func _acquire_lock() -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var from := cam.global_position
+	var fwd := -cam.global_basis.z
+	var best: Node3D = null
+	var best_ang := deg_to_rad(40.0)
+	for n in get_tree().get_nodes_in_group("zoltraak_target"):
+		var t := n as Node3D
+		if t == null or not is_instance_valid(t):
+			continue
+		var to := t.global_position + Vector3(0, 1.0, 0) - from
+		if to.length() > 70.0 or to.length() < 1.5:
+			continue
+		var ang := fwd.angle_to(to)
+		if ang < best_ang:
+			best_ang = ang
+			best = t
+	lock_target = best
+	if best:
+		GameState.toast.emit("Locked on.")
+
+
+## LMB while charging: loose the charged Zoltraak at the aim point (sustained
+## while the button stays down; width and seals scale with the charge).
+func _fire_charged() -> void:
+	cast_power = lerpf(1.0, 3.0, clampf(aim_charge, 0.0, 1.0))
+	_fire_variant("beam")
+	aim_charge = 0.0
+	_heavy_ready_sfx = false
 
 
 func _release_aim_pose(gen: int) -> void:
@@ -987,12 +1024,40 @@ func _release_aim_pose(gen: int) -> void:
 		face.set_expression("neutral", 0.0)
 
 
+## LMB without RMB with a Zoltraak equipped: raise the staff on the aim, loose a
+## quick shot, and lower it again shortly after (unless RMB is then held).
+func _snap_shot() -> void:
+	if staff and not staff.out:
+		if staff.busy or is_indoors() or not can_start_cast():
+			return
+		await staff.summon()
+	var held := focus_aim
+	if not held:
+		_begin_focus_aim()
+		await get_tree().create_timer(0.3).timeout
+	if not focus_aim:
+		return
+	_fire_variant("quick")
+	if not held:
+		await get_tree().create_timer(1.1).timeout
+		if focus_aim and not Input.is_action_pressed("aim"):
+			_end_focus_aim(false)
+
+
 func _fire_variant(variant: String, force := false) -> void:
 	if not _variants.has(variant):
 		_variants[variant] = load("res://data/spells/zoltraak_%s.tres" % variant) as SpellDefinition
 	var sd: SpellDefinition = _variants[variant]
 	if sd == null:
 		return
+	var cur := caster.current_spell()
+	if cur != null and cur.visual == &"black":
+		var key := variant + "_black"
+		if not _variants.has(key):
+			var d := sd.duplicate() as SpellDefinition
+			d.visual = &"black"
+			_variants[key] = d
+		sd = _variants[key]
 	if not force and not (focus_aim and can_start_cast()):
 		return
 	var reason := caster.try_cast(sd)
@@ -1034,17 +1099,18 @@ func aim_point() -> Vector3:
 func _update_focus_aim(delta: float) -> void:
 	aim_blend = move_toward(aim_blend, 1.0 if focus_aim else 0.0, delta * 5.0)
 	if focus_aim:
-		aim_charge = minf(aim_charge + delta / AIM_CHARGE_TIME, 1.0)
+		if caster.casting:
+			aim_charge = maxf(aim_charge - delta * 3.0, 0.0)
+		else:
+			aim_charge = minf(aim_charge + delta / AIM_CHARGE_TIME, 1.0)
 		if aim_charge >= 0.99 and not _heavy_ready_sfx:
 			_heavy_ready_sfx = true
 			Audio.sfx("spell_gather", -14.0, 0.0)
-		# Holding the cast button past a tap channels the sustained beam.
-		if Input.is_action_pressed("cast") or Input.is_action_pressed("cast_alt"):
-			_cast_hold += delta
-			if _cast_hold > 0.3 and not caster.casting:
-				_fire_variant("beam")
-		else:
-			_cast_hold = 0.0
+		if lock_target != null and not is_instance_valid(lock_target):
+			lock_target = null
+		# Ctrl pressed after RMB also locks.
+		if lock_target == null and Input.is_action_just_pressed("lock"):
+			_acquire_lock()
 	# Neutral combat-ready stance: staff out with Zoltraak equipped, she hovers a
 	# hand's breadth off the ground while standing.
 	var ready := staff != null and staff.out and _zoltraak_equipped() and not flying and is_on_floor() and velocity.length() < 0.4 and not _casting
@@ -1088,24 +1154,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_released("aim") and focus_aim:
 		get_viewport().set_input_as_handled()
-		_end_focus_aim(true)
+		_end_focus_aim(false)
 		return
 	if not has_control():
 		return
 	if focus_aim:
-		# While aiming the same keys fire the Zoltraak modes.
+		# While aiming (RMB held): LMB looses what the aim has charged, or, with a
+		# lock-on (Ctrl), the arcing missiles. Q is a rapid burst.
 		if (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
 			get_viewport().set_input_as_handled()
-			_cast_hold = 0.0
-			_fire_variant("quick")
+			if lock_target != null and is_instance_valid(lock_target):
+				_fire_variant("volley")
+			else:
+				_fire_charged()
 			return
 		if event.is_action_pressed("summon"):
 			get_viewport().set_input_as_handled()
 			_fire_variant("burst")
-			return
-		if event.is_action_pressed("interact"):
-			get_viewport().set_input_as_handled()
-			_fire_variant("volley")
 			return
 	if event.is_action_pressed("interact") and focus:
 		get_viewport().set_input_as_handled()
@@ -1130,6 +1195,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Freyja summons her staff out of thin air before casting if it isn't out.
 func _cast_with_staff() -> void:
+	var cur := caster.current_spell()
+	if cur != null and cur.aim and cur.staff_pose != &"":
+		await _snap_shot()
+		return
 	if staff and not staff.out:
 		if is_indoors() or staff.busy or not can_start_cast():
 			var r := caster.try_cast()  # let the caster explain (e.g. indoors)

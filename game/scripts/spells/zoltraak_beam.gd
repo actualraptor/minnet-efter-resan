@@ -47,7 +47,7 @@ func setup() -> void:
 	if seals > 0:
 		_stack = SealStack.new()
 		add_child(_stack)
-		_stack.build(seals, seal_radius, 1.1 + seal_radius * 0.7, kind)
+		_stack.build(seals, seal_radius * 0.5, 0.8 + seal_radius * 0.5, kind)
 		_stack.assemble(0.05)
 	_light = OmniLight3D.new()
 	_light.light_color = ZoltraakVisuals.accent(kind)

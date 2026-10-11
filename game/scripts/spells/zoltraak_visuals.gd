@@ -47,15 +47,15 @@ static func beam_material(kind: Kind, length: float) -> ShaderMaterial:
 		m.set_shader_parameter("core_energy", 3.0)
 		m.set_shader_parameter("rim_color", Vector3(0.2, 0.3, 1.0))
 		m.set_shader_parameter("rim_energy", 1.3)
-		m.set_shader_parameter("core_width", 0.5)
-		m.set_shader_parameter("outline_start", 0.64)
+		m.set_shader_parameter("core_width", 0.8)
+		m.set_shader_parameter("outline_start", 0.9)
 		m.set_shader_parameter("dark", 0.0)
 	else:
 		m.set_shader_parameter("core_color", Vector3(0.0, 0.0, 0.0))
 		m.set_shader_parameter("core_energy", 1.0)
 		m.set_shader_parameter("rim_color", Vector3(0.5, 0.25, 1.0))
 		m.set_shader_parameter("rim_energy", 1.6)
-		m.set_shader_parameter("core_width", 0.5)
+		m.set_shader_parameter("core_width", 0.62)
 		m.set_shader_parameter("dark", 1.0)
 		m.set_shader_parameter("grain", 1.5)
 	return m

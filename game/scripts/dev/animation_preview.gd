@@ -147,7 +147,7 @@ func _build_ui() -> void:
 	_header(v, "Staff")
 	_row(v, [["Summon", _summon], ["Stow", func(): if player.staff: player.staff.stow()]])
 	_header(v, "Spells (need the staff out)")
-	_row(v, [["Zoltraak", func(): _cast(1)], ["x3 chain", _chain], ["Flowers", func(): _cast(0)]])
+	_row(v, [["Solstråk", func(): _cast(1)], ["x3 chain", _chain], ["Flowers", func(): _cast(0)]])
 	_row(v, [["Barrier", _barrier], ["Hit", _barrier_hit], ["Release", _release], ["Interrupt", func(): player.interrupt_cast()]])
 	var aim := CheckBox.new()
 	aim.text = "Aim at target pillar"
