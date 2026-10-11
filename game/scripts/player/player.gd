@@ -57,6 +57,7 @@ var staff: StaffSummon
 var _look_mod: LookAtModifier3D
 var _neck_mod: LookAtModifier3D
 var _fly_clip_on := false
+var gait_polish: GaitPolish
 var grounder: FootGrounder
 var hands: HandPoser
 var staff_rig: StaffRig
@@ -131,6 +132,7 @@ func _ready() -> void:
 	_setup_look_at()
 	_setup_grounding()
 	_setup_staff_rig()
+	_setup_gait_polish()
 	_aim_fx = AimFx.new()
 	_aim_fx.name = "AimFx"
 	add_child(_aim_fx)
@@ -286,6 +288,25 @@ func _update_aim() -> void:
 	_aim_yaw = atan2(flat.x, flat.z)
 	if staff_rig:
 		staff_rig.aim_elevation = atan2(p.y - from_pt.y, flat.length())
+
+
+## Procedural finishing layer for the walk/run (pelvic tilt, torso carry, level
+## head, breath). First in the modifier stack, so the foot grounder runs after it.
+func _setup_gait_polish() -> void:
+	var skels := model.find_children("*", "Skeleton3D", true, false)
+	if skels.is_empty():
+		return
+	var skel: Skeleton3D = skels[0]
+	if skel.find_bone("Hips") < 0 or skel.find_bone("LeftFoot") < 0:
+		return
+	var gp := GaitPolish.new()
+	gp.name = "GaitPolish"
+	skel.add_child(gp)
+	if not gp.setup():
+		gp.queue_free()
+		return
+	skel.move_child(gp, 0)
+	gait_polish = gp
 
 
 func _setup_look_at() -> void:
@@ -501,6 +522,10 @@ func _update_flight_hold() -> void:
 
 
 func _update_hover_pose() -> void:
+	if gait_polish:
+		var grounded := is_on_floor() and not flying and _lift < 0.05
+		gait_polish.amount = move_toward(gait_polish.amount, 1.0 if grounded else 0.0, get_physics_process_delta_time() * 4.0)
+		gait_polish.speed01 = Vector2(velocity.x, velocity.z).length() / maxf(walk_speed, 0.1)
 	if hover_pose == null:
 		return
 	hover_pose.amount = maxf(smoothstep(0.0, 1.0, clampf(_lift / 0.25, 0.0, 1.0)), smoothstep(0.0, 1.0, _fly_blend))
