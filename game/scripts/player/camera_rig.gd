@@ -61,8 +61,8 @@ func _max_pitch() -> float:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and target and target.has_control():
-		yaw -= event.relative.x * mouse_sensitivity
-		pitch = clampf(pitch - event.relative.y * mouse_sensitivity, _min_pitch(), _max_pitch())
+		yaw -= event.relative.x * mouse_sensitivity * Settings.mouse
+		pitch = clampf(pitch - event.relative.y * mouse_sensitivity * Settings.mouse, _min_pitch(), _max_pitch())
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and target and target.has_control():
 		zoom = clampf(zoom * (0.88 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 0.88), min_zoom, max_zoom)
 		get_viewport().set_input_as_handled()

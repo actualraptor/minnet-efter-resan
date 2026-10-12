@@ -54,6 +54,8 @@ func _ready() -> void:
 		await _time()
 	if only == "" or only == "way":
 		await _waypoints()
+	if only == "life":
+		await _life()
 	get_tree().quit()
 
 
@@ -166,3 +168,29 @@ func _waypoints() -> void:
 	GameState.world_date["hour"] = 19.0
 	await _wait(1.5)
 	await _snap("way_beacon_dusk")
+
+
+func _life() -> void:
+	GameState.set_quest("garden_of_jonas", "complete")
+	GameState.world_date["hour"] = 16.0
+	GameState.set_flag("pippa_met")
+	await _wait(0.5)
+	for r in _main._routines:
+		r.snap_to_plan()
+	# From the meadow, looking at the bench and the stops round it.
+	_look(_ground(1.0, -24.0) + Vector3(0, 0.2, 0), 0.25, 5.0, 1.4, -6.0, 0.0)
+	await _wait(1.5)
+	await _snap("life_bench_sit")
+	var pr: NpcRoutine = _main.pippa.get_node("Routine")
+	pr.wait_scale = 0.15
+	for i in 6:
+		await _wait(1.6)
+		await _snap("life_t%d" % i)
+	# Close on Edda, seated, and then talking.
+	var e: NPC = _main.edda
+	_look(_ground(e.global_position.x - 1.2, e.global_position.z + 1.8) + Vector3(0, 0.2, 0), atan2(1.2, -1.8), 3.0, 0.7, -4.0, 0.0)
+	await _wait(0.8)
+	await _snap("life_edda_close")
+	e.play(&"Talk")
+	await _wait(0.8)
+	await _snap("life_edda_talk")

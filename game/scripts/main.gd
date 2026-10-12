@@ -19,6 +19,10 @@ var _stone_quests: StoneQuests
 var _waypoints: Waypoints
 var _time_of_day: TimeOfDay
 var _bloom_pending := false
+var _ending_running := false
+## Tests switch the ending off so a finished errand does not take the scene over.
+var ending_enabled := true
+var end_card: EndCard
 
 
 func _ready() -> void:
@@ -41,7 +45,7 @@ func _ready() -> void:
 		title.visible = false
 		# Dev audits: --dbg --face|--spell|--pose|--walk (default: staff walk).
 		var dbg := "staffwalk"
-		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range", "teaser", "book", "probe", "npc", "yard"]:
+		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range", "teaser", "book", "probe", "npc", "yard", "perf"]:
 			if "--" + k in args:
 				dbg = k
 		add_child(load("res://tests/_dbg_%s.gd" % dbg).new())
@@ -59,7 +63,30 @@ func _ready() -> void:
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_build_range_yard()
-	_opening()
+	_show_title()
+
+
+## The front door over the live meadow. Begin runs the opening; Continue loads the
+## saved journal and drops her back on the road.
+func _show_title() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	player.lock_input()
+	var t := TitleScreen.new()
+	t.name = "TitleScreen"
+	$UI.add_child(t)
+	t.set_continue_enabled(GameState.has_save())
+	t.begin_pressed.connect(func():
+		t.queue_free()
+		player.unlock_input()
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		_opening())
+	t.continue_pressed.connect(func():
+		if GameState.load_game():
+			t.queue_free()
+			fade.visible = false
+			title.visible = false
+			player.unlock_input()
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
 
 
 ## The dedicated practice range east of the road (see PracticeRange): walk there,
@@ -105,6 +132,9 @@ func _ground(x: float, z: float) -> Vector3:
 	return Vector3(x, terrain.height_at(x, z), z)
 
 
+var _routines: Array[NpcRoutine] = []
+
+
 func _place_cast() -> void:
 	var s := WorldLayout.PLAYER_START
 	player.teleport(_ground(s.x, s.z) + Vector3.UP * 0.1, PI)
@@ -113,17 +143,24 @@ func _place_cast() -> void:
 	var c := WorldLayout.COTTAGE_POS
 	edda.set_home(Vector3(c.x + 1.4, pad + 0.05, c.z - 1.6), atan2(-1.4, 4.95))
 	pippa.set_home(_ground(4.6, 0.9) + Vector3.UP * 0.05, -0.5)
-	if GameState.quest(QUEST) in ["bloomed", "complete"]:
-		_move_edda_to_bench()
+	_start_routines()
 
 
-func _move_edda_to_bench() -> void:
-	var b := WorldLayout.BENCH_POS
-	var to_meadow := WorldLayout.GARDEN_MEADOW - b
-	var yaw := atan2(to_meadow.x, to_meadow.z)
-	var side := Vector3(cos(yaw), 0, -sin(yaw))
-	var p := b + side * 1.2
-	edda.set_home(_ground(p.x, p.z) + Vector3.UP * 0.05, yaw)
+## Edda and Pippa live their day (NpcPlans: where the story and the clock put
+## them; NpcRoutine: the walking, sitting, noticing and barking). After a load
+## they are put where the plan says at once.
+func _start_routines() -> void:
+	var plans := NpcPlans.new(terrain)
+	for n in [edda, pippa]:
+		var r := NpcRoutine.new()
+		r.name = "Routine"
+		n.add_child(r)
+		r.setup(n, player, world.door, plans)
+		r.snap_to_plan()
+		_routines.append(r)
+	GameState.save_loaded.connect(func():
+		for r in _routines:
+			r.snap_to_plan())
 
 
 func _opening() -> void:
@@ -172,7 +209,6 @@ func _garden_bloomed() -> void:
 	pippa.set_home(_ground(-0.5, -13.0) + Vector3.UP * 0.05, atan2(-3.5, -11.0))
 	pippa.play(&"Hop")
 	pippa.bark("GRANDMA! GRANDMA, COME AND LOOK!", 3.5)
-	_move_edda_to_bench()
 	Audio.music_volume(-11.0, 3.0)
 
 
@@ -196,6 +232,57 @@ func _on_quest_changed(id: String, state: String) -> void:
 func _on_conversation_finished(id: String) -> void:
 	if id == "pippa" and GameState.quest(QUEST) == "bloomed":
 		pippa.play(&"Hop")
+	if id == "pippa" and ending_enabled and _ending_ready():
+		_start_ending()
+
+
+func _ending_ready() -> bool:
+	return not _ending_running and not GameState.has_flag("demo_complete") \
+		and GameState.quest(QUEST) == "complete" and GameState.quest(StoneQuests.STONE) == "complete" \
+		and GameState.quest(StoneQuests.STATUE) == "complete"
+
+
+## The last beat: dusk on the road, Pippa says good evening to the statue, she
+## walks on, and the end card comes up (then she may keep wandering).
+func _start_ending() -> void:
+	_ending_running = true
+	player.lock_input()
+	for r in _routines:
+		r.paused = true
+	fade.visible = true
+	var tw := create_tween()
+	tw.tween_property(fade, "modulate:a", 1.0, 1.6)
+	await tw.finished
+	GameState.world_date["hour"] = 19.4
+	player.teleport(_ground(-3.0, 37.0) + Vector3.UP * 0.15, 0.0)
+	pippa.set_home(_ground(-5.3, 38.4) + Vector3.UP * 0.05, atan2(2.3, -1.4))
+	await get_tree().create_timer(0.5).timeout
+	tw = create_tween()
+	tw.tween_property(fade, "modulate:a", 0.0, 1.6)
+	await tw.finished
+	fade.visible = false
+	player.unlock_input()
+	director.start_conversation("ending", pippa, player)
+	while true:
+		var done: String = await director.conversation_finished
+		if done == "ending":
+			break
+	_record_ending_memory()
+	# She walks on down the road while the light goes out.
+	player.scripted_yaw = PI
+	player.scripted_walk = Vector2(0.0, -1.0)
+	fade.visible = true
+	fade.modulate.a = 0.0
+	tw = create_tween()
+	tw.tween_interval(3.0)
+	tw.tween_property(fade, "modulate:a", 1.0, 3.0)
+	await tw.finished
+	player.scripted_walk = Vector2.ZERO
+	GameState.set_flag("demo_complete")
+	_ending_running = false
+	for r in _routines:
+		r.paused = false
+	end_card.show_card()
 
 
 func _on_dialogue_event(event: String, _dialogue_id: String) -> void:
@@ -249,6 +336,20 @@ func _record_garden_memory() -> void:
 	GameState.change_affinity("char_edda", 1, "memory_cottage_garden_restored")
 
 
+func _record_ending_memory() -> void:
+	GameState.record_memory({
+		"id": "memory_dusk_on_the_road",
+		"title": "Dusk on the road",
+		"kind": "journey",
+		"participants": [GameState.PROTAGONIST_ID, "char_pippa"],
+		"absent_but_present": ["char_edda", "char_jonas_brenn"],
+		"location": {"id": "loc_roadside_statue", "region": "reg_brenns_meadow", "position": [StoneQuests.STATUE_POS.x, 0.0, StoneQuests.STATUE_POS.y]},
+		"tags": ["leaving", "promise", "counting"],
+		"promises": [{"id": "promise_return_to_edda", "to": "char_edda", "text": "Weeks, not years.", "due_in_days": 21, "kept": null}],
+		"journal_text": "Left Brenn's Meadow at dusk, down the road, the way most things go. Edda is counting weeks. Pippa is counting from zero, and says it starts when I go. I wrote the date down so that I would.",
+	})
+
+
 ## Sun, sky and fog follow the in-game clock.
 func _build_time_of_day() -> void:
 	_time_of_day = TimeOfDay.new()
@@ -273,10 +374,6 @@ func _build_stone_errands() -> void:
 	book.name = "Spellbook"
 	book.player = player
 	$UI.add_child(book)
-
-
-## Dev/playtest shortcut: F10 travels to the Linköping slice.
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F10:
-		get_viewport().set_input_as_handled()
-		get_tree().change_scene_to_file("res://scenes/linkoping.tscn")
+	end_card = EndCard.new()
+	end_card.name = "EndCard"
+	$UI.add_child(end_card)

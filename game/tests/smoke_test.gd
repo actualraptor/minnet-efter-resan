@@ -75,6 +75,7 @@ func _run() -> void:
 	var terrain: MeadowTerrain = main.terrain
 	var field := FlowerField.instance
 	var wp: Waypoints = main.get_node("Waypoints")
+	main.ending_enabled = false   # the ending has its own check at the end
 
 	# World
 	var h := terrain.height_at(0, 20)
@@ -337,6 +338,59 @@ func _run() -> void:
 	check("stone and statue restored clean", not quests._stone.is_dirty() and not quests._statue.is_dirty())
 	var hud: Hud = main.get_node("UI/Hud")
 	check("tracker shows the latest finished errand", hud._quest_title.text == "Good Morning, Statue", hud._quest_title.text)
+
+	# After a load the cast is where the plan says (Edda out on her bench), not where the scene started.
+	var bench := WorldLayout.BENCH_POS
+	check("after a load Edda is back on the bench", Vector2(main.edda.global_position.x - bench.x, main.edda.global_position.z - bench.z).length() < 1.3 and main.edda.seated, "%.1f m, seated=%s" % [Vector2(main.edda.global_position.x - bench.x, main.edda.global_position.z - bench.z).length(), main.edda.seated])
+
+	# The cast has a day: they walk between stops, and go home when the light goes.
+	var pr: NpcRoutine = main.pippa.get_node("Routine")
+	var er: NpcRoutine = main.edda.get_node("Routine")
+	pr.wait_scale = 0.04
+	var travelled := 0.0
+	var last_pos: Vector3 = main.pippa.global_position
+	for k in 50:
+		await _seconds(0.3)
+		travelled += main.pippa.global_position.distance_to(last_pos)
+		last_pos = main.pippa.global_position
+	check("Pippa moves around on her own", travelled > 3.0, "%.1f m" % travelled)
+	pr.wait_scale = 1.0
+	var hour_now := float(GameState.world_date["hour"])
+	GameState.world_date["hour"] = 22.0
+	await _seconds(2.2)
+	check("at night both go home", pr._plan_key == "pippa_home" and er._plan_key == "edda_home", "%s / %s" % [pr._plan_key, er._plan_key])
+	GameState.world_date["hour"] = hour_now
+	await _seconds(2.2)
+	check("in daylight Edda is back to the bench plan", er._plan_key == "edda_bench", er._plan_key)
+
+	# Front door and options.
+	Settings.ensure_buses()
+	check("option buses exist", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("Ambience") >= 0 and AudioServer.get_bus_index("Effects") >= 0)
+	var credits: Variant = DialogueRunner._read_json("res://data/credits.json")
+	check("credits list every licence group", credits is Array and (credits as Array).size() >= 5)
+	var ts := TitleScreen.new()
+	main.get_node("UI").add_child(ts)
+	await _frames(2)
+	ts.set_continue_enabled(false)
+	check("title screen builds with Begin, Continue, Options, Credits, Quit", ts.get_child_count() >= 2 and ts._continue_btn != null and ts._continue_btn.disabled)
+	ts.queue_free()
+
+	# The ending: dusk on the road, the closing conversation, then the end card.
+	main.ending_enabled = true
+	check("ending is ready once all three errands are done", main._ending_ready())
+	main.call("_start_ending")
+	var guard_end := 0
+	while not main.end_card.visible and guard_end < 900:
+		guard_end += 1
+		if main.director.runner.active:
+			main.director.runner.advance()
+		await _frames(10)
+	check("end card shows after the closing conversation", main.end_card.visible and GameState.has_flag("demo_complete"))
+	check("closing beat happens at dusk", float(GameState.world_date["hour"]) >= 19.0)
+	check("ending is written into the journal", GameState.has_memory("memory_dusk_on_the_road"))
+	main.end_card.visible = false
+	get_tree().paused = false
+
 	print("\n---- transcript sample ----\n" + t3)
 
 

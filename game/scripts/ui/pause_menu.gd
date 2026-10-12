@@ -7,6 +7,8 @@ var _root: PanelContainer
 var _journal: RichTextLabel
 var _main: VBoxContainer
 var _quests: Dictionary = {}
+var _options: OptionsPanel
+var _credits: CreditsPanel
 
 
 func _ready() -> void:
@@ -41,17 +43,17 @@ func _build() -> void:
 	title.add_theme_color_override("font_color", UiStyle.CREAM)
 	_main.add_child(title)
 	var sub := Label.new()
-	sub.text = "Prototype 001 — in development"
+	sub.text = "Demo 1: The Cottage"
 	sub.add_theme_font_size_override("font_size", 17)
 	sub.add_theme_color_override("font_color", Color(UiStyle.CREAM, 0.7))
 	_main.add_child(sub)
-	for item in [["Resume", _resume], ["Save journal", _save], ["Load journal", _load], ["Quit", _quit]]:
+	for item in [["Resume", _resume], ["Save journal", _save], ["Load journal", _load], ["Options", _show_options], ["Credits", _show_credits], ["Begin again", _again], ["Quit", _quit]]:
 		var b := Button.new()
 		b.text = item[0]
 		b.pressed.connect(item[1])
 		_main.add_child(b)
 	var controls := Label.new()
-	controls.text = "WASD move · Shift run · Space jump\nMouse look · E interact / talk\nLMB or F cast · Esc pause · F5/F9 save/load"
+	controls.text = "WASD move · Shift run · Space jump\nMouse look · E interact / talk\nLMB or F cast · 1-9 spells · B spellbook · I satchel\nTab journal · Esc pause · F5/F9 save/load"
 	controls.add_theme_font_size_override("font_size", 16)
 	controls.add_theme_color_override("font_color", Color(UiStyle.CREAM, 0.8))
 	_main.add_child(controls)
@@ -70,6 +72,14 @@ func _build() -> void:
 	_journal.add_theme_font_size_override("italics_font_size", 19)
 	_journal.add_theme_color_override("default_color", UiStyle.INK)
 	_root.add_child(_journal)
+	_options = OptionsPanel.new()
+	_options.visible = false
+	_options.closed.connect(_show_journal)
+	row.add_child(_options)
+	_credits = CreditsPanel.new()
+	_credits.visible = false
+	_credits.closed.connect(_show_journal)
+	row.add_child(_credits)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -103,7 +113,32 @@ func _open() -> void:
 	(_main.get_child(2) as Button).grab_focus()
 
 
+func _show_journal() -> void:
+	_options.visible = false
+	_credits.visible = false
+	_root.visible = true
+
+
+func _show_options() -> void:
+	_root.visible = false
+	_credits.visible = false
+	_options.visible = true
+
+
+func _show_credits() -> void:
+	_root.visible = false
+	_options.visible = false
+	_credits.visible = true
+
+
+func _again() -> void:
+	get_tree().paused = false
+	GameState.reset()
+	get_tree().reload_current_scene()
+
+
 func _resume() -> void:
+	_show_journal()
 	visible = false
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

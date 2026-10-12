@@ -8,6 +8,8 @@ signal quest_changed(quest_id: String, state: String)
 signal memory_recorded(memory: Dictionary)
 signal spell_cast(spell_id: String, origin: Vector3, target: Vector3)
 signal toast(text: String)
+## Emitted once everything from a save has been applied (not for normal play).
+signal save_loaded
 signal inventory_changed
 signal spells_changed
 signal time_advanced(hours: float)
@@ -169,6 +171,12 @@ func advance_time(hours: float) -> void:
 	time_advanced.emit(hours)
 
 
+## "night" between about 20:45 and 06:00, otherwise "day" (dialogue and routines).
+func daypart() -> String:
+	var h := float(world_date["hour"])
+	return "night" if h >= 20.75 or h < 6.0 else "day"
+
+
 func format_clock() -> String:
 	var h := float(world_date["hour"])
 	return "%02d:%02d" % [int(h), int((h - floorf(h)) * 60.0)]
@@ -299,6 +307,7 @@ func apply_save(data: Dictionary) -> void:
 			_providers[key].call("load_state", systems[key])
 	for q in quests:
 		quest_changed.emit(q, quests[q])
+	save_loaded.emit()
 
 
 ## Upgrades older save dictionaries in place. Add a branch per version bump.

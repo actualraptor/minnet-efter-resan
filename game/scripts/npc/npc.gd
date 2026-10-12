@@ -27,6 +27,10 @@ var _bark: Label3D
 var _home_yaw := 0.0
 var _talking := false
 var _look_target: Vector3
+var _walk_velocity := Vector3.ZERO
+var _cur_anim: StringName = &""
+## Sitting (on the bench, in the armchair): Idle and Talk map to the seated clips.
+var seated := false
 
 
 func _ready() -> void:
@@ -96,10 +100,61 @@ func play(anim_name: StringName) -> void:
 	# The shared library has no "Hop"; a small jump does the same job.
 	if anim_name == &"Hop" and _anim and not _anim.has_animation(&"Hop") and _anim.has_animation(&"Jump"):
 		anim_name = &"Jump"
-	if _anim and _anim.has_animation(anim_name):
+	if seated:
+		anim_name = &"SitTalk" if anim_name == &"Talk" else &"Sit"
+	if _anim == null:
+		return
+	if not _anim.has_animation(anim_name):
+		anim_name = &"Idle"
+	# Looping clips are not restarted by asking again.
+	if anim_name == _cur_anim and _anim.has_animation(anim_name) and _anim.get_animation(anim_name).loop_mode != Animation.LOOP_NONE:
+		return
+	_cur_anim = anim_name
+	if _anim.has_animation(anim_name):
 		_anim.play(anim_name, 0.3)
-	elif _anim and _anim.has_animation(&"Idle"):
-		_anim.play(&"Idle", 0.3)
+
+
+## Sit down or stand up (the clips with the transition, then the seated or standing idle).
+func sit(on: bool, instant := false) -> void:
+	if on == seated:
+		return
+	seated = on
+	if _anim == null:
+		return
+	var enter: StringName = &"SitDown" if on else &"StandUp"
+	var rest: StringName = &"Sit" if on else &"Idle"
+	if not instant and _anim.has_animation(enter) and _anim.has_animation(rest):
+		_anim.play(enter, 0.2)
+		_anim.queue(rest)
+		_cur_anim = rest
+	else:
+		_cur_anim = &""
+		play(rest)
+
+
+## Walks toward a ground point this physics frame; returns the horizontal
+## distance still to go. (Call stop_walk() when done.)
+func walk_toward(point: Vector3, speed: float) -> float:
+	var to := point - global_position
+	to.y = 0.0
+	var d := to.length()
+	if d < 0.12:
+		_walk_velocity = Vector3.ZERO
+		return d
+	_walk_velocity = to / d * speed
+	model.rotation.y = lerp_angle(model.rotation.y, atan2(to.x, to.z), 1.0 - exp(-9.0 * get_process_delta_time()))
+	play(&"Run" if speed > 1.5 else &"Walk")
+	return d
+
+
+func stop_walk() -> void:
+	if _walk_velocity != Vector3.ZERO:
+		_walk_velocity = Vector3.ZERO
+		play(&"Idle")
+
+
+func face_point(point: Vector3, time := 0.4) -> void:
+	_face(point, time)
 
 
 func _face(point: Vector3, time: float) -> void:
@@ -132,6 +187,6 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 15.0 * delta
 	else:
 		velocity.y = 0.0
-	velocity.x = 0.0
-	velocity.z = 0.0
+	velocity.x = _walk_velocity.x
+	velocity.z = _walk_velocity.z
 	move_and_slide()

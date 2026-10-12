@@ -1,0 +1,21 @@
+{
+	"id": "ending",
+	"entries": [{"node": "dusk"}],
+	"nodes": {
+		"dusk": {
+			"lines": [
+				{"id": "ending.dusk.01", "speaker": "narrator", "text": "By the time the statue was clean, the light had gone the colour of weak tea."},
+				{"id": "ending.dusk.02", "speaker": "char_pippa", "text": "It's evening. You can't say good morning in the evening. That's a rule I just made."},
+				{"id": "ending.dusk.03", "speaker": "char_freyja", "text": "What do you say in the evening?"},
+				{"id": "ending.dusk.04", "speaker": "char_pippa", "text": "Good evening, statue. I tried it. It works exactly the same."},
+				{"id": "ending.dusk.05", "speaker": "char_pippa", "text": "Grandma says it's weeks, not years. She says I'm to count too, and not let her cheat."},
+				{"id": "ending.dusk.06", "speaker": "char_freyja", "text": "And what number are you on?"},
+				{"id": "ending.dusk.07", "speaker": "char_pippa", "text": "Zero. It starts when you go. That's how counting works."},
+				{"id": "ending.dusk.08", "speaker": "char_freyja", "text": "...East, then. Most things are, eventually.", "if": "has_flag(\"heard_teodor_seed_story\")", "pause": 0.5},
+				{"id": "ending.dusk.09", "speaker": "char_freyja", "text": "...Then I'd better go.", "if": "not has_flag(\"heard_teodor_seed_story\")", "pause": 0.5},
+				{"id": "ending.dusk.10", "speaker": "char_pippa", "text": "Bye, Freyja. Good evening, statue. Good evening, road.", "emote": "Talk"},
+				{"id": "ending.dusk.11", "speaker": "narrator", "text": "She walked on. Behind her, somebody was wishing the whole road good evening, one stone at a time."}
+			]
+		}
+	}
+}

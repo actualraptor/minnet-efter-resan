@@ -628,6 +628,11 @@ func _build_lift_motes() -> void:
 
 # --- Movement -------------------------------------------------------------------
 
+## A scripted walk (the ending): non-zero overrides input and the camera yaw.
+var scripted_walk := Vector2.ZERO
+var scripted_yaw := 0.0
+
+
 func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
 	if flying:
@@ -654,6 +659,8 @@ func _physics_process(delta: float) -> void:
 			input *= AIM_MOVE_SCALE
 		if Input.is_action_just_pressed("jump") and not _casting and not flying:
 			_jump_buffer = 0.13
+	if scripted_walk != Vector2.ZERO:
+		input = scripted_walk
 	if has_control() and flying and not (_casting and _cast_move <= 0.0):
 		climb = Input.get_action_strength("jump") - (0.0 if focus_aim else Input.get_action_strength("descend"))
 	# Double-tap jump in the air: take off.
@@ -666,6 +673,8 @@ func _physics_process(delta: float) -> void:
 		_last_jump_press = Time.get_ticks_msec() / 1000.0
 
 	var yaw := camera_rig.yaw if camera_rig else 0.0
+	if scripted_walk != Vector2.ZERO:
+		yaw = scripted_yaw
 	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, yaw)
 	var move_speed := run_speed if running else walk_speed
 	var accel_up := acceleration

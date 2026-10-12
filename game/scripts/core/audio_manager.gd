@@ -16,6 +16,8 @@ var _music_current: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	Settings.load_settings()
+	Settings.apply()
 	_music_a = _make_player("Music")
 	_music_b = _make_player("Music")
 
@@ -49,6 +51,7 @@ func sfx(sound: String, volume_db: float = 0.0, pitch_jitter: float = 0.05, at: 
 		var p3 := AudioStreamPlayer3D.new()
 		p3.stream = stream
 		p3.volume_db = volume_db
+		p3.bus = "Effects"
 		p3.unit_size = 6.0
 		p3.max_distance = 40.0
 		p3.pitch_scale = 1.0 + randf_range(-pitch_jitter, pitch_jitter)
@@ -59,6 +62,7 @@ func sfx(sound: String, volume_db: float = 0.0, pitch_jitter: float = 0.05, at: 
 	else:
 		var p2 := AudioStreamPlayer.new()
 		p2.stream = stream
+		p2.bus = "Effects"
 		p2.volume_db = volume_db
 		p2.pitch_scale = 1.0 + randf_range(-pitch_jitter, pitch_jitter)
 		add_child(p2)

@@ -4,7 +4,7 @@ extends RefCounted
 ## toon shader and configures looping animations.
 
 const TOON := preload("res://shaders/toon_character.gdshader")
-const LOOPING := ["Idle", "Walk", "Run", "Fall", "Talk", "Sit", "Knit", "Wave", "IdleStaff", "WalkStaff", "RunStaff", "Hop"]
+const LOOPING := ["Idle", "Walk", "Run", "Fall", "Talk", "Sit", "SitTalk", "Crouch", "Knit", "Wave", "IdleStaff", "WalkStaff", "RunStaff", "Hop"]
 
 
 static func find_animation_player(root: Node) -> AnimationPlayer:
@@ -33,6 +33,9 @@ const UAL_CLIPS := {
 	"Wipe": "Interact",
 	# Holding something upright in the right hand (the statue of her).
 	"Torch": "Idle_Torch",
+	# Seated and crouched idles for people who live in the meadow.
+	"Sit": "Sitting_Idle", "SitTalk": "Sitting_Talking", "SitDown": "Sitting_Enter", "StandUp": "Sitting_Exit",
+	"Crouch": "Crouch_Idle",
 	"SummonFlick": ["Spell_Simple_Enter", "Spell_Simple_Exit"], "SummonTwirl": "PickUp_Table",
 }
 

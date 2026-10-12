@@ -1,0 +1,27 @@
+[
+	{"title": "Minnet efter resan", "lines": [
+		"Demo 1: The Cottage",
+		"A small errand, a long memory.",
+		"Direction, story and the character Freyja: actualraptor",
+		"Written and built with Claude (Anthropic)."
+	]},
+	{"title": "Characters and animation", "lines": [
+		"Edda and Pippa are VRoid Project sample avatars (AvatarSample_G and AvatarSample_E), CC0, from the \"VRoid Studio CC0 models\" pack on OpenGameArt.",
+		"Humanoid animation: Universal Animation Library by Quaternius, CC0.",
+		"Jump and landing motion: CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), free for use.",
+		"Practice-range monsters: Animated Monster Pack by Quaternius, CC0."
+	]},
+	{"title": "Engine and code", "lines": [
+		"Godot Engine 4, MIT licence (godotengine.org).",
+		"VRM importer: godot-vrm by V-Sekai, MIT.",
+		"MToon shader for Godot, MIT."
+	]},
+	{"title": "Fonts", "lines": [
+		"Nunito, SIL Open Font License 1.1.",
+		"Cormorant Garamond, SIL Open Font License 1.1."
+	]},
+	{"title": "Sound and music", "lines": [
+		"Sound effects and ambience are synthesised for this game.",
+		"Music is composed for this game and rendered with the GeneralUser GS soundfont by S. Christian Collins."
+	]}
+]

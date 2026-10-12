@@ -1,0 +1,36 @@
+{
+	"char_pippa": {
+		"greet": [
+			{"text": "Hi, Freyja!"},
+			{"text": "Oh! Did you see the worm? There was a worm."},
+			{"text": "Good evening!", "if": "daypart() == \"night\""},
+			{"text": "Look, I'm not hiding anything. I'm just standing here."}
+		],
+		"idle": [
+			{"text": "Fact forty-four: worms have no ears. They just feel it."},
+			{"text": "Is that a bee? That's a bee."},
+			{"text": "Grandma says carrots take their time. I'm giving them a talking-to.", "if": "quest(\"garden_of_jonas\") == \"none\" or quest(\"garden_of_jonas\") == \"active\""},
+			{"text": "The blue ones are called harebells. Or 'the blue ones'.", "if": "quest(\"garden_of_jonas\") == \"complete\""},
+			{"text": "I'm going to say good morning to the statue the second you tell me it's morning.", "if": "quest(\"statue_by_the_road\") == \"active\""},
+			{"text": "Do elves get cold ears?"},
+			{"text": "Nobody ever tells you what the clouds are called.", "if": "daypart() == \"day\""},
+			{"text": "I'm not tired. I'm resting my eyes.", "if": "daypart() == \"night\""}
+		]
+	},
+	"char_edda": {
+		"greet": [
+			{"text": "Mm."},
+			{"text": "Still here, then."},
+			{"text": "Mind the flowers. Not that they'd mind you."},
+			{"text": "You'll want a shawl, this time of evening.", "if": "daypart() == \"night\""}
+		],
+		"idle": [
+			{"text": "Four winters. Hm.", "if": "quest(\"garden_of_jonas\") == \"complete\""},
+			{"text": "That hat of his is still on the peg."},
+			{"text": "The kettle and I have an understanding."},
+			{"text": "Pippa! Walk, don't gallop!"},
+			{"text": "The light's gone the colour of tea.", "if": "daypart() == \"night\""},
+			{"text": "Somebody ought to oil that gate."}
+		]
+	}
+}
