@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/npc/npc.gd" id="1_npc"]
-[ext_resource type="PackedScene" path="res://assets/models/characters/pippa.glb" id="2_model"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/npc_pippa.vrm" id="2_model"]
 
 [sub_resource type="CapsuleShape3D" id="Capsule_npc"]
 radius = 0.22
@@ -11,7 +11,8 @@ height = 1.25
 script = ExtResource("1_npc")
 character_id = "char_pippa"
 dialogue_id = "pippa"
-head_height = 1.2
+head_height = 1.12
+body_scale = 0.74
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.625, 0)

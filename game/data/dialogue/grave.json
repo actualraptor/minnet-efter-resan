@@ -15,7 +15,7 @@
 		"planted": {
 			"lines": [
 				{"id": "grave.planted.01", "speaker": "char_freyja", "text": "Blue by the kerb, daisies wherever the spell liked. He'd have corrected all of it."},
-				{"id": "grave.planted.02", "speaker": "char_freyja", "text": "The moss is still on the name. Not tonight. Something small and household would do it.", "if": "has_flag(\"clean_jonas_stone\") == false and knows_spell(\"spell_stain_free\")"}
+				{"id": "grave.planted.02", "speaker": "char_freyja", "text": "The moss is still on the name. Not yet. Something small and household would do it.", "if": "has_flag(\"clean_jonas_stone\") == false and knows_spell(\"spell_stain_free\")"}
 			]
 		},
 		"clean": {

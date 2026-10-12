@@ -11,17 +11,25 @@ signal cleaned(id: String)
 @export var prompt := "Look closer"
 ## Seconds the moss takes to come off.
 @export var clean_time := 2.4
+## Rough size of the thing (metres), for the cleaning effect.
+@export var extent := Vector3(1.0, 1.0, 1.0)
 
 var grime := 1.0
 ## Optional text on the thing itself, faded in once the moss is gone.
 var plaque: Label3D
-var _mat: ShaderMaterial
+var _mats: Array[ShaderMaterial] = []
 var _tween: Tween
 
 
+## Registers a moss material whose `grime` this prop drives (one prop may use
+## several, e.g. a statue with alpha-cut hair).
+func add_material(m: ShaderMaterial) -> void:
+	_mats.append(m)
+	m.set_shader_parameter("grime", grime)
+
+
 func setup(material: ShaderMaterial) -> void:
-	_mat = material
-	_mat.set_shader_parameter("grime", grime)
+	add_material(material)
 	add_to_group("interactable")
 	add_to_group("cleanable")
 
@@ -55,7 +63,13 @@ func set_clean(on: bool) -> void:
 
 func _set_grime(v: float) -> void:
 	grime = v
-	_mat.set_shader_parameter("grime", v)
+	for m in _mats:
+		m.set_shader_parameter("grime", v)
+
+
+## For tests: the grime the first material currently shows.
+func shader_grime() -> float:
+	return float(_mats[0].get_shader_parameter("grime")) if not _mats.is_empty() else -1.0
 
 
 # --- interaction ---------------------------------------------------------------------

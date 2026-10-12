@@ -27,25 +27,32 @@ Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass 
 | Teaser film tooling (`scripts/dev/teaser.gd`, `build/teaser/render.sh`, `tools/audio/compose_teaser.js`) | Done, dev only | rendered clips |
 | Design pool of useless spells (`docs/design/USELESS_SPELLS.md`, 86 entries) | Proposal doc | n/a |
 
-## Built since the reconciliation (2026-10-12, uncommitted until the next commit)
+## Built since the reconciliation (2026-10-12)
 - **Spellbook, satchel and studying** (B / I): spell cards with details, nine number-key slots (click, press 1-9, drag), items studied for in-game hours. Doc: [docs/design/SPELLBOOK_AND_STUDY.md](docs/design/SPELLBOOK_AND_STUDY.md).
 - **Errands** *Flowers for Jonas* (stone under the oak, Edda's mother's household book, learn **Fläckfri**) and *Good Morning, Statue* (clean the statue by the road with Fläckfri). Dialogue in `edda.json`, `pippa.json`, `grave.json`, `statue.json`.
-- Smoke test: 77 checks, PASS (headless, 2026-10-12), including study clock, save/load mid-errand and props restored.
-- Screenshots of the UI, moss and statue were rendered with `--dbg --book` and inspected.
+- **Fläckfri wipe**: gesture, sweeping band, bubbles, glints. **The statue is Freyja's own model** as weathered stone.
+- **Time of day**: the world clock runs (12 in-game minutes per real minute, from 16:00) and the sun, sky and fog follow it (`TimeOfDay`); studying jumps it.
+- **Waypoints**: a column of sunlit haze and a guiding firefly toward the current objective (`Waypoints`).
+- **Practice range yard** (east of the road): two lanes, continuous fire, a switch pedestal (`PracticeRange`).
+- **Edda and Pippa** are CC0 VRoid sample bodies (AvatarSample_G and _E) on the shared humanoid library, with tints, stoop, spectacles, long skirt and shawl (`NpcLook`).
+- Smoke test: 91 checks (headless, 2026-10-12), including waypoints per state, study clock, save/load mid-errand, the range lanes and the sun at noon versus night.
+- Screenshots of the UI, moss, wipe, statue, NPCs, range, time of day and waypoints were rendered with `--dbg --book` / `--dbg --yard` and inspected.
 
 ## Known issues and gaps
 - **No human playtest has ever been run** (movement feel, camera indoors #10, dialogue pacing, audio mix).
 - **No performance numbers recorded** (finish line needs 60 fps at 1080p on the RTX 5070 Ti).
 - **No options menu** (volumes, mouse sensitivity) and no credits screen (#13).
 - `PauseMenu` subtitle still reads "Prototype 001 — in development"; F10 travels to Linköping (dev shortcut) and must be removed from a demo build.
-- Edda and Pippa are still the v2 scripted geometry (decal faces, mitten hands); unchanged since 2026-10-10.
+- Edda and Pippa's faces are still the young anime faces of the sample bodies: age comes from hair, glasses, stoop and clothes, not from the face. The old scripted Edda/Pippa models were deleted (still in git history).
+- The statue (Freyja's model in stone) is about 130 small meshes with per-surface materials; its frame cost has not been measured.
+- Night is real: the meadow gets dark by about 21:00 game time; nobody goes indoors and there are no extra lights besides the cottage and the firefly.
 - The old CC-BY Sketchfab-based `freyja.glb` and its textures are still tracked and **no longer referenced by any scene**, but the export preset uses `export_filter="all_resources"`, so it would ship and need attribution unless excluded or deleted. The raw `freyja_vroid.vrm` (18 MB) and `World/` are untracked local files; neither is referenced at runtime.
 - The export preset points `custom_template/release` at `D:/Utveckling CODEX/...`, a path that exists only on this machine.
 - CI runs the smoke test only; the flight, Zoltraak, and barrier suites are manual `--dbg` scripts.
 
 ## Verified today (2026-10-12, Windows 11, Godot 4.7.2)
 - `godot --headless --path game --import`: 0 script or parse errors.
-- `godot --headless --path game -- --smoke-test`: **PASS, 42/42 checks** on the committed tree (log kept outside the repo).
+- `godot --headless --path game -- --smoke-test`: **PASS** (91 checks after the second round of owner additions; see the line above).
 - Not run today: CI on GitHub, GPU tours, any export.
 
 ## GitHub (verified 2026-10-12)

@@ -15,15 +15,16 @@ const MEMORY_ID := "memory_cottage_garden_restored"
 @onready var fade: ColorRect = $UI/Fade
 @onready var title: Label = $UI/Title
 
-var _marker: GPUParticles3D
 var _stone_quests: StoneQuests
+var _waypoints: Waypoints
+var _time_of_day: TimeOfDay
 var _bloom_pending := false
 
 
 func _ready() -> void:
 	world.build(terrain)
+	_build_time_of_day()
 	_place_cast()
-	_build_quest_marker()
 	_build_stone_errands()
 	director.runner.event_fired.connect(_on_dialogue_event)
 	director.conversation_finished.connect(_on_conversation_finished)
@@ -40,7 +41,7 @@ func _ready() -> void:
 		title.visible = false
 		# Dev audits: --dbg --face|--spell|--pose|--walk (default: staff walk).
 		var dbg := "staffwalk"
-		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range", "teaser", "book"]:
+		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range", "teaser", "book", "probe", "npc", "yard"]:
 			if "--" + k in args:
 				dbg = k
 		add_child(load("res://tests/_dbg_%s.gd" % dbg).new())
@@ -57,11 +58,19 @@ func _ready() -> void:
 		add_child(t)
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	_build_practice_range()
+	_build_range_yard()
 	_opening()
 
 
-## Practice range for spell testing, just up the path from where she arrives:
+## The dedicated practice range east of the road (see PracticeRange): walk there,
+## press E at the pedestal, and step into a lane to try the barrier.
+func _build_range_yard() -> void:
+	var r := PracticeRange.new()
+	add_child(r)
+	r.setup(terrain, player)
+
+
+## The old in-meadow range (dev tools and the teaser film still build it):
 ## straw dummies to hit, and two shooters (Mörkstråk beam, Solstråk volley) that
 ## hunt her on a telegraphed line so the barrier can be tried against them.
 func _build_practice_range() -> void:
@@ -180,7 +189,6 @@ func _on_cast_failed(_spell: SpellDefinition, reason: String) -> void:
 func _on_quest_changed(id: String, state: String) -> void:
 	if id != QUEST:
 		return
-	_marker.emitting = state == "active"
 	if state == "active":
 		Audio.sfx("quest_start", -8.0)
 
@@ -241,53 +249,30 @@ func _record_garden_memory() -> void:
 	GameState.change_affinity("char_edda", 1, "memory_cottage_garden_restored")
 
 
-## The stone and statue errands, and the spellbook / satchel screen.
+## Sun, sky and fog follow the in-game clock.
+func _build_time_of_day() -> void:
+	_time_of_day = TimeOfDay.new()
+	_time_of_day.name = "TimeOfDay"
+	add_child(_time_of_day)
+	var we := world.get_node("WorldEnvironment") as WorldEnvironment
+	_time_of_day.setup(world.sun, we.environment)
+
+
+## The stone and statue errands, the way-showing beacons, and the spellbook /
+## satchel screen.
 func _build_stone_errands() -> void:
-	var marker := _make_marker("StoneMarker")
 	_stone_quests = StoneQuests.new()
 	_stone_quests.name = "StoneQuests"
 	add_child(_stone_quests)
-	_stone_quests.setup(terrain, director, marker)
+	_stone_quests.setup(terrain, director)
+	_waypoints = Waypoints.new()
+	_waypoints.name = "Waypoints"
+	add_child(_waypoints)
+	_waypoints.setup(terrain, player, edda, pippa)
 	var book := Spellbook.new()
 	book.name = "Spellbook"
 	book.player = player
 	$UI.add_child(book)
-
-
-func _build_quest_marker() -> void:
-	_marker = _make_marker("GardenMarker")
-	_marker.emitting = GameState.quest(QUEST) == "active"
-	var m := WorldLayout.GARDEN_MEADOW
-	_marker.global_position = _ground(m.x, m.z) + Vector3.UP * 0.8
-
-
-func _make_marker(marker_name: String) -> GPUParticles3D:
-	var marker := GPUParticles3D.new()
-	marker.name = marker_name
-	marker.amount = 40
-	marker.lifetime = 4.0
-	marker.emitting = false
-	marker.visibility_aabb = AABB(Vector3(-8, -2, -8), Vector3(16, 10, 16))
-	var pm := ParticleProcessMaterial.new()
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	pm.emission_sphere_radius = 4.0
-	pm.direction = Vector3.UP
-	pm.spread = 15.0
-	pm.initial_velocity_min = 0.2
-	pm.initial_velocity_max = 0.5
-	pm.gravity = Vector3.ZERO
-	pm.color = Color(1.0, 0.92, 0.55)
-	var c := Curve.new()
-	c.add_point(Vector2(0, 0))
-	c.add_point(Vector2(0.4, 1))
-	c.add_point(Vector2(1, 0))
-	var ct := CurveTexture.new()
-	ct.curve = c
-	pm.scale_curve = ct
-	marker.process_material = pm
-	marker.draw_pass_1 = SpellCaster._mote_mesh(0.09)
-	add_child(marker)
-	return marker
 
 
 ## Dev/playtest shortcut: F10 travels to the Linköping slice.

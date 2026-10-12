@@ -29,6 +29,10 @@ const UAL_CLIPS := {
 	"Cast": ["Spell_Simple_Enter", "Spell_Simple_Shoot", "Spell_Simple_Exit"],
 	# Pulling the staff out of thin air (see StaffSummon.VARIANTS for timing).
 	"Summon": "PickUp_Table", "SummonReach": "Interact",
+	# A household wipe: the reach, with the arm swept side to side (see _wipe_motion).
+	"Wipe": "Interact",
+	# Holding something upright in the right hand (the statue of her).
+	"Torch": "Idle_Torch",
 	"SummonFlick": ["Spell_Simple_Enter", "Spell_Simple_Exit"], "SummonTwirl": "PickUp_Table",
 }
 
@@ -93,6 +97,8 @@ static func use_humanoid_library(root: Node) -> bool:
 			continue
 		if game_name == "Run":
 			_soften_posture(c, sk, 0.45)
+		if game_name == "Wipe":
+			_wipe_motion(c)
 		if game_name in MIRRORED:
 			c = _mirror(c)
 		if lib.has_animation(game_name):
@@ -100,6 +106,22 @@ static func use_humanoid_library(root: Node) -> bool:
 		lib.add_animation(game_name, c)
 	src.free()
 	return true
+
+
+## Sweeps the right arm side to side about the vertical axis over a trimmed reach,
+## so one gesture reads as wiping a surface down.
+static func _wipe_motion(a: Animation) -> void:
+	a.length = minf(a.length, 1.5)
+	for t in a.get_track_count():
+		if a.track_get_type(t) != Animation.TYPE_ROTATION_3D:
+			continue
+		if String(a.track_get_path(t).get_concatenated_subnames()) != "RightUpperArm":
+			continue
+		for k in a.track_get_key_count(t):
+			var u := a.track_get_key_time(t, k) / a.length
+			var swing := sin(u * TAU * 2.5) * deg_to_rad(24.0) * sin(clampf(u, 0.0, 1.0) * PI)
+			var q: Quaternion = a.track_get_key_value(t, k)
+			a.track_set_key_value(t, k, Quaternion(Vector3.UP, swing) * q)
 
 
 ## Concatenate clips with identical track layouts into one.

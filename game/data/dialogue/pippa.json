@@ -141,7 +141,7 @@
 		},
 		"stone_planted": {
 			"lines": [
-				{"id":"pippa.stone_planted.01","speaker":"char_pippa","text":"I SAW! From the carrots! There's blue on Grandpa!","emote":"Talk"},
+				{"id":"pippa.stone_planted.01","speaker":"char_pippa","text":"I SAW! From the meadow! There's blue on Grandpa!","emote":"Talk"},
 				{"id":"pippa.stone_planted.02","speaker":"char_pippa","text":"Go and tell Grandma. She's pretending she didn't see."}
 			]
 		},

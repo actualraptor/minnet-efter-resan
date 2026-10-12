@@ -22,6 +22,9 @@ const DEFAULT_SPELLS: Array = ["spell_field_of_flowers", "spell_zoltraak", "spel
 const HOTBAR_SLOTS := 9
 const SEASONS := ["spring", "summer", "autumn", "winter"]
 const DAYS_PER_SEASON := 30
+## How fast the world's clock runs: in-game minutes per real second (12 per real
+## minute: the meadow goes from golden hour to dusk in about twenty minutes).
+const MINUTES_PER_SECOND := 0.2
 
 var flags: Dictionary = {}
 var quests: Dictionary = {}
@@ -30,7 +33,7 @@ var relationships: Dictionary = {}
 ## Structured, append-only memory events (see docs/design/MEMORY_EVENTS.md).
 var memories: Array[Dictionary] = []
 ## The calendar is simple for milestone 001: year, season, day, hour.
-var world_date: Dictionary = {"year": 1031, "season": "spring", "day": 14, "hour": 15.0}
+var world_date: Dictionary = {"year": 1031, "season": "spring", "day": 14, "hour": 16.0}
 ## Satchel: item id -> count (definitions in data/items/items.json).
 var inventory: Dictionary = {}
 ## Spells she knows, and which one sits on number keys 1-9 ("" = empty slot).
@@ -42,6 +45,7 @@ var hotbar: Array = _default_hotbar()
 ## `load_state(data: Dictionary) -> void`.
 var _providers: Dictionary = {}
 var _game_time := 0.0
+var _clock_carry := 0.0
 
 
 func _ready() -> void:
@@ -52,6 +56,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not get_tree().paused:
 		_game_time += delta
+		_clock_carry += delta * MINUTES_PER_SECOND / 60.0
+		if _clock_carry >= 1.0 / 60.0:
+			advance_time(_clock_carry)
+			_clock_carry = 0.0
 	RenderingServer.global_shader_parameter_set("game_time", _game_time)
 
 
@@ -307,7 +315,7 @@ func reset() -> void:
 	quests.clear()
 	relationships.clear()
 	memories.clear()
-	world_date = {"year": 1031, "season": "spring", "day": 14, "hour": 15.0}
+	world_date = {"year": 1031, "season": "spring", "day": 14, "hour": 16.0}
 	inventory.clear()
 	known_spells = DEFAULT_SPELLS.duplicate()
 	hotbar = _default_hotbar()

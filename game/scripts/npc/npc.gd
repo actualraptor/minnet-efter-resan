@@ -10,6 +10,16 @@ signal talked(npc: NPC)
 @export var dialogue_id := ""
 @export var prompt_verb := "Talk"
 @export var head_height := 1.55
+## One shared VRoid body becomes a person through these (see NpcLook): overall
+## size, hair and clothes tint (white = none), a forward stoop in degrees, spectacles.
+@export var body_scale := 1.0
+@export var hair_tint := Color(1, 1, 1, 1)
+@export var cloth_tint := Color(1, 1, 1, 1)
+@export var stoop_deg := 0.0
+@export var glasses := false
+## Cloth cones over the sample body (alpha 0 = none): a long skirt, a shawl.
+@export var long_skirt := Color(0, 0, 0, 0)
+@export var shawl := Color(0, 0, 0, 0)
 
 @onready var model: Node3D = $Model
 var _anim: AnimationPlayer
@@ -25,6 +35,10 @@ func _ready() -> void:
 	collision_layer = 4
 	collision_mask = 1
 	_anim = CharacterVisual.find_animation_player(model)
+	model.scale = Vector3.ONE * body_scale
+	# VRM bodies carry no animations of their own: give them the shared library.
+	if CharacterVisual.use_humanoid_library(model):
+		NpcLook.apply(model, hair_tint, cloth_tint, stoop_deg, glasses, long_skirt, shawl)
 	CharacterVisual.prepare(model)
 	_home_yaw = model.rotation.y
 	_bark = Label3D.new()
@@ -79,6 +93,9 @@ func end_talk() -> void:
 
 
 func play(anim_name: StringName) -> void:
+	# The shared library has no "Hop"; a small jump does the same job.
+	if anim_name == &"Hop" and _anim and not _anim.has_animation(&"Hop") and _anim.has_animation(&"Jump"):
+		anim_name = &"Jump"
 	if _anim and _anim.has_animation(anim_name):
 		_anim.play(anim_name, 0.3)
 	elif _anim and _anim.has_animation(&"Idle"):

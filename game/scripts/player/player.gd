@@ -486,7 +486,7 @@ func begin_cast(anim: StringName, _duration: float) -> void:
 	_casting = true
 	_cast_anim = anim
 	if loco:
-		loco.cast()
+		loco.cast(anim)
 	else:
 		_play(anim, 0.15)
 

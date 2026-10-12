@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/npc/npc.gd" id="1_npc"]
-[ext_resource type="PackedScene" path="res://assets/models/characters/edda.glb" id="2_model"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/npc_edda.vrm" id="2_model"]
 
 [sub_resource type="CapsuleShape3D" id="Capsule_npc"]
 radius = 0.26
@@ -11,7 +11,14 @@ height = 1.5
 script = ExtResource("1_npc")
 character_id = "char_edda"
 dialogue_id = "edda"
-head_height = 1.45
+head_height = 1.42
+body_scale = 0.94
+hair_tint = Color(0.72, 0.78, 1, 1)
+cloth_tint = Color(0.34, 0.27, 0.36, 1)
+stoop_deg = 22.0
+glasses = true
+long_skirt = Color(0.3, 0.24, 0.33, 1)
+shawl = Color(0.45, 0.55, 0.45, 1)
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)

@@ -16,6 +16,17 @@ var telegraph := 1.3
 var beam_seconds := 2.4
 var volley := false
 var max_range := 55.0
+## Lane mode (the practice range): fires along one fixed line at `lane_end`,
+## continuously while `lane_active`: a beam held for `lane_on` seconds with a short
+## `lane_off` gap (so a barrier can heal and be broken again), or, for a volley
+## turret, a bolt every `lane_period` seconds.
+var lane_end := Vector3.INF
+var lane_active := false
+var lane_on := 8.0
+var lane_off := 1.2
+var lane_period := 0.45
+var _lane_beam: ZoltraakBeam
+var _lane_clock := 0.0
 var _beams: Array[ZoltraakBeam] = []
 var _clock := 0.0
 var _busy := false
@@ -151,8 +162,14 @@ func _process(delta: float) -> void:
 		if auto_target != null and is_instance_valid(auto_target):
 			var to := auto_target.global_position - global_position
 			_monster.rotation.y = lerp_angle(_monster.rotation.y, atan2(to.x, to.z), 1.0 - exp(-4.0 * delta))
+		elif lane_end != Vector3.INF:
+			var to_end := lane_end - global_position
+			_monster.rotation.y = lerp_angle(_monster.rotation.y, atan2(to_end.x, to_end.z), 1.0 - exp(-4.0 * delta))
 	elif _eye != null:
 		_eye.scale = Vector3.ONE * (1.0 + 0.25 * sin(Time.get_ticks_msec() / 1000.0 * 2.0) + _pulse * 0.6)
+	if lane_end != Vector3.INF:
+		_lane_tick(delta)
+		return
 	if down or auto_target == null or not is_instance_valid(auto_target) or _busy:
 		return
 	_clock += delta
@@ -163,6 +180,32 @@ func _process(delta: float) -> void:
 		return
 	_clock = 0.0
 	_run_attack()
+
+
+func _lane_tick(delta: float) -> void:
+	if down or not lane_active:
+		if _lane_beam != null and is_instance_valid(_lane_beam):
+			_lane_beam.release()
+		_lane_beam = null
+		_lane_clock = 0.0
+		_play("Idle")
+		return
+	_pulse = maxf(_pulse, 0.3)
+	_play("Attack")
+	_lane_clock += delta
+	if volley:
+		if _lane_clock >= lane_period:
+			_lane_clock = 0.0
+			fire_bolt(lane_end, 38.0, 1.0)
+		return
+	var live := _lane_beam != null and is_instance_valid(_lane_beam)
+	if live and _lane_clock >= lane_on:
+		_lane_beam.release()
+		_lane_beam = null
+		_lane_clock = 0.0
+	elif not live and _lane_clock >= (lane_off if _lane_clock > 0.0 else 0.0):
+		_lane_beam = fire_beam(lane_end, lane_on + 1.0, 0.22)
+		_lane_clock = 0.0
 
 
 func _run_attack() -> void:

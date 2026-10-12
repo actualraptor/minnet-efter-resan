@@ -11,18 +11,18 @@ const STATUE := "statue_by_the_road"
 const STAIN_FREE := "spell_stain_free"
 const STONE_POS := Vector2(12.8, -15.6)
 const STATUE_POS := Vector2(-8.0, 40.0)
+const STATUE_MODEL := "res://assets/models/characters/freyja_vroid_game.glb"
 
 var _terrain: MeadowTerrain
 var _stone: Inspectable
 var _statue: Inspectable
-var _marker: GPUParticles3D
+var _alpha_mats: Dictionary = {}
 
 
-func setup(terrain: MeadowTerrain, director: DialogueDirector, marker: GPUParticles3D) -> void:
+func setup(terrain: MeadowTerrain, director: DialogueDirector) -> void:
 	_terrain = terrain
-	_marker = marker
-	_stone = _build_stone(_moss_material())
-	_statue = _build_statue(_moss_material())
+	_stone = _build_stone(_moss_material(STONE_POS))
+	_statue = _build_statue()
 	_stone.cleaned.connect(_on_cleaned)
 	_statue.cleaned.connect(_on_cleaned)
 	GameState.spell_cast.connect(_on_spell_cast)
@@ -32,11 +32,13 @@ func setup(terrain: MeadowTerrain, director: DialogueDirector, marker: GPUPartic
 	_sync()
 
 
-## One material per prop: each one's moss recedes on its own.
-func _moss_material() -> ShaderMaterial:
+## One material set per prop: each one's moss recedes on its own. `at` is where
+## the prop stands (moss gathers low, near the ground there).
+func _moss_material(at: Vector2) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
 	mat.shader = preload("res://shaders/grime_stone.gdshader")
 	mat.set_shader_parameter("noise", ZoltraakVisuals.noise())
+	mat.set_shader_parameter("base_y", _terrain.height_at(at.x, at.y))
 	return mat
 
 
@@ -78,6 +80,7 @@ func _build_stone(mat: ShaderMaterial) -> Inspectable:
 	s.id = "jonas_stone"
 	s.dialogue_id = "grave"
 	s.prompt = "Read the stone"
+	s.extent = Vector3(0.9, 1.1, 1.6)
 	# Faces the bench, so she reads it as she walks up from there.
 	var to_bench := WorldLayout.BENCH_POS - Vector3(STONE_POS.x, 0, STONE_POS.y)
 	_place(STONE_POS, atan2(to_bench.x, to_bench.z), s)
@@ -89,37 +92,108 @@ func _build_stone(mat: ShaderMaterial) -> Inspectable:
 	return s
 
 
-func _build_statue(mat: ShaderMaterial) -> Inspectable:
+## The statue is Freyja herself: her own game model posed holding a staff, every
+## surface turned to weathered grey stone with the same moss. Hair cards and lashes
+## keep their alpha cut-out. A pointed hat she has never owned sits on her head.
+func _build_statue() -> Inspectable:
 	var s := Inspectable.new()
 	s.name = "RoadsideStatue"
 	s.id = "statue"
 	s.dialogue_id = "statue"
 	s.prompt = "Look at the statue"
+	s.extent = Vector3(1.6, 3.0, 1.6)
 	_place(STATUE_POS, deg_to_rad(90.0), s)   # faces the road (+x)
-	_box(s, Vector3(1.25, 0.7, 1.25), Vector3(0, 0.35, 0), mat)
-	var robe := CylinderMesh.new()
-	robe.top_radius = 0.2
-	robe.bottom_radius = 0.42
-	robe.height = 1.55
-	_body(s, robe, Vector3(0, 1.47, 0), mat)
-	var head := SphereMesh.new()
-	head.radius = 0.2
-	head.height = 0.4
-	_body(s, head, Vector3(0, 2.4, 0), mat)
-	_box(s, Vector3(0.78, 0.22, 0.34), Vector3(0, 2.1, 0), mat)   # shoulders
-	var hat := CylinderMesh.new()   # a hat she has never owned
-	hat.top_radius = 0.0
-	hat.bottom_radius = 0.34
-	hat.height = 0.55
-	_body(s, hat, Vector3(0, 2.8, 0), mat)
-	var staff := CylinderMesh.new()
-	staff.top_radius = 0.035
-	staff.bottom_radius = 0.045
-	staff.height = 2.5
-	_body(s, staff, Vector3(0.42, 1.95, 0.12), mat)
-	s.setup(mat)
+	var plain := _moss_material(STATUE_POS)
+	s.setup(plain)
+	_box(s, Vector3(1.25, 0.7, 1.25), Vector3(0, 0.35, 0), plain)
+	var scene := load(STATUE_MODEL) as PackedScene
+	if scene == null:
+		push_warning("Statue model missing: " + STATUE_MODEL)
+	else:
+		var model := scene.instantiate() as Node3D
+		model.position = Vector3(0, 0.7, 0)
+		model.scale = Vector3.ONE * 1.12
+		s.add_child(model)
+		_pose_statue(model)
+		_turn_to_stone(model, s, plain)
+		_add_hat_and_staff(model, s, plain)
 	s.plaque = _plaque(s, "FREYJA\nwho made it rain on one tomato,\nand then on all of us.", Vector3(0, 0.36, 0.64))
 	return s
+
+
+func _pose_statue(model: Node3D) -> void:
+	var anim := CharacterVisual.find_animation_player(model)
+	if anim and CharacterVisual.use_humanoid_library(model) and anim.has_animation(&"Torch"):
+		anim.play(&"Torch")
+		anim.seek(0.5, true)
+		anim.pause()
+
+
+func _turn_to_stone(model: Node3D, prop: Inspectable, plain: ShaderMaterial) -> void:
+	for n in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if mi.name == &"Staff":
+			mi.visible = false   # her real staff is a prop of the player, not of the stone
+			continue
+		# Eyelets, laces and charms are a few millimetres: not worth a draw call in stone.
+		if mi.get_aabb().size.length() < 0.07:
+			mi.visible = false
+			continue
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		for i in mi.mesh.get_surface_count():
+			var src := mi.get_active_material(i)
+			var cut := src is BaseMaterial3D and (src as BaseMaterial3D).transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and (src as BaseMaterial3D).albedo_texture != null
+			if not cut:
+				mi.set_surface_override_material(i, plain)
+				continue
+			if not _alpha_mats.has(src):
+				var m := _moss_material(STATUE_POS)
+				var b := src as BaseMaterial3D
+				m.set_shader_parameter("use_alpha_tex", true)
+				m.set_shader_parameter("albedo_tex", b.albedo_texture)
+				m.set_shader_parameter("alpha_cut", b.alpha_scissor_threshold if b.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR else 0.5)
+				prop.add_material(m)
+				_alpha_mats[src] = m
+			mi.set_surface_override_material(i, _alpha_mats[src])
+
+
+func _add_hat_and_staff(model: Node3D, prop: Inspectable, mat: ShaderMaterial) -> void:
+	var sk: Skeleton3D = null
+	for n in model.find_children("*", "Skeleton3D", true, false):
+		sk = n
+		break
+	if sk == null:
+		return
+	var head := sk.find_bone("Head")
+	if head >= 0:
+		var att := BoneAttachment3D.new()
+		att.bone_name = "Head"
+		sk.add_child(att)
+		var hat := CylinderMesh.new()
+		hat.top_radius = 0.0
+		hat.bottom_radius = 0.17
+		hat.height = 0.3
+		_body(att, hat, Vector3(0, 0.2, 0.0), mat)
+		var brim := CylinderMesh.new()
+		brim.top_radius = 0.26
+		brim.bottom_radius = 0.26
+		brim.height = 0.015
+		_body(att, brim, Vector3(0, 0.07, 0.0), mat)
+	# A plain stone staff planted at her right hand (the bone pose is read here).
+	var hand := sk.find_bone("RightHand")
+	var at := Vector3(-0.34, 0.9, 0.12)
+	if hand >= 0:
+		var p := sk.global_transform * sk.get_bone_global_pose(hand).origin
+		at = prop.to_local(p)
+	var staff := CylinderMesh.new()
+	staff.top_radius = 0.028
+	staff.bottom_radius = 0.034
+	staff.height = 2.35
+	_body(prop, staff, Vector3(at.x, 0.7 + 2.35 * 0.5, at.z), mat)
+	var orb := SphereMesh.new()
+	orb.radius = 0.08
+	orb.height = 0.16
+	_body(prop, orb, Vector3(at.x, 0.7 + 2.38, at.z), mat)
 
 
 # --- story ---------------------------------------------------------------------------
@@ -152,9 +226,6 @@ func _sync() -> void:
 		var want_clean := GameState.has_flag("clean_" + i.id)
 		if want_clean == i.is_dirty():
 			i.set_clean(want_clean)
-	var target := STONE_POS if GameState.quest(STONE) in ["active"] else STATUE_POS
-	_marker.global_position = Vector3(target.x, _terrain.height_at(target.x, target.y) + 0.8, target.y)
-	_marker.emitting = GameState.quest(STONE) == "active" or (GameState.quest(STATUE) == "active" and not GameState.has_flag("clean_statue"))
 
 
 func _record_stone_memory() -> void:
@@ -169,7 +240,7 @@ func _record_stone_memory() -> void:
 		"spell": "spell_field_of_flowers",
 		"outcome": {"learned_spell": STAIN_FREE, "item": "household_book"},
 		"tags": ["grave", "jonas", "household", "inheritance", "small_magic"],
-		"journal_text": "Planted blue flowers at Jonas Brenn's stone while Edda watched from the window and did not watch. She gave me her mother's household book. The rhyme for stains in it is a real spell: two hours of study, and it's mine. Her mother used it on gravy for forty years and never knew.",
+		"journal_text": "Planted blue flowers at Jonas Brenn's stone while Edda watched from her bench and did not watch. She gave me her mother's household book. The rhyme for stains in it is a real spell: two hours of study, and it's mine. Her mother used it on gravy for forty years and never knew.",
 	})
 	GameState.change_affinity("char_edda", 1, "memory_jonas_stone_flowers")
 

@@ -74,6 +74,7 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	_has_land = anim_player.has_animation("Land")
 	var cast := AnimationNodeAnimation.new()
 	cast.animation = "Cast"
+	_cast_clip = cast
 	bt.add_node("CastClip", cast, Vector2(400, 300))
 	var shot := AnimationNodeOneShot.new()
 	shot.fadein_time = 0.15
@@ -100,6 +101,7 @@ func setup(anim_player: AnimationPlayer, character: String) -> AnimationTree:
 	tree.tree_root = bt
 	anim_player.get_parent().add_child(tree)
 	tree.anim_player = tree.get_path_to(anim_player)
+	_anim = anim_player
 	tree.active = true
 	return tree
 
@@ -163,6 +165,8 @@ func set_staff(on: bool) -> void:
 
 
 var _summon_clip: AnimationNodeAnimation
+var _cast_clip: AnimationNodeAnimation
+var _anim: AnimationPlayer
 
 
 func summon(clip: String = "Summon") -> void:
@@ -170,5 +174,7 @@ func summon(clip: String = "Summon") -> void:
 	tree.set("parameters/summon/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 
-func cast() -> void:
+## `clip`: the gesture to play (a spell's cast_animation); falls back to "Cast".
+func cast(clip: StringName = &"Cast") -> void:
+	_cast_clip.animation = clip if _anim != null and _anim.has_animation(clip) else &"Cast"
 	tree.set("parameters/cast/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)

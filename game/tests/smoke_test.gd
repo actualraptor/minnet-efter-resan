@@ -74,6 +74,7 @@ func _run() -> void:
 	var player: Player = main.player
 	var terrain: MeadowTerrain = main.terrain
 	var field := FlowerField.instance
+	var wp: Waypoints = main.get_node("Waypoints")
 
 	# World
 	var h := terrain.height_at(0, 20)
@@ -152,6 +153,8 @@ func _run() -> void:
 	check("choice-conditional flag recorded", GameState.has_flag("asked_what_jonas_planted"))
 	var t2b := await _talk(edda, [])
 	check("Edda has distinct 'active' follow-up", t2b.contains("disappointed"), t2b.get_slice("\n", 0))
+	check("waypoint: the garden meadow", wp.objective() == WorldLayout.GARDEN_MEADOW)
+	check("Edda and Pippa wear the shared VRoid library", main.edda.model.scale.x < 1.0 and main.pippa.model.scale.x < main.edda.model.scale.x and CharacterVisual.find_animation_player(main.edda.model).has_animation(&"Talk") and CharacterVisual.find_animation_player(main.pippa.model).has_animation(&"Idle"))
 
 	# Cast in the meadow behind the cottage.
 	var m := WorldLayout.GARDEN_MEADOW
@@ -196,6 +199,7 @@ func _run() -> void:
 
 	# --- Errand: Flowers for Jonas (stone, book, study, Fläckfri) ---------------------
 	check("Pippa offers Jonas's stone after the garden", GameState.quest("jonas_stone") == "active", GameState.quest("jonas_stone"))
+	check("waypoint: Jonas's stone", (wp.objective() as Vector3).distance_to(Vector3(StoneQuests.STONE_POS.x, terrain.height_at(StoneQuests.STONE_POS.x, StoneQuests.STONE_POS.y), StoneQuests.STONE_POS.y)) < 0.5)
 	var stone_pos := StoneQuests.STONE_POS
 	var quests: StoneQuests = main.get_node("StoneQuests")
 	check("stone and statue props exist", quests._stone != null and quests._statue != null and quests._stone.is_dirty() and quests._statue.is_dirty())
@@ -207,6 +211,7 @@ func _run() -> void:
 	check("cast accepted at the stone", reason == "", reason)
 	await _seconds(6.0)
 	check("flowers at the stone move the errand on", GameState.quest("jonas_stone") == "planted", GameState.quest("jonas_stone"))
+	check("waypoint: back to Edda", (wp.objective() as Vector3).is_equal_approx(main.edda.global_position))
 	var t_stone := await _talk_monologue("grave")
 	check("stone shows the planted line", t_stone.contains("Blue by the kerb"), t_stone.get_slice("\n", 0))
 	player.teleport(edda.global_position + Vector3(0.0, 0.3, 1.5), PI)
@@ -214,6 +219,7 @@ func _run() -> void:
 	var t5 := await _talk(edda, [])
 	check("Edda gives her mother's book", GameState.has_item("household_book") and GameState.quest("jonas_stone") == "book", GameState.quest("jonas_stone"))
 	check("Fläckfri is not known before studying", not GameState.knows_spell("spell_stain_free"))
+	check("waypoint: none while studying", wp.objective() == null)
 	var hud0: Hud = main.get_node("UI/Hud")
 	check("tracker shows the study objective", hud0._quest_title.text == "Flowers for Jonas" and hud0._quest_obj.text.contains("study"), hud0._quest_obj.text)
 
@@ -232,11 +238,12 @@ func _run() -> void:
 	var hours := SpellLibrary.get_def("spell_stain_free").study_hours
 	await book._study("household_book")
 	var moved := fposmod(float(GameState.world_date["hour"]) - hour0, 24.0)
-	check("study moved the clock by the spell's study time", is_equal_approx(moved, hours), "%.2f h of %.2f" % [moved, hours])
+	check("study moved the clock by the spell's study time", absf(moved - hours) < 0.15, "%.2f h of %.2f" % [moved, hours])
 	check("studying taught Fläckfri", GameState.knows_spell("spell_stain_free"))
 	check("new spell took the first free number key", GameState.hotbar.find("spell_stain_free") == 4, "slot %d" % GameState.hotbar.find("spell_stain_free"))
 	check("book is kept after studying", GameState.has_item("household_book"))
 	check("Flowers for Jonas completes on learning", GameState.quest("jonas_stone") == "complete")
+	check("waypoint: Pippa after the book", (wp.objective() as Vector3).is_equal_approx(main.pippa.global_position))
 	check("stone memory recorded", GameState.has_memory("memory_jonas_stone_flowers"))
 	var key5 := InputEventAction.new()
 	key5.action = "spell_5"
@@ -259,13 +266,16 @@ func _run() -> void:
 	check("Fläckfri cleaned Jonas's stone", GameState.has_flag("clean_jonas_stone") and not quests._stone.is_dirty())
 	var t_clean_stone := await _talk_monologue("grave")
 	check("clean stone is readable", t_clean_stone.contains("HE HUMMED WHEN HE WEEDED"), t_clean_stone.get_slice("\n", 0))
-	check("cleaning the stone leaves the statue mossy", quests._statue.is_dirty() and float(quests._statue._mat.get_shader_parameter("grime")) > 0.99)
+	check("cleaning the stone leaves the statue mossy", quests._statue.is_dirty() and quests._statue.shader_grime() > 0.99)
 
 	# --- Errand: Good morning, statue ---------------------------------------------
 	player.teleport(pippa.global_position + Vector3(0, 0.2, 2.0), PI)
 	await _frames(10)
 	var t6 := await _talk(pippa, [])
 	check("Pippa asks for the statue", GameState.quest("statue_by_the_road") == "active", GameState.quest("statue_by_the_road"))
+	check("waypoint: the statue", (wp.objective() as Vector3).distance_to(Vector3(StoneQuests.STATUE_POS.x, terrain.height_at(StoneQuests.STATUE_POS.x, StoneQuests.STATUE_POS.y), StoneQuests.STATUE_POS.y)) < 0.5)
+	var statue_meshes := quests._statue.find_children("*", "MeshInstance3D", true, false).size()
+	check("statue is built from her own model (many meshes, alpha cut-outs kept)", statue_meshes > 40 and not quests._alpha_mats.is_empty(), "%d meshes, %d cut-out materials" % [statue_meshes, quests._alpha_mats.size()])
 	var sp := StoneQuests.STATUE_POS
 	player.teleport(Vector3(sp.x + 3.0, terrain.height_at(sp.x + 3.0, sp.y) + 0.3, sp.y), -PI / 2.0)
 	await _frames(30)
@@ -278,11 +288,38 @@ func _run() -> void:
 	check("Fläckfri cleaned the statue", GameState.has_flag("clean_statue") and not quests._statue.is_dirty())
 	var t_plate := await _talk_monologue("statue")
 	check("clean statue shows the plaque and moves the errand on", t_plate.contains("TOMATO") and GameState.quest("statue_by_the_road") == "found", GameState.quest("statue_by_the_road"))
+	check("waypoint: back to Pippa", (wp.objective() as Vector3).is_equal_approx(main.pippa.global_position))
 	player.teleport(pippa.global_position + Vector3(0, 0.2, 2.0), PI)
 	await _frames(10)
 	var t7 := await _talk(pippa, [1])
 	check("Pippa closes the statue errand", GameState.quest("statue_by_the_road") == "complete" and GameState.has_memory("memory_statue_by_the_road"))
 	check("statue choice recorded in the memory", GameState.get_memory("memory_statue_by_the_road").get("journal_text", "").contains("I told Pippa I didn't remember"))
+	check("waypoint: none once the errands are done", wp.objective() == null)
+
+	# Time of day: the sun is brighter at noon than at night, and moves.
+	var tod: TimeOfDay = main.get_node("TimeOfDay")
+	tod.apply(12.5)
+	var noon_energy: float = main.world.sun.light_energy
+	tod.apply(23.0)
+	var night_energy: float = main.world.sun.light_energy
+	tod.apply(float(GameState.world_date["hour"]))
+	check("sun is dimmer at night than at noon", night_energy < noon_energy * 0.4, "%.2f vs %.2f" % [night_energy, noon_energy])
+	var clock0 := float(GameState.world_date["hour"])
+	await _seconds(6.0)
+	check("the clock keeps running in play", float(GameState.world_date["hour"]) != clock0)
+
+	# Practice range: two lanes fire continuously along fixed lines when started.
+	var yard := PracticeRange.new()
+	main.add_child(yard)
+	yard.setup(terrain, player)
+	yard.set_active(true)
+	await _seconds(2.0)
+	var beam_up: bool = yard._turrets.size() == 2 and is_instance_valid(yard._turrets[0]._lane_beam)
+	check("range: the black lane holds a beam while on", beam_up)
+	yard.set_active(false)
+	await _seconds(0.5)
+	check("range: it stops when switched off", yard._turrets[0]._lane_beam == null)
+	yard.queue_free()
 
 	# Save / load roundtrip.
 	var before_flowers := field.total()
