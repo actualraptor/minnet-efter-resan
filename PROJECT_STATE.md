@@ -3,7 +3,7 @@
 _Last updated: 2026-10-12 (reconciled against git history, the repo and a fresh headless run; see "Verified today")_
 
 ## Current milestone
-**Demo 1: The Cottage.** A playable, shippable slice: the cottage and meadow, three small quests, a closing beat and a Windows build. Status: **Building** (quests 2 and 3 picked and built; spellbook, satchel and studying added at the owner's request; ending, options, credits, export still to do). Finish line and plan: [docs/design/DEMO_1.md](docs/design/DEMO_1.md).
+**Demo 1: The Cottage.** A playable, shippable slice: the cottage and meadow, three small quests, a closing beat and a Windows build. Status: **Review / testing** (content, ending, front door and package are built and scripted-tested; waiting for the owner's hands-on playtest). Finish line and plan: [docs/design/DEMO_1.md](docs/design/DEMO_1.md).
 
 Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass the smoke test, but its human playtest (#9) never happened; Demo 1's playtest replaces it.
 
@@ -35,19 +35,19 @@ Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass 
 - **Waypoints**: a column of sunlit haze and a guiding firefly toward the current objective (`Waypoints`).
 - **Practice range yard** (east of the road): two lanes, continuous fire, a switch pedestal (`PracticeRange`).
 - **Edda and Pippa** are CC0 VRoid sample bodies (AvatarSample_G and _E) on the shared humanoid library, with tints, stoop, spectacles, long skirt and shawl (`NpcLook`).
-- Smoke test: 91 checks (headless, 2026-10-12), including waypoints per state, study clock, save/load mid-errand, the range lanes and the sun at noon versus night.
+- **Ending** (dusk on the road, end card), **NPC routines** (walk, sit, crouch, notice, bark, go home at night; placed correctly after a load), **title screen, options, credits**, F10 and the CC-BY model removed, **export script** (`tools/export_demo.ps1`: zip 103.7 MB, clean-folder boot exit 0).
+- Smoke test: 102 checks (headless, 2026-10-12), including waypoints per state, study clock, save/load mid-errand (cast placement too), the range lanes, the sun at noon versus night, the ending and the front-door data.
+- Frame time on the RTX 5070 Ti at 1600x900, vsync off: 90-190 fps average across the meadow, statue, range, night and flower field (`--dbg --perf`). Not yet measured at true 1080p.
 - Screenshots of the UI, moss, wipe, statue, NPCs, range, time of day and waypoints were rendered with `--dbg --book` / `--dbg --yard` and inspected.
 
 ## Known issues and gaps
 - **No human playtest has ever been run** (movement feel, camera indoors #10, dialogue pacing, audio mix).
 - **No performance numbers recorded** (finish line needs 60 fps at 1080p on the RTX 5070 Ti).
-- **No options menu** (volumes, mouse sensitivity) and no credits screen (#13).
-- `PauseMenu` subtitle still reads "Prototype 001 — in development"; F10 travels to Linköping (dev shortcut) and must be removed from a demo build.
 - Edda and Pippa's faces are still the young anime faces of the sample bodies: age comes from hair, glasses, stoop and clothes, not from the face. The old scripted Edda/Pippa models were deleted (still in git history).
 - The statue (Freyja's model in stone) is about 130 small meshes with per-surface materials; its frame cost has not been measured.
 - Night is real: the meadow gets dark by about 21:00 game time; nobody goes indoors and there are no extra lights besides the cottage and the firefly.
-- The old CC-BY Sketchfab-based `freyja.glb` and its textures are still tracked and **no longer referenced by any scene**, but the export preset uses `export_filter="all_resources"`, so it would ship and need attribution unless excluded or deleted. The raw `freyja_vroid.vrm` (18 MB) and `World/` are untracked local files; neither is referenced at runtime.
-- The export preset points `custom_template/release` at `D:/Utveckling CODEX/...`, a path that exists only on this machine.
+- The raw `freyja_vroid.vrm` (18 MB) and `World/` are untracked local files; neither is referenced at runtime, and the export excludes the VRM.
+- The export preset points `custom_template/release` at `D:/Utveckling CODEX/...`, a path that exists only on this machine (the standard Godot export templates are not installed here).
 - CI runs the smoke test only; the flight, Zoltraak, and barrier suites are manual `--dbg` scripts.
 
 ## Verified today (2026-10-12, Windows 11, Godot 4.7.2)

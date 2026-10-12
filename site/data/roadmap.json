@@ -13,15 +13,15 @@
       "id": "D1",
       "title": "Demo 1: The Cottage",
       "summary": "A short, finished slice you can download and play: the cottage and meadow, three small quests, a closing beat, options and credits, on Windows.",
-      "status": "in_progress",
+      "status": "testing",
       "items": [
-        {"title": "Three quests, tracked in the journal, with a closing beat", "status": "in_progress", "note": "Quest 1 done; quests 2 and 3 being chosen."},
-        {"title": "Save and load mid-quest and after each quest", "status": "planned"},
-        {"title": "A scripted test per quest, CI green", "status": "planned"},
-        {"title": "Options (volumes, mouse sensitivity, restart, quit) and credits", "status": "planned"},
-        {"title": "Windows build that runs from a clean folder", "status": "planned"},
-        {"title": "Human playtest and blocker fixes", "status": "planned"},
-        {"title": "60 fps at 1080p, measured", "status": "planned"}
+        {"title": "Three quests, tracked in the journal, with a closing beat", "status": "complete"},
+        {"title": "Save and load mid-quest and after each quest", "status": "complete"},
+        {"title": "A scripted test per quest, CI green", "status": "complete"},
+        {"title": "Options (volumes, mouse sensitivity, restart, quit) and credits", "status": "complete"},
+        {"title": "Windows build that runs from a clean folder", "status": "complete"},
+        {"title": "Human playtest and blocker fixes", "status": "testing", "note": "Waiting for the owner."},
+        {"title": "60 fps at 1080p, measured", "status": "testing", "note": "90-190 fps measured at 1600x900; true 1080p still to run."}
       ]
     },
     {

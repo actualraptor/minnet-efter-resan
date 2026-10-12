@@ -1,6 +1,6 @@
 # Demo 1: The Cottage
 
-Status: **building**. Quests 2 and 3 are picked (pair A, 2026-10-12). Decisions marked **OWNER** are still open.
+Status: **built, waiting for the owner's playtest** (2026-10-12). Decided by the owner: quests pair A; ending = dusk on the road; title card = "Minnet efter resan / A small errand, a long memory"; the F10 shortcut removed; practice range = the dedicated yard.
 
 ## Finish line (all must be verified, not assumed)
 1. A new game reaches the end card in 15-25 minutes, with exactly 3 quests completed, tracked in the journal, and a short closing beat.

@@ -56,6 +56,8 @@ func _ready() -> void:
 		await _waypoints()
 	if only == "life":
 		await _life()
+	if only == "front":
+		await _front()
 	get_tree().quit()
 
 
@@ -194,3 +196,31 @@ func _life() -> void:
 	e.play(&"Talk")
 	await _wait(0.8)
 	await _snap("life_edda_talk")
+
+
+func _front() -> void:
+	_main.get_node("UI").visible = true
+	var ts := TitleScreen.new()
+	_main.get_node("UI").add_child(ts)
+	ts.set_continue_enabled(true)
+	await _wait(0.6)
+	await _snap("front_title")
+	ts._page(ts._options)
+	await _wait(0.3)
+	await _snap("front_options")
+	ts._page(ts._credits)
+	await _wait(0.3)
+	await _snap("front_credits")
+	ts.queue_free()
+	var pm: PauseMenu = _main.get_node("UI/PauseMenu")
+	GameState.set_quest("garden_of_jonas", "complete")
+	pm._open()
+	await _wait(0.4)
+	await _snap("front_pause")
+	pm._show_options()
+	await _wait(0.3)
+	await _snap("front_pause_options")
+	pm._resume()
+	_main.end_card.show_card()
+	await _wait(2.2)
+	await _snap("front_endcard")

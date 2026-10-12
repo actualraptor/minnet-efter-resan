@@ -71,18 +71,21 @@ func _ready() -> void:
 func _show_title() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player.lock_input()
+	$UI/Hud.visible = false
 	var t := TitleScreen.new()
 	t.name = "TitleScreen"
 	$UI.add_child(t)
 	t.set_continue_enabled(GameState.has_save())
 	t.begin_pressed.connect(func():
 		t.queue_free()
+		$UI/Hud.visible = true
 		player.unlock_input()
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_opening())
 	t.continue_pressed.connect(func():
 		if GameState.load_game():
 			t.queue_free()
+			$UI/Hud.visible = true
 			fade.visible = false
 			title.visible = false
 			player.unlock_input()
