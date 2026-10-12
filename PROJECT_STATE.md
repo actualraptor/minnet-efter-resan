@@ -36,7 +36,7 @@ Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass 
 - **Practice range yard** (east of the road): two lanes, continuous fire, a switch pedestal (`PracticeRange`).
 - **Edda and Pippa** are CC0 VRoid sample bodies (AvatarSample_G and _E) on the shared humanoid library, with tints, stoop, spectacles, long skirt and shawl (`NpcLook`).
 - **Ending** (dusk on the road, end card), **NPC routines** (walk, sit, crouch, notice, bark, go home at night; placed correctly after a load), **title screen, options, credits**, F10 and the CC-BY model removed, **export script** (`tools/export_demo.ps1`: zip 103.7 MB, clean-folder boot exit 0).
-- Smoke test: 102 checks (headless, 2026-10-12), including waypoints per state, study clock, save/load mid-errand (cast placement too), the range lanes, the sun at noon versus night, the ending and the front-door data.
+- Smoke test: 107 checks (headless, 2026-10-12), including locomotion step responses and the garment-coverage gear rule, plus waypoints per state, study clock, save/load mid-errand (cast placement too), the range lanes, the sun at noon versus night, the ending and the front-door data.
 - Frame time on the RTX 5070 Ti at 1600x900, vsync off: 90-190 fps average across the meadow, statue, range, night and flower field (`--dbg --perf`). Not yet measured at true 1080p.
 - Screenshots of the UI, moss, wipe, statue, NPCs, range, time of day and waypoints were rendered with `--dbg --book` / `--dbg --yard` and inspected.
 
