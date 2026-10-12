@@ -1,73 +1,68 @@
 # Project State
 
-_Last updated: 2026-10-10_
+_Last updated: 2026-10-12 (reconciled against git history, the repo and a fresh headless run; see "Verified today")_
 
 ## Current milestone
-**001: A Cottage, a Mage, and a Memory.** Status: **Review / testing.** The systems are implemented and pass the automated smoke test. It still needs a human playtest, feel tuning and an art pass against the official character sheet.
+**Demo 1: The Cottage.** A playable, shippable slice: the cottage and meadow, three small quests, a closing beat and a Windows build. Status: **Planning** (scope and plan agreed with the owner, quests 2 and 3 not yet picked). Finish line and plan: [docs/design/DEMO_1.md](docs/design/DEMO_1.md).
 
-## Implemented (verified in the running game)
-| Feature | State | Verified by |
+Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass the smoke test, but its human playtest (#9) never happened; Demo 1's playtest replaces it.
+
+## Implemented (in the repository, with how each is checked)
+| Feature | State | Checked by |
 |---|---|---|
-| Meadow terrain (220 m generated, ~108 m playable diameter), heightmap collision, soft play boundary | Done | smoke test, screenshots |
-| Wind grass (chunked MultiMesh, visibility ranges), wildflower drifts, tree ring, mountains, sky, butterflies, pollen, chimney smoke | Done | screenshots |
-| Cottage exterior and interior with collision, working door, indoor volume (camera, footsteps, ambience, spell rule) | Done | smoke test (indoor detection), screenshots |
-| Freyja v3: CC-BY anime base heavily modified; CMU mocap walk/run (free and staff sets, stride matched); spring-bone hair, skirt and capelet; face rig (blinks, lids, mouth, brows, iris saccades, expressions); head look-at (camera, speaker); staff summoned from thin air (4 random gestures, dissolve shader) | Done | smoke test, Blender previews, runtime contact sheets |
-| Edda and Pippa: rigged GLBs with idle and talk (Pippa also has Hop) | Done | screenshots |
-| Third-person controller and spring-arm camera | Done | screenshots. **Not yet hand-playtested for feel.** |
-| Spell framework and Field of Flowers (gather, wave, bloom, persistence, caps, indoor refusal) | Done | smoke test: 902 flowers on first cast, 2,472 after 5 casts within caps, none inside the cottage |
-| Dialogue runner, director, UI (both speakers, choices, conditions, exit, voice and l10n hooks) | Done | smoke test transcripts |
-| Quest *The Garden Behind the Cottage* and memory event | Done | smoke test |
-| Save/load (versioned JSON, flowers re-planted deterministically) | Done | smoke test: identical flower count after reload |
-| HUD, pause menu, journal | Done | screenshots |
-| Audio: ambience, SFX, music (original) | Done | files generated; levels checked with ffmpeg. **Not yet judged by ear in play.** |
+| Meadow terrain, grass, wildflower drifts, tree ring, mountains, sky, butterflies, pollen, chimney smoke | Done | smoke test (terrain, grass, props), screenshots |
+| Cottage exterior and interior, working door, indoor volume (camera, footsteps, ambience, spell rule) | Done | smoke test (door, indoor detection, cast refused) |
+| **Freyja is the VRoid model** (`freyja_vroid_game.glb`, reference outfit, spring-bone hair and cloth); Quaternius UAL (CC0) idle/walk/jog/jump/talk/cast retargeted by BoneMap; CMU mocap kept for jump/land | Done | smoke test (animations, spring chains, face rig, look-at), deformation gate, physics audit |
+| Staff performance rig: summoned from thin air, two-handed IK grip, authored staff poses per spell | Done | smoke test (summon), `--dbg --staff` audits |
+| Flight with stamina, hover legs, casting from the air | Done | `--dbg --fly`; **not in the smoke test** |
+| Spell framework and **Field of Flowers** (levitating cast, circle, wave, bloom, caps, indoor refusal) | Done | smoke test (870 flowers first cast, 2,295 after 5 casts, none indoors) |
+| **Solstråk / Mörkstråk** (white and black Zoltraak-style beams, seals, charged, burst, volley), **hex barrier**, focus-aim controls | Done (a toy, not an enemy system) | `--dbg --zoltraak` ten scenarios; **not in the smoke test** |
+| Practice range in the meadow: straw dummies and two shooters (black beam, white volley) that hit the player (toast, no health) | Done | `--dbg --range`; **scope decision pending for the demo** |
+| Dialogue runner, director, UI (choices, conditions, actions, interpolation) | Done | smoke test transcripts |
+| Quest *The Garden Behind the Cottage* and memory event `memory_cottage_garden_restored` | Done | smoke test |
+| Save/load (versioned JSON, flowers re-planted deterministically) | Done | smoke test (2,295 vs 2,295 after reload) |
+| HUD, pause menu, journal (errands and memories), quit | Done | screenshots |
+| Audio: ambience, SFX, music (synthesised and composed in-repo) | Done | files generated; **never judged by ear in play** |
+| Linköping slice (`scenes/linkoping.tscn`, F10 from the meadow): procedural cathedral, square, bridge, houses | Prototype, **out of scope for the demo** | `town_shots` / `town_walk`; not in CI |
+| Teaser film tooling (`scripts/dev/teaser.gd`, `build/teaser/render.sh`, `tools/audio/compose_teaser.js`) | Done, dev only | rendered clips |
+| Design pool of useless spells (`docs/design/USELESS_SPELLS.md`, 86 entries) | Proposal doc | n/a |
 
-## Partially complete / known issues
-- **Freyja (v3, 2026-10-10):** clothing bands, petticoat and skirt/capelet spring rings are wrapped around the torso centre (no back "bustle"); the back hair has an underlayer; character meshes skip auto-LOD. Open: side plum-panel trims stand slightly off the skirt; Jump/Fall are still hand-keyed (now free-armed); the cast is hand-keyed rather than mocap.
-- **Edda and Pippa** are still v2 scripted geometry (decal faces, mitten hands, rigid cloth).
-- **Indoor camera:** in tight spots Freyja now fades out as the camera closes in. It still needs a feel check by hand (#10).
-- **Edda's shawl** reads as a large plum shape from the front.
-- **The interior** has improved but is still warmer and plainer than the reference art.
-- The meadow wave glow is tuned for this lighting and may need retuning if the time of day changes.
-- No options menu (sensitivity, volume, key rebinding) yet.
-- The tree ring is deterministic random placement, not fully hand-composed.
+## Work in progress (uncommitted, not wired in)
+A prototype of a two-step stone errand chain (grave flowers → Fläckfri cleaning spell → mossed statue): `scripts/world/inspectable.gd`, `scripts/world/stone_quests.gd`, `shaders/grime_stone.gdshader`, `scripts/spells/stain_free_effect.gd`, `data/spells/stain_free.tres`. It is one candidate for quests 2 and 3 and is not connected to `main.gd` until the owner picks (see DEMO_1.md).
 
-## GitHub (verified 2026-10-09)
-- Repository (public): https://github.com/actualraptor/minnet-efter-resan
-- GitHub Pages (Actions deploy, verified HTTP 200): https://actualraptor.github.io/minnet-efter-resan/ and `/roadmap.html`
-- CI `Godot checks` on ubuntu-24.04 with Godot 4.7.2: import plus smoke test **PASS** on the first push.
-- Board: Projects v2 https://github.com/users/actualraptor/projects/1 (public). The Status field is Backlog / Ready / In Progress / Review-Testing / Done / Blocked, with 20 issues placed. **Limitation:** the API cannot create a *Board-layout view*, so the project opens in table layout. Switch it once via *View → Layout → Board* in the GitHub UI.
-- 8 milestones (001–008), labels for type/priority/area/status, and 20 issues (8 done and closed with verification notes; #9 playtest in Review/Testing; #10 and #12 Ready; #11 Blocked on the character sheet; #13 and #14–#20 epics in Backlog). Seeded by `tools/github/seed_board.js` and `setup_project.js`.
-- Status sync: `site/data/roadmap.json` is the single source for the site, and the board is updated alongside it (manual for now).
+## Known issues and gaps
+- **No human playtest has ever been run** (movement feel, camera indoors #10, dialogue pacing, audio mix).
+- **No performance numbers recorded** (finish line needs 60 fps at 1080p on the RTX 5070 Ti).
+- **No options menu** (volumes, mouse sensitivity) and no credits screen (#13).
+- `PauseMenu` subtitle still reads "Prototype 001 — in development"; F10 travels to Linköping (dev shortcut) and must be removed from a demo build.
+- Edda and Pippa are still the v2 scripted geometry (decal faces, mitten hands); unchanged since 2026-10-10.
+- The old CC-BY Sketchfab-based `freyja.glb` and its textures are still tracked and **no longer referenced by any scene**, but the export preset uses `export_filter="all_resources"`, so it would ship and need attribution unless excluded or deleted. The raw `freyja_vroid.vrm` (18 MB) and `World/` are untracked local files; neither is referenced at runtime.
+- The export preset points `custom_template/release` at `D:/Utveckling CODEX/...`, a path that exists only on this machine.
+- CI runs the smoke test only; the flight, Zoltraak, and barrier suites are manual `--dbg` scripts.
+
+## Verified today (2026-10-12, Windows 11, Godot 4.7.2)
+- `godot --headless --path game --import`: 0 script or parse errors.
+- `godot --headless --path game -- --smoke-test`: **PASS, 42/42 checks** on the committed tree (log kept outside the repo).
+- Not run today: CI on GitHub, GPU tours, any export.
+
+## GitHub (verified 2026-10-12)
+- Repository (public): https://github.com/actualraptor/minnet-efter-resan; Pages: https://actualraptor.github.io/minnet-efter-resan/ and `/roadmap.html`.
+- CI `Godot checks` (ubuntu-24.04, Godot 4.7.2): JSON validation, import, smoke test.
+- Board: Projects v2 https://github.com/users/actualraptor/projects/1. 20 issues from milestone 001/002–008 seeding (#1–#8 closed, #9 review/testing, #10–#12 ready, #13 backlog, #14–#20 epics). Demo 1 gets its own milestone and epic. The API cannot create a Board-layout view, so switch the layout once in the UI.
+- `site/data/roadmap.json` is the single source for the site; the board is updated alongside it by hand.
 
 ## Architecture
-See [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md). In short: `GameState` (the one narrative singleton) plus `Audio` autoloads; the scene-node systems are terrain, grass, flowers, world builder, player, caster, dialogue director and UI.
+See [docs/design/ARCHITECTURE.md](docs/design/ARCHITECTURE.md): `GameState` (the one narrative singleton) plus `Audio` autoloads; scene-node systems for terrain, grass, flowers, world builder, player, caster, dialogue director and UI.
 
 ## Assets and licences
-See [docs/ASSETS.md](docs/ASSETS.md). All models and audio are generated from scripts in this repo. Fonts are OFL. The music was rendered with the GeneralUser GS soundfont.
+See [docs/ASSETS.md](docs/ASSETS.md). Shipped third-party: Quaternius UAL and monsters (CC0), godot-vrm and MToon (MIT), Nunito and Cormorant Garamond (OFL), GeneralUser GS (render-time only), CMU mocap (jump/land). The VRoid-made Freyja model is the owner's own work. CC-BY Sketchfab base: see the known issue above.
 
-## Tests actually run (2026-10-09, Windows 11, RTX 5070 Ti, Godot 4.7.2)
-- `godot --headless --path game --import`: no script errors.
-- `godot --headless --path game -- --smoke-test`: **PASS, 41/41 checks** (2026-10-10).
-- Dev audits (`godot --path game -- --dbg --face|--spell|--pose|--walk --out=<dir>`): face/look-at stills and contact sheets of summon variants, cast, walk/run/stop from side, back and front; inspected.
-- `godot --path game -- --tour`: 9 runtime screenshots captured at 1080p and inspected (used on the site, labelled in-game).
-- GitHub Actions on Linux: import plus smoke test PASS.
-- Blender 4.5.14 builds of all assets: success. Pose previews inspected.
-- **Not done:** human playtest with keyboard, mouse or gamepad. Performance profiling (no FPS numbers recorded). 
-
-## Skills and tools
-- Installed project skills: 28 Godot skills from `jame581/GodotPrompter` (MIT, skill text only, no hooks) plus the local `creature-rigging` skill. See `.claude/skills/SKILLS_PROVENANCE.md` (local only, git-ignored).
-- No suitable Blender skill was found: the available ones require blender-mcp with a GUI session. Headless `bpy` is used instead.
-
-## Next priorities
-0. World vision pass: path dressing (walls, lantern posts, cobbles; props already built), castle vista, spell ribbons and petals, ornate HUD, optional pixel-art render mode.
-1. Human playtest: movement feel, camera indoors, dialogue pacing, audio mix.
-2. Character pass against the official Freyja sheet once provided (proportions, face, hair volume).
-3. Interior dressing and lighting toward the reference (light shafts, clutter density, Edda's outfit).
-4. Options menu (mouse sensitivity, volumes, rebinding) and accessibility (text speed, size).
-5. Milestone 002 planning: the village to the south and the next small quests.
+## Next
+1. Owner picks quests 2 and 3, the ending beat and the title card (DEMO_1.md).
+2. Build the plan in DEMO_1.md in order, one commit per task.
 
 ## Change log (short)
-- 2026-10-10 (b): Freyja: generated long loose hair (replaces the twin-tail ribbons), finger/thumb bones with procedural hand poses (relaxed/grip/open) and the staff placed in her fist, foot IK grounding on terrain, neck+head look-at, skirt pieces fitted by ray-casting the real skirt surface, leg colliders sized to her thighs. Cottage: walkable step ramp; door collider now follows the swing (the door used to stay solid when open).
-- 2026-10-10: Freyja: head look-at, fixed a camera-fade bug that left her semi-transparent (eyes drew through her face), fixed back-of-waist clipping (bands wrapped around the wrong centre), back-hair underlayer, gem recolour, relaxed hand curl, free-armed jump/fall, playtest build.
-- 2026-10-09: Vision pass, characters: Freyja v2, Edda v2, Pippa v2. Golden-hour light, volumetric haze, cumulus sky, leaf-card trees, denser wildflowers.
+- 2026-10-12: State reconciled; Demo 1 milestone and plan added.
+- 2026-10-11: Solid beams, combat camera, practice range with monster-bodied shooters, teaser v1-v3, useless-spell design list.
+- 2026-10-10 to 2026-10-11: VRoid Freyja (reference outfit, UAL retarget, staff rig, flight, Zoltraak/barrier overhaul, Linköping slice).
 - 2026-10-09: Milestone 001 slice built: world, cottage, characters, spell, dialogue, quest, memory, audio, tests, docs, site.

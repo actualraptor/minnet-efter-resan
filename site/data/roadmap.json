@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-09",
-  "current_milestone": "001",
+  "updated": "2026-10-12",
+  "current_milestone": "D1",
   "statuses": {
     "planned": "Planned",
     "in_progress": "In progress",
@@ -9,6 +9,21 @@
     "blocked": "Blocked"
   },
   "phases": [
+    {
+      "id": "D1",
+      "title": "Demo 1: The Cottage",
+      "summary": "A short, finished slice you can download and play: the cottage and meadow, three small quests, a closing beat, options and credits, on Windows.",
+      "status": "in_progress",
+      "items": [
+        {"title": "Three quests, tracked in the journal, with a closing beat", "status": "in_progress", "note": "Quest 1 done; quests 2 and 3 being chosen."},
+        {"title": "Save and load mid-quest and after each quest", "status": "planned"},
+        {"title": "A scripted test per quest, CI green", "status": "planned"},
+        {"title": "Options (volumes, mouse sensitivity, restart, quit) and credits", "status": "planned"},
+        {"title": "Windows build that runs from a clean folder", "status": "planned"},
+        {"title": "Human playtest and blocker fixes", "status": "planned"},
+        {"title": "60 fps at 1080p, measured", "status": "planned"}
+      ]
+    },
     {
       "id": "001",
       "title": "A Cottage, a Mage, and a Memory",
@@ -23,8 +38,8 @@
         {"title": "Text dialogue with choices and stable line IDs", "status": "complete"},
         {"title": "The Garden Behind the Cottage quest and memory event", "status": "complete"},
         {"title": "Original audio: ambience, SFX, meadow theme", "status": "complete"},
-        {"title": "Human playtest and feel polish", "status": "testing"},
-        {"title": "Character art pass against the concept sheet", "status": "blocked", "note": "Waiting for the official character sheet."}
+        {"title": "Human playtest and feel polish", "status": "testing", "note": "Folded into the Demo 1 playtest."},
+        {"title": "Freyja remade in VRoid, with her own outfit", "status": "complete"}
       ]
     },
     {"id": "002", "title": "Village and Quests", "summary": "Brenn's village to the south: lived-in homes, schedules, small humane errands and an eccentric grimoire hunt.", "status": "planned"},
