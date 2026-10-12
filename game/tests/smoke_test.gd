@@ -363,6 +363,14 @@ func _run() -> void:
 	await _seconds(2.2)
 	check("in daylight Edda is back to the bench plan", er._plan_key == "edda_bench", er._plan_key)
 
+	# Locomotion has weight: speed builds, a stop takes time, a hard turn costs speed.
+	var loco_r := await _loco_response()
+	print("LOCO walk t90 %.2fs  run t90 %.2fs  stop from run %.2fs  pivot min speed %.2f m/s (run %.2f)" % [loco_r["walk_t90"], loco_r["run_t90"], loco_r["stop_run"], loco_r["pivot_min"], player.run_speed])
+	check("a walk takes about half a second to get going", loco_r["walk_t90"] > 0.35 and loco_r["walk_t90"] < 1.1, "%.2f s" % loco_r["walk_t90"])
+	check("stepping up from a walk to a run takes a beat", loco_r["run_t90"] > 0.4 and loco_r["run_t90"] < 1.7, "%.2f s" % loco_r["run_t90"])
+	check("stopping from a run is not instant", loco_r["stop_run"] > 0.4 and loco_r["stop_run"] < 1.4, "%.2f s" % loco_r["stop_run"])
+	check("a 180 degree turn at a run costs speed", loco_r["pivot_min"] < player.run_speed * 0.8 and loco_r["pivot_min"] > 0.2, "%.2f m/s" % loco_r["pivot_min"])
+
 	# Front door and options.
 	Settings.ensure_buses()
 	check("option buses exist", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("Ambience") >= 0 and AudioServer.get_bus_index("Effects") >= 0)
@@ -419,3 +427,52 @@ func _no_flowers_in_cottage(field: FlowerField) -> bool:
 			if WorldLayout.cottage_rect_contains(p, 0.2):
 				return false
 	return true
+
+
+
+## Step responses of the ground movement, measured with real input events.
+func _loco_response() -> Dictionary:
+	var p: Player = main.player
+	var out := {}
+	p.teleport(Vector3(-3.5, main.terrain.height_at(-3.5, 33.0) + 0.2, 33.0), PI)
+	p.camera_rig.yaw = 0.0
+	await _seconds(0.5)
+	var sp := func() -> float: return Vector2(p.velocity.x, p.velocity.z).length()
+	Input.action_press("move_forward")
+	var t := 0.0
+	while sp.call() < p.walk_speed * 0.9 and t < 4.0:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+	out["walk_t90"] = t
+	await _seconds(0.8)
+	Input.action_press("run")
+	t = 0.0
+	while sp.call() < p.run_speed * 0.9 and t < 6.0:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+	out["run_t90"] = t
+	await _seconds(0.6)
+	Input.action_release("move_forward")
+	Input.action_release("run")
+	t = 0.0
+	while sp.call() > 0.15 and t < 4.0:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+	out["stop_run"] = t
+	# Pivot: run, then the camera (and so the input) swings round 180 degrees.
+	p.teleport(Vector3(-3.5, main.terrain.height_at(-3.5, 31.0) + 0.2, 31.0), PI)
+	p.camera_rig.yaw = 0.0
+	Input.action_press("move_forward")
+	Input.action_press("run")
+	await _seconds(2.6)
+	p.camera_rig.yaw = PI
+	var lo := 99.0
+	for i in 70:
+		await get_tree().physics_frame
+		lo = minf(lo, sp.call())
+	out["pivot_min"] = lo
+	Input.action_release("move_forward")
+	Input.action_release("run")
+	p.camera_rig.yaw = 0.0
+	await _seconds(1.2)
+	return out

@@ -28,6 +28,7 @@ var _home_yaw := 0.0
 var _talking := false
 var _look_target: Vector3
 var _walk_velocity := Vector3.ZERO
+var _walk_speed := 0.0
 var _cur_anim: StringName = &""
 ## Sitting (on the bench, in the armchair): Idle and Talk map to the seated clips.
 var seated := false
@@ -138,18 +139,29 @@ func walk_toward(point: Vector3, speed: float) -> float:
 	var to := point - global_position
 	to.y = 0.0
 	var d := to.length()
+	var dt := get_process_delta_time()
 	if d < 0.12:
 		_walk_velocity = Vector3.ZERO
+		_walk_speed = 0.0
 		return d
-	_walk_velocity = to / d * speed
-	model.rotation.y = lerp_angle(model.rotation.y, atan2(to.x, to.z), 1.0 - exp(-9.0 * get_process_delta_time()))
-	play(&"Run" if speed > 1.5 else &"Walk")
+	# Ease in, and slow down over the last metre so a stop is not a wall.
+	var goal := speed * clampf(d / 1.0, 0.3, 1.0)
+	_walk_speed = move_toward(_walk_speed, goal, (1.1 if speed < 1.5 else 3.2) * dt)
+	_walk_velocity = to / d * _walk_speed
+	model.rotation.y = lerp_angle(model.rotation.y, atan2(to.x, to.z), 1.0 - exp(-6.0 * dt))
+	var run := _walk_speed > 1.5
+	play(&"Run" if run else &"Walk")
+	if _anim:
+		_anim.speed_scale = clampf(_walk_speed / (3.0 if run else 1.2), 0.45, 1.5)
 	return d
 
 
 func stop_walk() -> void:
+	_walk_speed = 0.0
 	if _walk_velocity != Vector3.ZERO:
 		_walk_velocity = Vector3.ZERO
+		if _anim:
+			_anim.speed_scale = 1.0
 		play(&"Idle")
 
 

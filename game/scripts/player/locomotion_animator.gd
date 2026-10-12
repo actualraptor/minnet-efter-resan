@@ -121,8 +121,8 @@ func update(delta: float, speed: float, walk_speed: float, run_speed: float, gro
 	# Stride matching: play the clips at the rate the feet actually cover ground.
 	var natural := lerpf(walk_natural, run_natural, clampf(_blend - 1.0, 0.0, 1.0))
 	var scale := 1.0
-	if _blend > 0.35:
-		scale = clampf(speed / natural, 0.75, 1.6)
+	if _blend > 0.15:
+		scale = clampf(speed / natural, 0.4, 1.6)
 	tree.set("parameters/stride/scale", scale)
 	if not grounded:
 		_air += delta

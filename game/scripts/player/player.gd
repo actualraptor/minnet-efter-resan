@@ -21,7 +21,17 @@ const FLY_CEILING := 60.0
 @export var air_acceleration := 3.5
 @export var jump_velocity := 4.9
 @export var gravity := 15.0
-@export var turn_speed := 11.0
+@export var turn_speed := 8.0
+@export_group("Ground feel")
+## Acceleration builds up (jerk-limited) instead of being applied at once, a
+## sharp turn costs speed, and a standing start turns to face first.
+@export var accel_walk := 2.7        # m/s^2 from rest up to a walk
+@export var accel_run := 3.6         # m/s^2 from a walk up to a run
+@export var brake := 4.6             # m/s^2 slowing down
+@export var jerk_time := 0.28        # seconds for the acceleration itself to build
+@export var turn_rate_slow := 11.0   # rad/s heading change at a crawl
+@export var turn_rate_run := 3.0     # rad/s at a run: a wide arc, not a pivot
+@export_group("")
 @export var interact_range := 2.6
 @export_group("Flight")
 @export var fly_speed := 4.2
@@ -37,6 +47,7 @@ const FLY_CEILING := 60.0
 var camera_rig: CameraRig
 
 var input_locks := 0
+var _accel_now := 0.0
 var focus: Node = null
 var _anim: AnimationPlayer
 var _current_anim := ""
@@ -687,7 +698,7 @@ func _physics_process(delta: float) -> void:
 	var target := dir.normalized() * target_speed if dir.length() > 0.01 else Vector3.ZERO
 	var cur := Vector3(velocity.x, 0.0, velocity.z)
 	var accel := (accel_up if target.length() >= cur.length() else accel_down) if (on_floor or flying) else air_acceleration
-	var hv := cur.move_toward(target, accel * delta)
+	var hv := _ground_step(cur, target, delta) if (on_floor and not flying) else cur.move_toward(target, accel * delta)
 	velocity.x = hv.x
 	velocity.z = hv.z
 	if flying:
@@ -707,8 +718,10 @@ func _physics_process(delta: float) -> void:
 		# points at the crosshair, whatever direction she is drifting.
 		_update_aim()
 		model.rotation.y = lerp_angle(model.rotation.y, _aim_yaw - _aim_offset, 1.0 - exp(-13.0 * delta))
-	elif dir.length() > 0.05:
-		var want := atan2(dir.x, dir.z)
+	elif dir.length() > 0.05 or hv.length() > 0.15:
+		# The body follows where she is actually going; at rest it turns to the input.
+		var face_dir := hv if hv.length() > 0.15 else dir
+		var want := atan2(face_dir.x, face_dir.z)
 		# Turn slower at speed, like a person carrying momentum.
 		var ts := turn_speed * lerpf(1.0, 0.55, clampf(hv.length() / run_speed, 0.0, 1.0))
 		model.rotation.y = lerp_angle(model.rotation.y, want, 1.0 - exp(-ts * delta))
@@ -717,11 +730,11 @@ func _physics_process(delta: float) -> void:
 	_prev_yaw = model.rotation.y
 	var accel_fwd := (hv.length() - _prev_speed) / maxf(delta, 1e-4)
 	_prev_speed = hv.length()
-	var bank := clampf(-yaw_rate * hv.length() * 0.035, -0.18, 0.18) if on_floor else 0.0
+	var bank := clampf(-yaw_rate * hv.length() * 0.05, -0.24, 0.24) if on_floor else 0.0
 	if flying:
 		bank = clampf(-yaw_rate * (0.5 + hv.length()) * 0.07, -0.55, 0.55)
 	_lean = lerpf(_lean, bank, 1.0 - exp(-6.0 * delta))
-	var pitch := clampf(accel_fwd * 0.012, -0.06, 0.08) if on_floor else 0.0
+	var pitch := clampf(accel_fwd * 0.03, -0.12, 0.14) if on_floor else 0.0
 	if flying:
 		# Levitation, not jet propulsion: upright when hovering, a small forward lean
 		# as she glides. She straightens up to cast or aim.
@@ -751,6 +764,30 @@ func _physics_process(delta: float) -> void:
 	_update_focus_aim(delta)
 	_update_flight_hold()
 	RenderingServer.global_shader_parameter_set("player_position", global_position)
+
+
+## Ground velocity with weight: speed follows a jerk-limited acceleration, the
+## heading turns at a rate that falls with speed (a run takes a wide arc and a
+## hard turn costs speed), and from a standstill she turns toward the way she is
+## going before the legs get going.
+func _ground_step(cur: Vector3, target: Vector3, delta: float) -> Vector3:
+	var speed := cur.length()
+	var want := target.length()
+	var want_dir := target / want if want > 0.01 else Vector3.ZERO
+	var dir := cur / speed if speed > 0.05 else want_dir
+	if want > 0.01 and speed > 0.05:
+		var ang := dir.signed_angle_to(want_dir, Vector3.UP)
+		var rate := lerpf(turn_rate_slow, turn_rate_run, clampf(speed / run_speed, 0.0, 1.0))
+		dir = dir.rotated(Vector3.UP, clampf(ang, -rate * delta, rate * delta))
+		want *= lerpf(1.0, 0.5, smoothstep(0.6, 2.8, absf(ang)) * clampf(speed / run_speed, 0.0, 1.0))
+	if want > 0.01 and speed < 1.0:
+		var face := Vector3(sin(model.rotation.y), 0.0, cos(model.rotation.y))
+		want *= lerpf(0.3, 1.0, smoothstep(0.3, 0.9, face.dot(want_dir)))
+	var a_max := brake if want < speed else (accel_run if speed > walk_speed * 0.9 else accel_walk)
+	var a_goal := a_max if absf(want - speed) > 0.02 else 0.0
+	_accel_now = move_toward(_accel_now, a_goal, a_max / jerk_time * delta)
+	speed = move_toward(speed, want, _accel_now * delta)
+	return dir * speed
 
 
 func _apply_soft_boundary() -> void:

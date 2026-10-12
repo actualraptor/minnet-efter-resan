@@ -13,6 +13,7 @@ extends Node3D
 @export var max_zoom := 1.6
 var zoom := 1.0
 var _zoom_smooth := 1.0
+var _fov_extra := 0.0
 @export var height := 1.55
 @export var follow_speed := 12.0
 @export var min_pitch := deg_to_rad(-62.0)
@@ -89,7 +90,8 @@ func _process(delta: float) -> void:
 	_zoom_smooth = lerpf(_zoom_smooth, zoom, 1.0 - exp(-10.0 * delta))
 	var ab := target.aim_blend
 	var want_len := (indoor_length if target.is_indoors() else outdoor_length) * _zoom_smooth * lerpf(1.0, aim_boom, ab)
-	camera.fov = lerpf(62.0, 53.0, ab)
+	_fov_extra = lerpf(_fov_extra, 3.5 * clampf(Vector2(target.velocity.x, target.velocity.z).length() / maxf(target.run_speed, 0.1), 0.0, 1.0), 1.0 - exp(-3.0 * delta))
+	camera.fov = lerpf(62.0, 53.0, ab) + _fov_extra
 	_arm.spring_length = lerpf(_arm.spring_length, want_len, 1.0 - exp(-4.0 * delta))
 	_apply()
 	# Fade the mage out when walls push the camera right up against her.
