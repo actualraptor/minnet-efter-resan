@@ -371,6 +371,10 @@ func _run() -> void:
 	check("stopping from a run is not instant", loco_r["stop_run"] > 0.4 and loco_r["stop_run"] < 1.4, "%.2f s" % loco_r["stop_run"])
 	check("a 180 degree turn at a run costs speed", loco_r["pivot_min"] < player.run_speed * 0.8 and loco_r["pivot_min"] > 0.2, "%.2f m/s" % loco_r["pivot_min"])
 
+	# The gear rule: every garment on her is covered by a hair/cloth collision volume.
+	var uncovered := CharacterPhysics.uncovered_garments(player.model)
+	check("every garment mesh is covered by a collider volume", uncovered.is_empty(), str(uncovered))
+
 	# Front door and options.
 	Settings.ensure_buses()
 	check("option buses exist", AudioServer.get_bus_index("Music") >= 0 and AudioServer.get_bus_index("Ambience") >= 0 and AudioServer.get_bus_index("Effects") >= 0)

@@ -15,27 +15,42 @@ const GROUPS := {
 	"cape_": {"stiffness": 1.8, "drag": 0.4, "gravity": 0.6, "radius": 0.02},
 }
 
-## bone, kind, radius, height (capsule), offset along bone (0..1 of its length)
-const COLLIDERS := [
-	# Thighs measured from the tights: ~0.09 m radius at the top, ~0.06 above the knee.
-	["thigh.L", "capsule", 0.085, 0.24, 0.25], ["thigh.R", "capsule", 0.085, 0.24, 0.25],
-	["thigh.L", "capsule", 0.068, 0.3, 0.62], ["thigh.R", "capsule", 0.068, 0.3, 0.62],
-	["shin.L", "capsule", 0.06, 0.36, 0.5], ["shin.R", "capsule", 0.06, 0.36, 0.5],
-	["spine", "capsule", 0.13, 0.26, 0.5], ["chest", "capsule", 0.135, 0.24, 0.5],
-	["upper_arm.L", "capsule", 0.055, 0.3, 0.5], ["upper_arm.R", "capsule", 0.055, 0.3, 0.5],
-	["head", "sphere", 0.115, 0.0, 0.35],
-	# Humanoid (VRoid) rig.
-	# Measured on the VRoid tights: ~0.08 m radius at the top, 0.065 mid, 0.045 knee
-	# (+ ~1 cm so the chains, which sit inside the lining, keep the cloth clear).
-	["LeftUpperLeg", "capsule", 0.09, 0.2, 0.22], ["RightUpperLeg", "capsule", 0.09, 0.2, 0.22],
-	["LeftUpperLeg", "capsule", 0.075, 0.22, 0.62], ["RightUpperLeg", "capsule", 0.075, 0.22, 0.62],
-	["LeftLowerLeg", "sphere", 0.06, 0.0, 0.0], ["RightLowerLeg", "sphere", 0.06, 0.0, 0.0],   # knees
-	["LeftLowerLeg", "capsule", 0.055, 0.34, 0.45], ["RightLowerLeg", "capsule", 0.055, 0.34, 0.45],
-	["Spine", "capsule", 0.12, 0.2, 0.5], ["Chest", "capsule", 0.125, 0.2, 0.5],
-	["UpperChest", "capsule", 0.12, 0.18, 0.5],
-	["LeftUpperArm", "capsule", 0.05, 0.26, 0.5], ["RightUpperArm", "capsule", 0.05, 0.26, 0.5],
-	["Head", "sphere", 0.105, 0.0, 0.4],
-]
+const COLLIDER_DATA := "res://data/characters/body_colliders.json"
+
+
+## [{bone, kind, radius, height, offset, covers}] from data/characters/body_colliders.json.
+static func colliders() -> Array:
+	var d: Variant = DialogueRunner._read_json(COLLIDER_DATA)
+	return (d as Dictionary).get("colliders", []) if d is Dictionary else []
+
+
+## Names of garment meshes (anything on the character with an outfit material,
+## larger than a trinket) that no collider volume covers: the gear rule. Empty = ok.
+static func uncovered_garments(model: Node) -> Array[String]:
+	var d: Variant = DialogueRunner._read_json(COLLIDER_DATA)
+	var keys: Dictionary = (d as Dictionary).get("garment_keys", {}) if d is Dictionary else {}
+	var covered := {}
+	for c in colliders():
+		for k in c.get("covers", []):
+			covered[str(k)] = true
+	var out: Array[String] = []
+	for n in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var outfit := false
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i)
+			if m != null and m.resource_name.begins_with("M_Outfit_"):
+				outfit = true
+		if not outfit or mi.get_aabb().size.length() < 0.12 or str(mi.name) == "Staff":
+			continue
+		var key := ""
+		for prefix in keys:
+			if not str(prefix).begins_with("_") and str(mi.name).begins_with(str(prefix)):
+				key = str(keys[prefix])
+				break
+		if key == "" or not covered.has(key):
+			out.append(str(mi.name))
+	return out
 
 
 static func setup(model: Node) -> SpringBoneSimulator3D:
@@ -80,8 +95,8 @@ static func setup(model: Node) -> SpringBoneSimulator3D:
 		sim.set_gravity(i, g["gravity"])
 		sim.set_radius(i, g["radius"])
 		sim.set_enable_all_child_collisions(i, true)
-	for c in COLLIDERS:
-		var bone := skel.find_bone(c[0])
+	for c in colliders():
+		var bone := skel.find_bone(str(c["bone"]))
 		if bone < 0:
 			continue
 		var length := 0.2
@@ -89,17 +104,17 @@ static func setup(model: Node) -> SpringBoneSimulator3D:
 			length = skel.get_bone_rest(ch).origin.length()
 			break
 		var col: SpringBoneCollision3D
-		if c[1] == "capsule":
+		if c["kind"] == "capsule":
 			var cap := SpringBoneCollisionCapsule3D.new()
-			cap.radius = c[2]
-			cap.height = c[3]
+			cap.radius = float(c["radius"])
+			cap.height = float(c["height"])
 			col = cap
 		else:
 			var sph := SpringBoneCollisionSphere3D.new()
-			sph.radius = c[2]
+			sph.radius = float(c["radius"])
 			col = sph
-		col.name = "Col_" + c[0]
+		col.name = "Col_" + str(c["bone"])
 		sim.add_child(col)
-		col.bone_name = c[0]
-		col.position_offset = Vector3(0, length * c[4], 0)
+		col.bone_name = str(c["bone"])
+		col.position_offset = Vector3(0, length * float(c["offset"]), 0)
 	return sim

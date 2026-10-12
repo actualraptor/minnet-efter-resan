@@ -48,6 +48,7 @@ var camera_rig: CameraRig
 
 var input_locks := 0
 var _accel_now := 0.0
+var _move_intent := Vector3.ZERO
 var focus: Node = null
 var _anim: AnimationPlayer
 var _current_anim := ""
@@ -429,6 +430,8 @@ func _update_look(delta: float) -> void:
 	var yaw_f := Vector3(sin(model.rotation.y), 0.0, cos(model.rotation.y))
 	var fwd := yaw_f
 	var want := eye + fwd * 4.0
+	if _move_intent != Vector3.ZERO and is_on_floor() and not flying:
+		want = eye + fwd.lerp(_move_intent, 0.75).normalized() * 4.0
 	if flying and Vector2(velocity.x, velocity.z).length() > 1.0:
 		var vd := Vector3(velocity.x, velocity.y * 0.6, velocity.z).normalized()
 		want = eye + vd * 8.0
@@ -696,6 +699,7 @@ func _physics_process(delta: float) -> void:
 		accel_down = fly_deceleration
 	var target_speed := move_speed * minf(input.length(), 1.0)
 	var target := dir.normalized() * target_speed if dir.length() > 0.01 else Vector3.ZERO
+	_move_intent = dir.normalized() if dir.length() > 0.05 else Vector3.ZERO
 	var cur := Vector3(velocity.x, 0.0, velocity.z)
 	var accel := (accel_up if target.length() >= cur.length() else accel_down) if (on_floor or flying) else air_acceleration
 	var hv := _ground_step(cur, target, delta) if (on_floor and not flying) else cur.move_toward(target, accel * delta)
@@ -753,6 +757,9 @@ func _physics_process(delta: float) -> void:
 	if on_floor and not _was_on_floor and velocity.y <= 0.0 and not flying:
 		_footstep(-6.0)
 	_was_on_floor = on_floor
+	if gait_polish:
+		gait_polish.accel = accel_fwd if on_floor and not flying else 0.0
+		gait_polish.turn = yaw_rate if on_floor and not flying else 0.0
 	_update_footsteps(delta, hv.length())
 	_update_animation(hv.length())
 	_update_focus()

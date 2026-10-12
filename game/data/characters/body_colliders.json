@@ -1,0 +1,206 @@
+{
+	"_doc": "Volumes that hair and cloth springs may not enter, on the humanoid (VRoid) skeleton. kind: capsule (radius, height) or sphere (radius). offset: 0..1 along the bone toward its child. covers: what the volume stands for (the check in the smoke test requires every spring-driven garment to be covered).",
+	"colliders": [
+		{
+			"bone": "LeftUpperLeg",
+			"kind": "capsule",
+			"radius": 0.09,
+			"height": 0.2,
+			"offset": 0.22,
+			"covers": [
+				"Tights",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "RightUpperLeg",
+			"kind": "capsule",
+			"radius": 0.09,
+			"height": 0.2,
+			"offset": 0.22,
+			"covers": [
+				"Tights",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "LeftUpperLeg",
+			"kind": "capsule",
+			"radius": 0.075,
+			"height": 0.22,
+			"offset": 0.62,
+			"covers": [
+				"Tights",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "RightUpperLeg",
+			"kind": "capsule",
+			"radius": 0.075,
+			"height": 0.22,
+			"offset": 0.62,
+			"covers": [
+				"Tights",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "LeftLowerLeg",
+			"kind": "sphere",
+			"radius": 0.06,
+			"height": 0,
+			"offset": 0,
+			"covers": [
+				"Tights",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "RightLowerLeg",
+			"kind": "sphere",
+			"radius": 0.06,
+			"height": 0,
+			"offset": 0,
+			"covers": [
+				"Tights",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "LeftLowerLeg",
+			"kind": "capsule",
+			"radius": 0.055,
+			"height": 0.34,
+			"offset": 0.45,
+			"covers": [
+				"Tights",
+				"Boots",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "RightLowerLeg",
+			"kind": "capsule",
+			"radius": 0.055,
+			"height": 0.34,
+			"offset": 0.45,
+			"covers": [
+				"Tights",
+				"Boots",
+				"Skirt"
+			]
+		},
+		{
+			"bone": "Spine",
+			"kind": "capsule",
+			"radius": 0.12,
+			"height": 0.2,
+			"offset": 0.5,
+			"covers": [
+				"Corset",
+				"Blouse"
+			]
+		},
+		{
+			"bone": "Chest",
+			"kind": "capsule",
+			"radius": 0.125,
+			"height": 0.2,
+			"offset": 0.5,
+			"covers": [
+				"Blouse",
+				"Corset",
+				"Capelet"
+			]
+		},
+		{
+			"bone": "UpperChest",
+			"kind": "capsule",
+			"radius": 0.135,
+			"height": 0.18,
+			"offset": 0.5,
+			"covers": [
+				"Blouse",
+				"Capelet",
+				"RuffledCollar"
+			]
+		},
+		{
+			"bone": "LeftShoulder",
+			"kind": "sphere",
+			"radius": 0.075,
+			"height": 0,
+			"offset": 0.55,
+			"covers": [
+				"Capelet",
+				"Blouse"
+			]
+		},
+		{
+			"bone": "RightShoulder",
+			"kind": "sphere",
+			"radius": 0.075,
+			"height": 0,
+			"offset": 0.55,
+			"covers": [
+				"Capelet",
+				"Blouse"
+			]
+		},
+		{
+			"bone": "LeftUpperArm",
+			"kind": "capsule",
+			"radius": 0.055,
+			"height": 0.26,
+			"offset": 0.5,
+			"covers": [
+				"GatheredSleeve",
+				"Capelet"
+			]
+		},
+		{
+			"bone": "RightUpperArm",
+			"kind": "capsule",
+			"radius": 0.055,
+			"height": 0.26,
+			"offset": 0.5,
+			"covers": [
+				"GatheredSleeve",
+				"Capelet"
+			]
+		},
+		{
+			"bone": "Head",
+			"kind": "sphere",
+			"radius": 0.105,
+			"height": 0,
+			"offset": 0.4,
+			"covers": [
+				"Face"
+			]
+		}
+	],
+	"garment_keys": {
+		"_doc": "Mesh-name prefix of every garment mesh in the character -> the key a collider's 'covers' must contain. A garment mesh without an entry here, or whose key no collider covers, fails the smoke test: that is how hair or cloth ends up going through gear.",
+		"Capelet": "Capelet",
+		"Blouse": "Blouse",
+		"Corset": "Corset",
+		"Tights": "Tights",
+		"Boots": "Boots",
+		"CreamRuffle": "Skirt",
+		"CreamSkirtLining": "Skirt",
+		"PlumPanel": "Skirt",
+		"SagePanel": "Skirt",
+		"LeftGatheredSleeve": "GatheredSleeve",
+		"RightGatheredSleeve": "GatheredSleeve",
+		"RuffledCollar": "RuffledCollar",
+		"LeftRuffledCuff": "GatheredSleeve",
+		"RightRuffledCuff": "GatheredSleeve",
+		"DiagonalLeatherStrap": "Corset",
+		"LeatherBelt": "Corset",
+		"CharmChain": "Corset",
+		"LeatherPouch": "Skirt",
+		"PouchFlap": "Skirt"
+	}
+}
