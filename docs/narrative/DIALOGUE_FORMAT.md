@@ -34,6 +34,7 @@ Files live in `game/data/dialogue/<id>.json`. Speakers are defined in `game/data
 | `flag:name` / `flag:name=value` | Set a flag. |
 | `quest:id=state` | Change a quest state. |
 | `affinity:char_id:+n` | Adjust a relationship. |
+| `item:item_id` | Give an item to the satchel (definitions in `data/items/items.json`) and toast "Received: ...". Conditions can test `has_item("id")` and `knows_spell("spell_id")`. |
 | `event:name` | Emit to scene logic. |
 | `memory:id` | Ask scene logic to record a memory event. |
 | `end` | Stop the conversation. |

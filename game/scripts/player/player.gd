@@ -160,11 +160,29 @@ func _ready() -> void:
 			staff.queue_free()
 			staff = null
 	if caster.spells.is_empty():
-		for sp in ["field_of_flowers", "zoltraak", "barrier", "zoltraak_original"]:
-			var path := "res://data/spells/%s.tres" % sp
-			if ResourceLoader.exists(path):
-				caster.spells.append(load(path) as SpellDefinition)
+		_sync_spells()
 		caster.equip(0)
+	GameState.spells_changed.connect(_sync_spells)
+
+
+## The caster's list follows what she knows (GameState); the number keys follow
+## GameState.hotbar.
+func _sync_spells() -> void:
+	var cur := caster.current_spell()
+	caster.spells.clear()
+	for id in GameState.known_spells:
+		var d := SpellLibrary.get_def(id)
+		if d:
+			caster.spells.append(d)
+	caster.equipped = maxi(caster.spells.find(cur), 0)
+	caster.equipped_changed.emit(caster.current_spell())
+
+
+func _hotbar_slot(event: InputEvent) -> int:
+	for i in GameState.HOTBAR_SLOTS:
+		if event.is_action_pressed("spell_%d" % (i + 1)):
+			return i
+	return -1
 
 
 ## Staff performance rig (humanoid skeletons only): authored staff transform,
@@ -1192,9 +1210,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif (event.is_action_pressed("cast") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED) or event.is_action_pressed("cast_alt"):
 		get_viewport().set_input_as_handled()
 		_cast_with_staff()
-	elif event.is_action_pressed("spell_1") or event.is_action_pressed("spell_2") or event.is_action_pressed("spell_3") or event.is_action_pressed("spell_4"):
-		if not caster.casting:
-			caster.equip(0 if event.is_action_pressed("spell_1") else (1 if event.is_action_pressed("spell_2") else (2 if event.is_action_pressed("spell_3") else 3)))
+	elif _hotbar_slot(event) >= 0:
+		var def := SpellLibrary.get_def(str(GameState.hotbar[_hotbar_slot(event)]))
+		if def and not caster.casting:
+			caster.equip(caster.spells.find(def))
 	elif event.is_action_pressed("fly"):
 		toggle_flight()
 	elif event.is_action_pressed("interrupt"):

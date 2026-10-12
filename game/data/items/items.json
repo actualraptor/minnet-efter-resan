@@ -1,0 +1,9 @@
+{
+	"household_book": {
+		"name": "Mother's Household Book",
+		"kind": "book",
+		"teaches": "spell_stain_free",
+		"consumed": false,
+		"desc": "Edda's mother's book of household sense, older than the cottage. Mostly recipes and sums. The cover has been mended with someone's apron string. One page has a rhyme for stubborn stains, copied out in three different hands."
+	}
+}

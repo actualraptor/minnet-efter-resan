@@ -21,6 +21,9 @@ enum Category { WHIMSICAL, ENVIRONMENTAL, UTILITY, EXPLORATION, DEFENSIVE, OFFEN
 @export var radius := 10.0
 @export var max_range := 12.0
 @export var allowed_indoors := false
+## In-game hours of study the spell takes to learn from a book or scroll
+## (the complexity of the spell). 0 = known from the start.
+@export var study_hours := 0.0
 @export var cast_animation: StringName = &"Cast"
 ## Metres the caster floats off the ground while casting (0 = stays grounded).
 ## The effect still originates at ground level.

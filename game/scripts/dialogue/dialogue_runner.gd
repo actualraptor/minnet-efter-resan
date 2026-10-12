@@ -6,7 +6,7 @@ extends Node
 ##   nodes: {id: {lines: [Line], choices?: [Choice], goto?: id}}
 ##   Line: {id, speaker, text, voice?, emote?, if?, do?: [Action], pause?}
 ##   Choice: {id, text, if?, goto?, do?: [Action]}
-## Actions: "flag:name[=value]", "quest:id=state", "affinity:char_id:+n",
+## Actions: "flag:name[=value]", "quest:id=state", "affinity:char_id:+n", "item:id",
 ##          "event:name", "memory:id" (records via the current scene hook).
 ## Every line has a stable `id`; translations use it as the msgid and voice
 ## files default to res://assets/audio/voice/<id>.ogg when present.
@@ -213,6 +213,9 @@ func _run_actions(actions: Array) -> void:
 			"affinity":
 				var parts := rest.split(":")
 				GameState.change_affinity(parts[0], int(parts[1]), dialogue_id)
+			"item":
+				GameState.give_item(rest)
+				GameState.toast.emit("Received: " + str(ItemLibrary.get_item(rest).get("name", rest)))
 			"event", "memory":
 				event_fired.emit(s, dialogue_id)
 			"end":

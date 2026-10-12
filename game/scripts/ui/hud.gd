@@ -20,6 +20,8 @@ var _memory_card: PanelContainer
 var _memory_title: Label
 var _memory_body: Label
 var _date: Label
+var _hotbar: HBoxContainer
+var _slots: Array[SpellSlot] = []
 var _quests: Dictionary = {}
 var _toast_tween: Tween
 
@@ -40,7 +42,10 @@ func _ready() -> void:
 		add_child(reticle)
 		_player.caster.equipped_changed.connect(_on_spell)
 		_on_spell(_player.caster.current_spell())
+		GameState.spells_changed.connect(_refresh_hotbar)
+		_refresh_hotbar()
 	GameState.quest_changed.connect(_on_quest)
+	GameState.time_advanced.connect(func(_h): _refresh_date())
 	GameState.toast.connect(show_toast)
 	GameState.memory_recorded.connect(_on_memory)
 	if DialogueDirector.instance:
@@ -116,6 +121,21 @@ func _build() -> void:
 	_stamina_bar.modulate.a = 0.0
 	sv.add_child(_stamina_bar)
 
+	# Number-key slots, above the spell pill: only keys that hold a spell show.
+	_hotbar = HBoxContainer.new()
+	_hotbar.add_theme_constant_override("separation", 6)
+	_hotbar.anchor_top = 1.0
+	_hotbar.anchor_bottom = 1.0
+	_hotbar.offset_left = 34
+	_hotbar.offset_top = -176
+	_hotbar.offset_bottom = -112
+	_hotbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hotbar)
+	for i in GameState.HOTBAR_SLOTS:
+		var slot := SpellSlot.make(i, 54.0, false)
+		_hotbar.add_child(slot)
+		_slots.append(slot)
+
 	# Interaction prompt (centre, lower third)
 	_prompt = PanelContainer.new()
 	_prompt.add_theme_stylebox_override("panel", UiStyle.pill(0.7))
@@ -153,7 +173,7 @@ func _build() -> void:
 	# Date (top-left)
 	_date = _label(19, Color(UiStyle.CREAM, 0.85))
 	_date.position = Vector2(36, 30)
-	_date.text = "Brenn's Meadow  ·  " + GameState.format_date()
+	_refresh_date()
 	add_child(_date)
 
 	# Toast (top-centre)
@@ -225,6 +245,30 @@ func _on_stamina(stamina: float, max_stamina: float) -> void:
 
 func _on_spell(spell: SpellDefinition) -> void:
 	_spell_name.text = spell.display_name if spell else "—"
+	_refresh_hotbar()
+
+
+func _refresh_hotbar() -> void:
+	var cur := _player.caster.current_spell() if _player else null
+	for i in _slots.size():
+		var id := str(GameState.hotbar[i])
+		_slots[i].visible = id != ""
+		_slots[i].set_spell(id, cur != null and str(cur.id) == id)
+
+
+func _refresh_date() -> void:
+	_date.text = "Brenn's Meadow  ·  " + GameState.format_date()
+
+
+func _process(_delta: float) -> void:
+	if _player == null:
+		return
+	for s in _slots:
+		var def := SpellLibrary.get_def(s.spell_id) if s.spell_id != "" else null
+		var left := _player.caster.cooldown_left(def) / maxf(def.cooldown + def.cast_time, 0.1) if def else 0.0
+		if absf(left - s.cooldown) > 0.01:
+			s.cooldown = left
+			s.queue_redraw()
 
 
 func _on_quest(_id: String, _state: String) -> void:
@@ -235,14 +279,20 @@ func _on_quest(_id: String, _state: String) -> void:
 
 
 func _refresh_quest() -> void:
+	_refresh_date()
+	# The first errand still open; once all are done, the most recent one.
+	var pick := ""
 	for id in _quests:
 		var state := GameState.quest(id)
-		if state != "none":
-			_quest_title.text = _quests[id]["title"]
-			_quest_obj.text = _quests[id]["states"].get(state, "")
-			_quest_box.visible = true
-			return
-	_quest_box.visible = false
+		if state == "none":
+			continue
+		pick = id
+		if state != "complete":
+			break
+	_quest_box.visible = pick != ""
+	if pick != "":
+		_quest_title.text = _quests[pick]["title"]
+		_quest_obj.text = _quests[pick]["states"].get(GameState.quest(pick), "")
 
 
 func show_toast(text: String) -> void:
