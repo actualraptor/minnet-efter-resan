@@ -1,6 +1,6 @@
 # Demo 1: The Cottage
 
-Status: **planning**. Decisions marked **OWNER** are not made yet.
+Status: **building**. Quests 2 and 3 are picked (pair A, 2026-10-12). Decisions marked **OWNER** are still open.
 
 ## Finish line (all must be verified, not assumed)
 1. A new game reaches the end card in 15-25 minutes, with exactly 3 quests completed, tracked in the journal, and a short closing beat.
@@ -15,7 +15,8 @@ Status: **planning**. Decisions marked **OWNER** are not made yet.
 **In:** cottage and meadow, Freyja, Edda, Pippa, Field of Flowers, flight, dialogue/journal/save, two new quests, polish, options, export.
 **Out unless the owner says otherwise:** new regions (Linköping, village), combat and enemies (Zoltraak stays a toy), new characters, large art-direction changes. The VRM swap has already landed (the player scene uses `freyja_vroid_game.glb`), so it is a dependency now, not a bonus.
 
-## Quests 2 and 3: proposals (**OWNER picks**)
+## Quests 2 and 3: picked A (**OWNER, 2026-10-12**), with two additions
+The owner added: (1) reward spells are in-world items (a scroll, an old book) that are **studied**, spending in-game time by the spell's complexity like waiting in Skyrim; (2) a spellbook / satchel UI with number-key binding and a graphical list of spells, because the spell list keeps growing. Both are built (`docs/design/SPELLBOOK_AND_STUDY.md`). Original proposals kept below for the record.
 Rules: max one new mechanic each, reuse existing systems, rewards drawn from `USELESS_SPELLS.md`, no new characters.
 
 ### Pair A (prototype already started): "Flowers for Jonas" then "Good morning, statue"
@@ -44,9 +45,10 @@ My recommendation: **A**. Closest to your earlier request, it is the only pair w
 | # | Task | Done when |
 |---|---|---|
 | 0 | Reconcile PROJECT_STATE, roadmap, board; add this plan | Docs match the repo; JSON validates; board has the milestone |
-| 1 | Demo spine: quest list, HUD tracks the current unfinished quest, journal lists all three, `demo_complete` flag | Smoke test asserts tracker text for each state |
-| 2 | Quest 2 (per pick): content, mechanic, test | `tests/quest2_test.gd` passes headless; save/load mid-quest and after |
-| 3 | Quest 3: same | `tests/quest3_test.gd` passes; full chain test passes |
+| 1 | Demo spine: HUD tracks the first unfinished quest, journal lists all three, `demo_complete` flag | Smoke test asserts tracker text for each state (tracker done; `demo_complete` with the ending, task 4) |
+| 2a | Spellbook, satchel, study, hotbar (owner addition) | Smoke test: study moves the clock by the study time and teaches the spell; binding swaps; save/load keeps them |
+| 2 | Quest 2 *Flowers for Jonas*: content, mechanic, test | Smoke-test section passes headless; save/load mid-quest and after |
+| 3 | Quest 3 *Good Morning, Statue*: same | Smoke-test section passes; whole chain plus save/load passes |
 | 4 | Ending beat and end card (title card text from the owner) | Scripted run reaches the card; a dialogue-time estimate of the full path is 15-25 min |
 | 5 | Options (volumes, sensitivity, restart, quit); settings persisted; remove F10 and "Prototype 001" subtitle | Settings survive a restart; test reads/writes them |
 | 6 | Credits screen from a data file; resolve the CC-BY Freyja base (exclude from export, or credit) | Every shipped asset in `docs/ASSETS.md` appears; export contains no unlisted asset |

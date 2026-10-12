@@ -1,0 +1,25 @@
+{
+	"id": "statue",
+	"entries": [
+		{"if": "has_flag(\"clean_statue\")", "node": "clean"},
+		{"node": "moss"}
+	],
+	"nodes": {
+		"moss": {
+			"lines": [
+				{"id": "statue.moss.01", "speaker": "char_freyja", "text": "A robed figure with a staff. The moss has most of the face and all of the hands."},
+				{"id": "statue.moss.02", "speaker": "char_freyja", "text": "Someone made this to be looked at, and then everyone got used to it. That's how most monuments die."},
+				{"id": "statue.moss.03", "speaker": "char_freyja", "text": "There's a plate under the green. Good morning, then. Gently.", "if": "quest(\"statue_by_the_road\") == \"active\" and knows_spell(\"spell_stain_free\")"}
+			]
+		},
+		"clean": {
+			"lines": [
+				{"id": "statue.clean.01", "speaker": "char_freyja", "text": "A robed figure. A staff. Ears, from a sculptor who'd only been told about them."},
+				{"id": "statue.clean.02", "speaker": "narrator", "text": "FREYJA. WHO MADE IT RAIN ON ONE TOMATO, AND THEN ON ALL OF US. THE ROAD REMEMBERS."},
+				{"id": "statue.clean.03", "speaker": "char_freyja", "text": "...One tomato. A woman who'd been kind about my boots.", "pause": 0.6},
+				{"id": "statue.clean.04", "speaker": "char_freyja", "text": "I made it rain on a plant for an afternoon. I never looked behind me to see how far it went."},
+				{"id": "statue.clean.05", "speaker": "char_freyja", "text": "Pippa will want to know who it is.", "if": "quest(\"statue_by_the_road\") == \"active\"", "do": ["quest:statue_by_the_road=found"]}
+			]
+		}
+	}
+}

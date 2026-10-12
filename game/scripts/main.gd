@@ -16,6 +16,7 @@ const MEMORY_ID := "memory_cottage_garden_restored"
 @onready var title: Label = $UI/Title
 
 var _marker: GPUParticles3D
+var _stone_quests: StoneQuests
 var _bloom_pending := false
 
 
@@ -23,6 +24,7 @@ func _ready() -> void:
 	world.build(terrain)
 	_place_cast()
 	_build_quest_marker()
+	_build_stone_errands()
 	director.runner.event_fired.connect(_on_dialogue_event)
 	director.conversation_finished.connect(_on_conversation_finished)
 	GameState.spell_cast.connect(_on_spell_cast)
@@ -38,7 +40,7 @@ func _ready() -> void:
 		title.visible = false
 		# Dev audits: --dbg --face|--spell|--pose|--walk (default: staff walk).
 		var dbg := "staffwalk"
-		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range", "teaser"]:
+		for k in ["face", "spell", "pose", "walk", "waist", "feet", "side", "hand", "jump", "outfit", "vroid", "clips", "float", "staff", "fly", "aim", "physics", "zoltraak", "input", "range", "teaser", "book"]:
 			if "--" + k in args:
 				dbg = k
 		add_child(load("res://tests/_dbg_%s.gd" % dbg).new())
@@ -239,13 +241,33 @@ func _record_garden_memory() -> void:
 	GameState.change_affinity("char_edda", 1, "memory_cottage_garden_restored")
 
 
+## The stone and statue errands, and the spellbook / satchel screen.
+func _build_stone_errands() -> void:
+	var marker := _make_marker("StoneMarker")
+	_stone_quests = StoneQuests.new()
+	_stone_quests.name = "StoneQuests"
+	add_child(_stone_quests)
+	_stone_quests.setup(terrain, director, marker)
+	var book := Spellbook.new()
+	book.name = "Spellbook"
+	book.player = player
+	$UI.add_child(book)
+
+
 func _build_quest_marker() -> void:
-	_marker = GPUParticles3D.new()
-	_marker.name = "GardenMarker"
-	_marker.amount = 40
-	_marker.lifetime = 4.0
+	_marker = _make_marker("GardenMarker")
 	_marker.emitting = GameState.quest(QUEST) == "active"
-	_marker.visibility_aabb = AABB(Vector3(-8, -2, -8), Vector3(16, 10, 16))
+	var m := WorldLayout.GARDEN_MEADOW
+	_marker.global_position = _ground(m.x, m.z) + Vector3.UP * 0.8
+
+
+func _make_marker(marker_name: String) -> GPUParticles3D:
+	var marker := GPUParticles3D.new()
+	marker.name = marker_name
+	marker.amount = 40
+	marker.lifetime = 4.0
+	marker.emitting = false
+	marker.visibility_aabb = AABB(Vector3(-8, -2, -8), Vector3(16, 10, 16))
 	var pm := ParticleProcessMaterial.new()
 	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
 	pm.emission_sphere_radius = 4.0
@@ -262,11 +284,10 @@ func _build_quest_marker() -> void:
 	var ct := CurveTexture.new()
 	ct.curve = c
 	pm.scale_curve = ct
-	_marker.process_material = pm
-	_marker.draw_pass_1 = SpellCaster._mote_mesh(0.09)
-	add_child(_marker)
-	var m := WorldLayout.GARDEN_MEADOW
-	_marker.global_position = _ground(m.x, m.z) + Vector3.UP * 0.8
+	marker.process_material = pm
+	marker.draw_pass_1 = SpellCaster._mote_mesh(0.09)
+	add_child(marker)
+	return marker
 
 
 ## Dev/playtest shortcut: F10 travels to the Linköping slice.

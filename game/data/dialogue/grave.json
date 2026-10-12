@@ -1,0 +1,29 @@
+{
+	"id": "grave",
+	"entries": [
+		{"if": "has_flag(\"clean_jonas_stone\")", "node": "clean"},
+		{"if": "has_flag(\"stone_planted\")", "node": "planted"},
+		{"node": "moss"}
+	],
+	"nodes": {
+		"moss": {
+			"lines": [
+				{"id": "grave.moss.01", "speaker": "char_freyja", "text": "JON, and then moss. The stone has been left a long time, the way you leave a letter you aren't ready to answer."},
+				{"id": "grave.moss.02", "speaker": "char_freyja", "text": "Nobody has planted anything here in years. That, at least, I can fix.", "if": "quest(\"jonas_stone\") == \"active\""}
+			]
+		},
+		"planted": {
+			"lines": [
+				{"id": "grave.planted.01", "speaker": "char_freyja", "text": "Blue by the kerb, daisies wherever the spell liked. He'd have corrected all of it."},
+				{"id": "grave.planted.02", "speaker": "char_freyja", "text": "The moss is still on the name. Not tonight. Something small and household would do it.", "if": "has_flag(\"clean_jonas_stone\") == false and knows_spell(\"spell_stain_free\")"}
+			]
+		},
+		"clean": {
+			"lines": [
+				{"id": "grave.clean.01", "speaker": "narrator", "text": "JONAS BRENN. HE HUMMED WHEN HE WEEDED."},
+				{"id": "grave.clean.02", "speaker": "char_freyja", "text": "Somebody carved that. Somebody who was there."},
+				{"id": "grave.clean.03", "speaker": "char_freyja", "text": "It's the first thing anyone's said about him that I could believe straight away."}
+			]
+		}
+	}
+}

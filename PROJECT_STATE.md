@@ -3,7 +3,7 @@
 _Last updated: 2026-10-12 (reconciled against git history, the repo and a fresh headless run; see "Verified today")_
 
 ## Current milestone
-**Demo 1: The Cottage.** A playable, shippable slice: the cottage and meadow, three small quests, a closing beat and a Windows build. Status: **Planning** (scope and plan agreed with the owner, quests 2 and 3 not yet picked). Finish line and plan: [docs/design/DEMO_1.md](docs/design/DEMO_1.md).
+**Demo 1: The Cottage.** A playable, shippable slice: the cottage and meadow, three small quests, a closing beat and a Windows build. Status: **Building** (quests 2 and 3 picked and built; spellbook, satchel and studying added at the owner's request; ending, options, credits, export still to do). Finish line and plan: [docs/design/DEMO_1.md](docs/design/DEMO_1.md).
 
 Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass the smoke test, but its human playtest (#9) never happened; Demo 1's playtest replaces it.
 
@@ -27,8 +27,11 @@ Milestone 001 (*A Cottage, a Mage, and a Memory*) is built and its systems pass 
 | Teaser film tooling (`scripts/dev/teaser.gd`, `build/teaser/render.sh`, `tools/audio/compose_teaser.js`) | Done, dev only | rendered clips |
 | Design pool of useless spells (`docs/design/USELESS_SPELLS.md`, 86 entries) | Proposal doc | n/a |
 
-## Work in progress (uncommitted, not wired in)
-A prototype of a two-step stone errand chain (grave flowers → Fläckfri cleaning spell → mossed statue): `scripts/world/inspectable.gd`, `scripts/world/stone_quests.gd`, `shaders/grime_stone.gdshader`, `scripts/spells/stain_free_effect.gd`, `data/spells/stain_free.tres`. It is one candidate for quests 2 and 3 and is not connected to `main.gd` until the owner picks (see DEMO_1.md).
+## Built since the reconciliation (2026-10-12, uncommitted until the next commit)
+- **Spellbook, satchel and studying** (B / I): spell cards with details, nine number-key slots (click, press 1-9, drag), items studied for in-game hours. Doc: [docs/design/SPELLBOOK_AND_STUDY.md](docs/design/SPELLBOOK_AND_STUDY.md).
+- **Errands** *Flowers for Jonas* (stone under the oak, Edda's mother's household book, learn **Fläckfri**) and *Good Morning, Statue* (clean the statue by the road with Fläckfri). Dialogue in `edda.json`, `pippa.json`, `grave.json`, `statue.json`.
+- Smoke test: 77 checks, PASS (headless, 2026-10-12), including study clock, save/load mid-errand and props restored.
+- Screenshots of the UI, moss and statue were rendered with `--dbg --book` and inspected.
 
 ## Known issues and gaps
 - **No human playtest has ever been run** (movement feel, camera indoors #10, dialogue pacing, audio mix).

@@ -1,6 +1,10 @@
 {
 	"id": "edda",
 	"entries": [
+		{"if":"quest(\"jonas_stone\") == \"planted\"","node":"stone_done"},
+		{"if":"quest(\"jonas_stone\") == \"book\"","node":"stone_book"},
+		{"if":"quest(\"jonas_stone\") == \"active\"","node":"stone_active"},
+		{"if":"quest(\"jonas_stone\") == \"complete\"","node":"stone_after"},
 		{"if": "quest(\"garden_of_jonas\") == \"complete\"", "node": "after"},
 		{"if": "quest(\"garden_of_jonas\") == \"bloomed\"", "node": "bench"},
 		{"if": "quest(\"garden_of_jonas\") == \"active\"", "node": "active"},
@@ -161,6 +165,40 @@
 				{"id": "edda.after.01", "speaker": "char_edda", "text": "Still here? The flowers won't watch themselves. Actually, they will. Go on."},
 				{"id": "edda.after.02", "if": "has_flag(\"heard_teodor_seed_story\")", "speaker": "char_edda", "text": "The coast's east, if you've forgotten. Most things are east of here, eventually."},
 				{"id": "edda.after.03", "speaker": "char_edda", "text": "Weeks, mind. I'm counting."}
+			]
+		},
+		"stone_active": {
+			"lines": [
+				{"id":"edda.stone_active.01","speaker":"char_edda","text":"Pippa says you've gone up to the oak. Good. I haven't been up there since the knees."},
+				{"id":"edda.stone_active.02","speaker":"char_edda","text":"Mind the roots. He tripped on them every spring and called it the oak's fault."}
+			]
+		},
+		"stone_done": {
+			"lines": [
+				{"id":"edda.stone_done.01","speaker":"char_edda","text":"...","pause":1},
+				{"id":"edda.stone_done.02","speaker":"char_edda","text":"I saw from the window. I wasn't looking. I was cleaning the glass."},
+				{"id":"edda.stone_done.03","speaker":"char_freyja","text":"The blue ones are by the stone."},
+				{"id":"edda.stone_done.04","speaker":"char_edda","text":"Of course they are. He'd have put daisies there and been wrong about it."},
+				{"id":"edda.stone_done.05","speaker":"char_edda","text":"Hm. Wait there.","pause":0.8},
+				{"id":"edda.stone_done.06","speaker":"char_edda","text":"My mother's book. Household. Sums, mostly, and what to do about a chimney fire. There's a rhyme in the middle, for stains. She said it over everything. Gravy, boots, the vicar's cuff."},
+				{"id":"edda.stone_done.07","speaker":"char_edda","text":"Never worked on the vicar. But the cloth always came cleaner when she said it. I could never decide if that was the rhyme or her."},
+				{"id":"edda.stone_done.08","speaker":"char_freyja","text":"...May I?"},
+				{"id":"edda.stone_done.09","speaker":"char_edda","text":"That's why I've got it out. You read old things. It's about time somebody did."},
+				{"id":"edda.stone_done.10","speaker":"char_freyja","text":"It might only be a rhyme."},
+				{"id":"edda.stone_done.11","speaker":"char_edda","text":"It might. Most things are, until somebody says them like they mean it.","do":["item:household_book","flag:got_household_book","quest:jonas_stone=book","affinity:char_edda:2"]}
+			]
+		},
+		"stone_book": {
+			"lines": [
+				{"id":"edda.stone_book.01","speaker":"char_edda","text":"Well? There's jam on page three. Don't mind the jam."},
+				{"id":"edda.stone_book.02","speaker":"char_edda","text":"It takes a while, reading a thing properly. Sit somewhere. The bench is nice."}
+			]
+		},
+		"stone_after": {
+			"lines": [
+				{"id":"edda.stone_after.01","speaker":"char_edda","text":"A spell. In my mother's gravy rhyme. Forty years she told me it was only a rhyme. I'd have liked to tell her."},
+				{"id":"edda.stone_after.02","speaker":"char_freyja","text":"She may have thought so herself. Small magic doesn't announce itself."},
+				{"id":"edda.stone_after.03","speaker":"char_edda","text":"No. It just stays clean."}
 			]
 		}
 	}

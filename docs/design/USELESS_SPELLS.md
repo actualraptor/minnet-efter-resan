@@ -138,7 +138,7 @@
 
 ## First-quest candidates (small, readable, charming)
 
-1. **Fläckfri (Stain-Free)** — the cottage is full of stains; demonstrates in one second; can give a quest where she cleans one stubborn thing.
+1. **Fläckfri (Stain-Free)** — *implemented as the reward of the errand "Flowers for Jonas", learned by studying Mother's Household Book.* The cottage is full of stains; demonstrates in one second; can give a quest where she cleans one stubborn thing.
 2. **Namnlapp (Name Tag)** — fits "remembering"; ties to the dialogue and memory systems.
 3. **Minnesdoft (Memory Scent)** — the most on-theme; a drifting scent-cloud that remembers a place.
 

@@ -11,5 +11,33 @@
 			"bloomed": "The meadow is flowering. Edda came outside on her own. I should go to her.",
 			"complete": "Done, and noted, so that I remember: weeks, not years."
 		}
+	},
+	"jonas_stone": {
+		"title": "Flowers for Jonas",
+		"states": {
+			"active": "Plant flowers at Jonas's stone, under the oak past the bench.",
+			"planted": "The flowers are in. Tell Edda.",
+			"book": "Edda gave you her mother's book. Open your satchel (I) and study it.",
+			"complete": "Fläckfri learned. Small magic, kept."
+		},
+		"journal": {
+			"active": "Pippa says Jonas's stone, up by the oak, has been left to the moss. Edda hasn't been able to go. I can at least do the thing I'm good at.",
+			"planted": "Blue by the kerb. I should tell Edda before she works it out from the window.",
+			"book": "Edda gave me her mother's household book. There's a rhyme for stains in it that she insists is only a rhyme. I'm going to read it properly.",
+			"complete": "It was a spell. Edda's mother had real magic and used it on gravy for forty years. It took me an afternoon to learn what she never knew she had."
+		}
+	},
+	"statue_by_the_road": {
+		"title": "Good Morning, Statue",
+		"states": {
+			"active": "Clean the mossy statue by the road with Fläckfri.",
+			"found": "Tell Pippa who the statue is.",
+			"complete": "Say good morning to people, even when you don't know who they are."
+		},
+		"journal": {
+			"active": "Pippa has said good morning to a mossed-over statue by the road every day, in case it's someone. I have a rhyme for moss now.",
+			"found": "The statue is me. I should tell Pippa before she tells the statue.",
+			"complete": "A statue by the road, and a girl who said good morning to it for a year. The village remembered me better than I remember the village."
+		}
 	}
 }

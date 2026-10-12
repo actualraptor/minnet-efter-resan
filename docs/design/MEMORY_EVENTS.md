@@ -34,3 +34,5 @@ Memory events are compact, append-only records of moments that later dialogue, a
 | ID | Trigger | Future hooks |
 |---|---|---|
 | `memory_cottage_garden_restored` | Edda's farewell line `edda.farewell.04` | Promise to return (`due_in_days: 21`). `resolve_visit_teodor`. Old Pippa callback. |
+| `memory_jonas_stone_flowers` | Learning Fläckfri from Mother's Household Book (errand *Flowers for Jonas*) | Edda's mother's small magic; inheritance; later household spells. |
+| `memory_statue_by_the_road` | Pippa's closing line in *Good Morning, Statue* (`statue_me` / `statue_forgot`) | The village remembers Freyja; `statue_forgot` / `statue_said_me` seed later callbacks. |

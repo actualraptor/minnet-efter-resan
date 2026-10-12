@@ -194,6 +194,96 @@ func _run() -> void:
 	var t4 := await _talk(pippa, [])
 	check("Pippa after-quest line interpolates count", t4.contains("I counted") and not t4.contains("{"), t4.get_slice("\n", 0))
 
+	# --- Errand: Flowers for Jonas (stone, book, study, Fläckfri) ---------------------
+	check("Pippa offers Jonas's stone after the garden", GameState.quest("jonas_stone") == "active", GameState.quest("jonas_stone"))
+	var stone_pos := StoneQuests.STONE_POS
+	var quests: StoneQuests = main.get_node("StoneQuests")
+	check("stone and statue props exist", quests._stone != null and quests._statue != null and quests._stone.is_dirty() and quests._statue.is_dirty())
+	player.teleport(Vector3(stone_pos.x - 3.0, terrain.height_at(stone_pos.x - 3.0, stone_pos.y + 3.0) + 0.3, stone_pos.y + 3.0), 0.0)
+	await _frames(30)
+	player.caster.mana = player.caster.max_mana
+	player.caster._cooldowns.clear()
+	reason = player.caster.try_cast()
+	check("cast accepted at the stone", reason == "", reason)
+	await _seconds(6.0)
+	check("flowers at the stone move the errand on", GameState.quest("jonas_stone") == "planted", GameState.quest("jonas_stone"))
+	var t_stone := await _talk_monologue("grave")
+	check("stone shows the planted line", t_stone.contains("Blue by the kerb"), t_stone.get_slice("\n", 0))
+	player.teleport(edda.global_position + Vector3(0.0, 0.3, 1.5), PI)
+	await _frames(20)
+	var t5 := await _talk(edda, [])
+	check("Edda gives her mother's book", GameState.has_item("household_book") and GameState.quest("jonas_stone") == "book", GameState.quest("jonas_stone"))
+	check("Fläckfri is not known before studying", not GameState.knows_spell("spell_stain_free"))
+	var hud0: Hud = main.get_node("UI/Hud")
+	check("tracker shows the study objective", hud0._quest_title.text == "Flowers for Jonas" and hud0._quest_obj.text.contains("study"), hud0._quest_obj.text)
+
+	# Mid-errand save and load keeps the book and the errand.
+	check("mid-errand save written", GameState.save_game())
+	field.clear()
+	GameState.reset()
+	check("mid-errand state cleared", GameState.quest("jonas_stone") == "none" and not GameState.has_item("household_book"))
+	check("mid-errand load succeeded", GameState.load_game())
+	await _frames(2)
+	check("mid-errand state restored", GameState.quest("jonas_stone") == "book" and GameState.has_item("household_book") and GameState.quest("garden_of_jonas") == "complete")
+
+	# Study: the clock moves on by the spell's study time and the spell is learned.
+	var book: Spellbook = main.get_node("UI/Spellbook")
+	var hour0 := float(GameState.world_date["hour"])
+	var hours := SpellLibrary.get_def("spell_stain_free").study_hours
+	await book._study("household_book")
+	var moved := fposmod(float(GameState.world_date["hour"]) - hour0, 24.0)
+	check("study moved the clock by the spell's study time", is_equal_approx(moved, hours), "%.2f h of %.2f" % [moved, hours])
+	check("studying taught Fläckfri", GameState.knows_spell("spell_stain_free"))
+	check("new spell took the first free number key", GameState.hotbar.find("spell_stain_free") == 4, "slot %d" % GameState.hotbar.find("spell_stain_free"))
+	check("book is kept after studying", GameState.has_item("household_book"))
+	check("Flowers for Jonas completes on learning", GameState.quest("jonas_stone") == "complete")
+	check("stone memory recorded", GameState.has_memory("memory_jonas_stone_flowers"))
+	var key5 := InputEventAction.new()
+	key5.action = "spell_5"
+	key5.pressed = true
+	check("number key 5 maps to slot 5", player._hotbar_slot(key5) == 4)
+	GameState.bind_spell(0, "spell_stain_free")
+	check("binding swaps with the old occupant", GameState.hotbar[0] == "spell_stain_free" and GameState.hotbar[4] == "spell_field_of_flowers")
+	GameState.bind_spell(0, "spell_field_of_flowers")
+	check("binding back restores the slots", GameState.hotbar[0] == "spell_field_of_flowers" and GameState.hotbar[4] == "spell_stain_free")
+
+	# Fläckfri lifts the moss off the stone.
+	player.caster.equip(player.caster.spells.find(SpellLibrary.get_def("spell_stain_free")))
+	player.teleport(Vector3(stone_pos.x, terrain.height_at(stone_pos.x, stone_pos.y + 2.2) + 0.3, stone_pos.y + 2.2), PI)
+	await _frames(30)
+	player.caster.mana = player.caster.max_mana
+	player.caster._cooldowns.clear()
+	reason = player.caster.try_cast()
+	check("Fläckfri cast accepted", reason == "", reason)
+	await _seconds(4.5)
+	check("Fläckfri cleaned Jonas's stone", GameState.has_flag("clean_jonas_stone") and not quests._stone.is_dirty())
+	var t_clean_stone := await _talk_monologue("grave")
+	check("clean stone is readable", t_clean_stone.contains("HE HUMMED WHEN HE WEEDED"), t_clean_stone.get_slice("\n", 0))
+	check("cleaning the stone leaves the statue mossy", quests._statue.is_dirty() and float(quests._statue._mat.get_shader_parameter("grime")) > 0.99)
+
+	# --- Errand: Good morning, statue ---------------------------------------------
+	player.teleport(pippa.global_position + Vector3(0, 0.2, 2.0), PI)
+	await _frames(10)
+	var t6 := await _talk(pippa, [])
+	check("Pippa asks for the statue", GameState.quest("statue_by_the_road") == "active", GameState.quest("statue_by_the_road"))
+	var sp := StoneQuests.STATUE_POS
+	player.teleport(Vector3(sp.x + 3.0, terrain.height_at(sp.x + 3.0, sp.y) + 0.3, sp.y), -PI / 2.0)
+	await _frames(30)
+	var t_moss := await _talk_monologue("statue")
+	check("mossed statue has no readable plaque", t_moss.contains("moss") and not t_moss.contains("TOMATO"), t_moss.get_slice("\n", 0))
+	player.caster.mana = player.caster.max_mana
+	player.caster._cooldowns.clear()
+	player.caster.try_cast()
+	await _seconds(4.5)
+	check("Fläckfri cleaned the statue", GameState.has_flag("clean_statue") and not quests._statue.is_dirty())
+	var t_plate := await _talk_monologue("statue")
+	check("clean statue shows the plaque and moves the errand on", t_plate.contains("TOMATO") and GameState.quest("statue_by_the_road") == "found", GameState.quest("statue_by_the_road"))
+	player.teleport(pippa.global_position + Vector3(0, 0.2, 2.0), PI)
+	await _frames(10)
+	var t7 := await _talk(pippa, [1])
+	check("Pippa closes the statue errand", GameState.quest("statue_by_the_road") == "complete" and GameState.has_memory("memory_statue_by_the_road"))
+	check("statue choice recorded in the memory", GameState.get_memory("memory_statue_by_the_road").get("journal_text", "").contains("I told Pippa I didn't remember"))
+
 	# Save / load roundtrip.
 	var before_flowers := field.total()
 	check("save written", GameState.save_game())
@@ -205,15 +295,20 @@ func _run() -> void:
 	check("quest restored", GameState.quest("garden_of_jonas") == "complete")
 	check("memory restored", GameState.has_memory("memory_cottage_garden_restored"))
 	check("flowers re-planted deterministically", field.total() == before_flowers, "%d vs %d" % [field.total(), before_flowers])
+	check("satchel, spells and number keys restored", GameState.has_item("household_book") and GameState.knows_spell("spell_stain_free") and GameState.hotbar[4] == "spell_stain_free")
+	check("caster list follows the loaded spells", player.caster.spells.any(func(sp2: SpellDefinition): return sp2.id == &"spell_stain_free"))
+	check("stone and statue restored clean", not quests._stone.is_dirty() and not quests._statue.is_dirty())
+	var hud: Hud = main.get_node("UI/Hud")
+	check("tracker shows the latest finished errand", hud._quest_title.text == "Good Morning, Statue", hud._quest_title.text)
 	print("\n---- transcript sample ----\n" + t3)
 
 
-func _talk_monologue() -> String:
+func _talk_monologue(id := "intro") -> String:
 	var director: DialogueDirector = main.director
 	var lines: Array[String] = []
 	var cb := func(line, info): lines.append("%s: %s" % [info.get("name", "?"), line["text"]])
 	director.runner.line_shown.connect(cb)
-	director.start_monologue("intro", main.player)
+	director.start_monologue(id, main.player)
 	var guard := 0
 	while director.runner.active and guard < 50:
 		guard += 1

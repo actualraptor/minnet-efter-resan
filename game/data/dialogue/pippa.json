@@ -1,6 +1,13 @@
 {
 	"id": "pippa",
 	"entries": [
+		{"if":"quest(\"statue_by_the_road\") == \"complete\"","node":"statue_after"},
+		{"if":"quest(\"statue_by_the_road\") == \"found\"","node":"statue_found"},
+		{"if":"quest(\"statue_by_the_road\") == \"active\"","node":"statue_active"},
+		{"if":"quest(\"jonas_stone\") == \"complete\"","node":"statue_offer"},
+		{"if":"quest(\"jonas_stone\") == \"book\"","node":"stone_book"},
+		{"if":"quest(\"jonas_stone\") == \"planted\"","node":"stone_planted"},
+		{"if":"quest(\"jonas_stone\") == \"active\"","node":"stone_active"},
 		{"if": "quest(\"garden_of_jonas\") == \"complete\"", "node": "after"},
 		{"if": "quest(\"garden_of_jonas\") == \"bloomed\"", "node": "bloomed"},
 		{"if": "quest(\"garden_of_jonas\") == \"active\"", "node": "active"},
@@ -100,6 +107,104 @@
 				{"id": "pippa.after.02", "if": "has_flag(\"pippa_heard_forever\")", "speaker": "char_pippa", "text": "I wrote down what you said. About forever. Grandma read it and went quiet and then made me a pancake."},
 				{"id": "pippa.after.03", "if": "has_flag(\"pippa_will_tend\")", "speaker": "char_pippa", "text": "I'm in charge of watering now. Grandma says not the bluebells, they like it dry. I'm writing that down."},
 				{"id": "pippa.after.04", "speaker": "char_pippa", "text": "When you come back I'll be taller. You'll be the same, I bet. That's fact forty-two."}
+			],
+			"goto": "stone_hook"
+		},
+		"stone_hook": {
+			"lines": [
+				{"id":"pippa.stone_hook.01","speaker":"char_pippa","text":"Oh! And. There's another thing. You know the oak by the bench?"},
+				{"id":"pippa.stone_hook.02","speaker":"char_pippa","text":"Grandpa's stone is under it. It's got moss all over. Grandma used to scrub it every Sunday, and then her knees stopped, and then she just sort of stopped too."},
+				{"id":"pippa.stone_hook.03","speaker":"char_pippa","text":"I tried to read it once. It says JON and then moss and then something about a hat. I think. I wasn't sure about the hat."}
+			],
+			"choices": [
+				{"id":"pippa.stone_hook.c_yes","text":"Show me. I'll plant something.","goto":"stone_yes"},
+				{"id":"pippa.stone_hook.c_later","text":"Another day.","goto":"stone_later"}
+			]
+		},
+		"stone_yes": {
+			"lines": [
+				{"id":"pippa.stone_yes.01","speaker":"char_pippa","text":"The same flowers? The blue ones?"},
+				{"id":"pippa.stone_yes.02","speaker":"char_freyja","text":"If the spell allows it. It tends to have opinions."},
+				{"id":"pippa.stone_yes.03","speaker":"char_pippa","text":"It's up past the bench, under the oak. Don't tell Grandma I told you. She'll know I told you.","do":["quest:jonas_stone=active"]}
+			]
+		},
+		"stone_later": {
+			"lines": [
+				{"id":"pippa.stone_later.01","speaker":"char_pippa","text":"Okay. It's not going anywhere. That's sort of the point of stones."}
+			]
+		},
+		"stone_active": {
+			"lines": [
+				{"id":"pippa.stone_active.01","speaker":"char_pippa","text":"It's up past the bench, under the oak. I'll stay here and not watch."},
+				{"id":"pippa.stone_active.02","speaker":"char_pippa","text":"...I'm going to watch a bit."}
+			]
+		},
+		"stone_planted": {
+			"lines": [
+				{"id":"pippa.stone_planted.01","speaker":"char_pippa","text":"I SAW! From the carrots! There's blue on Grandpa!","emote":"Talk"},
+				{"id":"pippa.stone_planted.02","speaker":"char_pippa","text":"Go and tell Grandma. She's pretending she didn't see."}
+			]
+		},
+		"stone_book": {
+			"lines": [
+				{"id":"pippa.stone_book.01","speaker":"char_pippa","text":"Did you read it? Great-Grandma's book? I tried once. It's mostly sums."},
+				{"id":"pippa.stone_book.02","speaker":"char_pippa","text":"And one page about getting jam out of a tablecloth, in a rhyme. It smells like her kitchen. I don't know how a book remembers a kitchen."}
+			]
+		},
+		"statue_offer": {
+			"lines": [
+				{"id":"pippa.statue_offer.01","speaker":"char_pippa","text":"Does the stain one work on other things?"},
+				{"id":"pippa.statue_offer.02","speaker":"char_freyja","text":"Most things. Within reason. And moss, apparently."},
+				{"id":"pippa.statue_offer.03","speaker":"char_pippa","text":"Then can you do the statue? By the road, where you came in. Everyone walks past it. Even Grandma, and she says hello to the signpost."},
+				{"id":"pippa.statue_offer.04","speaker":"char_pippa","text":"It's got a face but the moss ate most of it. I say good morning to it anyway. In case."},
+				{"id":"pippa.statue_offer.05","speaker":"char_freyja","text":"In case of what?"},
+				{"id":"pippa.statue_offer.06","speaker":"char_pippa","text":"In case it's someone."}
+			],
+			"choices": [
+				{"id":"pippa.statue_offer.c_yes","text":"Let's find out who.","goto":"statue_yes"},
+				{"id":"pippa.statue_offer.c_later","text":"Later. Statues keep.","goto":"stone_later"}
+			]
+		},
+		"statue_yes": {
+			"lines": [
+				{"id":"pippa.statue_yes.01","speaker":"char_pippa","text":"You say good morning first. That's the rule. It's polite.","do":["quest:statue_by_the_road=active"]}
+			]
+		},
+		"statue_active": {
+			"lines": [
+				{"id":"pippa.statue_active.01","speaker":"char_pippa","text":"South, by the road. Where you came in. Say good morning first."}
+			]
+		},
+		"statue_found": {
+			"lines": [
+				{"id":"pippa.statue_found.01","speaker":"char_pippa","text":"You've got your thinking face. The one for when something's older than you. Which is hardly ever. What did it say?"}
+			],
+			"choices": [
+				{"id":"pippa.statue_found.c_me","text":"It says my name. It's a statue of me.","goto":"statue_me"},
+				{"id":"pippa.statue_found.c_forgot","text":"I don't remember doing it. They did.","goto":"statue_forgot"}
+			]
+		},
+		"statue_me": {
+			"lines": [
+				{"id":"pippa.statue_me.01","speaker":"char_pippa","text":"YOU? You have a STATUE?","emote":"Talk"},
+				{"id":"pippa.statue_me.02","speaker":"char_pippa","text":"Does it have the ears?"},
+				{"id":"pippa.statue_me.03","speaker":"char_freyja","text":"It has a hat I've never owned."},
+				{"id":"pippa.statue_me.04","speaker":"char_pippa","text":"That's fact forty-three. 'The elf has a statue and it's wearing the wrong hat.'"},
+				{"id":"pippa.statue_me.05","speaker":"char_pippa","text":"I'm going to say good morning to it properly now. Knowing.","do":["flag:statue_said_me","quest:statue_by_the_road=complete","memory:memory_statue_by_the_road"]}
+			]
+		},
+		"statue_forgot": {
+			"lines": [
+				{"id":"pippa.statue_forgot.01","speaker":"char_pippa","text":"You don't remember? But they did. Whoever it was put it there, and everyone just walked past it for years."},
+				{"id":"pippa.statue_forgot.02","speaker":"char_pippa","text":"And I said good morning every day. And it was you."},
+				{"id":"pippa.statue_forgot.03","speaker":"char_freyja","text":"Then you were being polite to the right person all along."},
+				{"id":"pippa.statue_forgot.04","speaker":"char_pippa","text":"That's fact forty-three. I'm underlining it.","do":["flag:statue_forgot","quest:statue_by_the_road=complete","memory:memory_statue_by_the_road"]}
+			]
+		},
+		"statue_after": {
+			"lines": [
+				{"id":"pippa.statue_after.01","speaker":"char_pippa","text":"I told Grandma the statue is you. She said 'I could have told you that,' and then she said she couldn't have, and then she went to look."},
+				{"id":"pippa.statue_after.02","speaker":"char_pippa","text":"It's a rule now, in the book. You say good morning to people even if you don't know who they are. Especially."}
 			]
 		}
 	}
